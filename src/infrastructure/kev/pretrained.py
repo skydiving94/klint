@@ -1,3 +1,4 @@
+import asyncio
 import json
 import urllib.request
 from typing import Any, Callable, Dict, Optional
@@ -22,10 +23,12 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
         self._timeout = timeout_seconds
         self._inference_fn = inference_fn or self._default_inference
 
-    def evaluate(self, unit: AuditableUnit, rule: AuditRule) -> AuditFinding:
+    async def evaluate(self, unit: AuditableUnit, rule: AuditRule) -> AuditFinding:
         context = self._format_context(unit)
         question_payload = self._build_question_payload(rule)
-        raw_answer = self._inference_fn(context, question_payload)
+        raw_answer = await asyncio.to_thread(
+            self._inference_fn, context, question_payload
+        )
 
         return AuditFinding(
             rule_id=rule.rule_id,

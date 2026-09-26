@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import argparse
 import json
@@ -11,11 +12,12 @@ from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from src.config.settings import AppSettings
 
 
+
 class CLIApp:
     def __init__(self, audit_service: AuditService):
         self._audit_service = audit_service
 
-    def run(self, argv: Optional[Sequence[str]] = None) -> int:
+    async def run(self, argv: Optional[Sequence[str]] = None) -> int:
         parser = argparse.ArgumentParser(description="Kev Code Auditor CLP")
         parser.add_argument("file", type=Path,
                             help="Path to the code file to audit")
@@ -32,7 +34,8 @@ class CLIApp:
         )
         args = parser.parse_args(argv)
 
-        report = self._audit_service.run_audit(
+        # Offload blocking file reads and network inference from the main thread
+        report = await self._audit_service.run_audit(
             target=args.file,
             custom_rules_source=args.rules,
         )
@@ -54,12 +57,12 @@ def create_audit_service(settings: AppSettings) -> AuditService:
     )
 
 
-def main() -> int:
-    settings = AppSettings.from_env()
+async def main() -> int:
+    settings = await asyncio.to_thread(AppSettings.from_env)
     service = create_audit_service(settings)
     app = CLIApp(audit_service=service)
-    return app.run(sys.argv[1:])
+    return await app.run(sys.argv[1:])
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(asyncio.run(main()))

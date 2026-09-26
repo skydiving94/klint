@@ -5,5 +5,5 @@ from src.core.domain.models import AuditableUnit
 
 class BaseUnitExtractor(ABC):
     @abstractmethod
-    def extract(self, target: Any) -> List[AuditableUnit]:
+    async def extract(self, target: Any) -> List[AuditableUnit]:
         pass

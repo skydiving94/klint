@@ -1,15 +1,15 @@
+import asyncio
 from pathlib import Path
 from typing import List
-
 from src.core.domain.enums import UnitType
 from src.core.domain.models import AuditableUnit
 from src.core.interfaces.extractor import BaseUnitExtractor
 
 
 class WholeFileExtractor(BaseUnitExtractor):
-    def extract(self, target: str | Path) -> List[AuditableUnit]:
+    async def extract(self, target: str | Path) -> List[AuditableUnit]:
         path = Path(target)
-        content = path.read_text(encoding="utf-8")
+        content = await asyncio.to_thread(path.read_text, encoding="utf-8")
         line_count = len(content.splitlines())
 
         return [
