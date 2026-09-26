@@ -1,0 +1,146 @@
+{
+  "n_plus_1_query": {
+    "type": "choice",
+    "instructions": "Does the code avoid making separate database queries for each item in a list?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "hardcoded_secrets": {
+    "type": "choice",
+    "instructions": "Is the code free of hardcoded API keys, passwords, or tokens?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "improper_error_handling": {
+    "type": "choice",
+    "instructions": "Are exceptions handled properly without exposing sensitive stack traces?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "sync_blocking_io": {
+    "type": "choice",
+    "instructions": "Does the code avoid heavy synchronous file reads or network requests on the main thread?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "missing_input_validation": {
+    "type": "choice",
+    "instructions": "Is user input properly validated and sanitized?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "tight_coupling": {
+    "type": "choice",
+    "instructions": "Are third-party APIs integrated using abstraction layers or interfaces?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "over_fetching_data": {
+    "type": "choice",
+    "instructions": "Does the database query only request the specific fields needed?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "prop_drilling": {
+    "type": "choice",
+    "instructions": "Is the code free of excessive prop drilling through intermediate components?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "ignoring_composition": {
+    "type": "choice",
+    "instructions": "Does the component use 'children' or slots instead of too many configuration props?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "improper_state_colocation": {
+    "type": "choice",
+    "instructions": "Is state kept close to where it is used rather than lifted too high unnecessarily?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "direct_dom_manipulation": {
+    "type": "choice",
+    "instructions": "Does the code use React's useRef instead of direct DOM manipulation methods?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "overusing_use_effect": {
+    "type": "choice",
+    "instructions": "Is the code free of useEffect hooks used for state that could be derived during render?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "missing_dependency_arrays": {
+    "type": "choice",
+    "instructions": "Do all useEffect and useCallback hooks include proper dependency arrays?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "large_bundle_sizes": {
+    "type": "choice",
+    "instructions": "Are imports optimized (e.g., importing specific functions rather than whole libraries)?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "inline_functions": {
+    "type": "choice",
+    "instructions": "Are functions defined outside the render method or JSX to avoid unnecessary re-renders?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  },
+  "god_components": {
+    "type": "choice",
+    "instructions": "Is the component reasonably sized and focused on a single responsibility?",
+    "criteria": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "irrelevant": "Irrelevant"
+    }
+  }
+}
