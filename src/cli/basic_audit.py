@@ -1,16 +1,34 @@
-import asyncio
-import sys
 import argparse
+import asyncio
 import json
+import sys
 from pathlib import Path
-from typing import Optional, Sequence
-
-from src.core.services.audit_service import AuditService
-from src.infrastructure.rules.json_loader import JsonRuleLoader
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
-from src.infrastructure.extractors.file_extractor import WholeFileExtractor
+from typing import Any, Dict, List, Optional, Sequence
+from src.cli.factory import create_audit_service
+from src.cli.file_collector import collect_target_files
 from src.config.settings import AppSettings
+from src.core.services.audit_service import AuditService
 
+
+def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Kev Code Auditor CLP")
+    parser.add_argument(
+        "file",
+        type=Path,
+        help="Path to the code file or directory to audit",
+    )
+    parser.add_argument(
+        "--rules",
+        type=Path,
+        default=None,
+        help="Path to user-defined rules JSON file",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Output all judgments (Pass, Fail, Irrelevant) instead of fails only",
+    )
+    return parser.parse_args(argv)
 
 
 class CLIApp:
@@ -18,49 +36,34 @@ class CLIApp:
         self._audit_service = audit_service
 
     async def run(self, argv: Optional[Sequence[str]] = None) -> int:
-        parser = argparse.ArgumentParser(description="Kev Code Auditor CLP")
-        parser.add_argument("file", type=Path,
-                            help="Path to the code file to audit")
-        parser.add_argument(
-            "--rules",
-            type=Path,
-            default=None,
-            help="Path to user-defined rules JSON file",
+        args = _parse_args(argv)
+        target_files = await asyncio.to_thread(collect_target_files, args.file)
+        reports = await asyncio.gather(
+            *(
+                self._audit_service.run_audit(
+                    target=file_path,
+                    custom_rules_source=args.rules,
+                )
+                for file_path in target_files
+            )
         )
-        parser.add_argument(
-            "--all",
-            action="store_true",
-            help="Output all judgments (Pass, Fail, Irrelevant) instead of fails only",
-        )
-        args = parser.parse_args(argv)
 
-        # Offload blocking file reads and network inference from the main thread
-        report = await self._audit_service.run_audit(
-            target=args.file,
-            custom_rules_source=args.rules,
-        )
-        issues = report.get_issues(fails_only=not args.all)
-        print(json.dumps(issues, indent=2))
+        issues: List[Dict[str, Any]] = [
+            issue
+            for report in reports
+            for issue in report.get_issues(fails_only=not args.all)
+        ]
+        output = {
+            "examined_files": [str(p) for p in target_files],
+            "issues": issues,
+        }
+        print(json.dumps(output, indent=2))
         return 0
-
-
-def create_audit_service(settings: AppSettings) -> AuditService:
-    return AuditService(
-        extractor=WholeFileExtractor(),
-        evaluator=PretrainedKevEvaluator(
-            model_name=settings.model_name,
-            base_url=settings.kev_base_url,
-            api_key=settings.kev_api_key,
-        ),
-        rule_loader=JsonRuleLoader(
-            default_rules_path=settings.default_rules_path),
-    )
 
 
 async def main() -> int:
     settings = await asyncio.to_thread(AppSettings.from_env)
-    service = create_audit_service(settings)
-    app = CLIApp(audit_service=service)
+    app = CLIApp(audit_service=create_audit_service(settings))
     return await app.run(sys.argv[1:])
 
 

@@ -28,7 +28,7 @@
   },
   "sync_blocking_io": {
     "type": "choice",
-    "instructions": "Does the code avoid heavy synchronous file reads or network requests on the main thread?",
+    "instructions": "Does the code avoid un-offloaded synchronous file reads or network requests that block the main event loop (e.g., by using async I/O or offloading blocking calls with asyncio.to_thread)?",
     "criteria": {
       "pass": "Pass",
       "fail": "Fail",
@@ -134,9 +134,9 @@
       "irrelevant": "Irrelevant"
     }
   },
-  "god_components": {
+  "god_component": {
     "type": "choice",
-    "instructions": "Is the component reasonably sized and focused on a single responsibility?",
+    "instructions": "Does the code avoid god components (class, function, file, React component, module, etc.) by keeping each component focused on a single clear responsibility?",
     "criteria": {
       "pass": "Pass",
       "fail": "Fail",
