@@ -218,3 +218,5 @@ __marimo__/
 .streamlit/secrets.toml
 
 **/.vscode/
+
+**/.DS_Store
