@@ -11,7 +11,7 @@ from src.core.services.audit_service import AuditService
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Kev Code Auditor CLP")
+    parser = argparse.ArgumentParser(description="klint - Declarative Code Auditor CLI")
     parser.add_argument(
         "file",
         type=Path,

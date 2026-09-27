@@ -13,7 +13,7 @@ from src.core.services.audit_service import AuditService
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Kev Code Auditor - recursive project structure audit"
+        description="klint - recursive project structure audit CLI"
     )
     parser.add_argument(
         "directory", type=Path, help="Path to the project directory to audit"
