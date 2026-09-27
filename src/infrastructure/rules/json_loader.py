@@ -2,7 +2,9 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from src.core.domain.models import AuditRule
+
+from src.core.domain.enums import QuestionType
+from src.core.domain.rule import AuditRule
 from src.core.interfaces.rule_loader import BaseRuleLoader
 
 
@@ -23,6 +25,7 @@ class JsonRuleLoader(BaseRuleLoader):
             )
 
         merged: Dict[str, AuditRule] = dict(self._cached_default_rules)
+
         if custom_rules_source is not None:
             merged.update(self._load_from_path_sync(Path(custom_rules_source)))
 
@@ -33,7 +36,7 @@ class JsonRuleLoader(BaseRuleLoader):
         return {
             rule_id: AuditRule(
                 rule_id=rule_id,
-                question_type=spec["type"],
+                question_type=QuestionType(spec["type"]),
                 instructions=spec["instructions"],
                 criteria=spec["criteria"],
             )

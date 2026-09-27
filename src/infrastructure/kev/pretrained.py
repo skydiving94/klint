@@ -2,8 +2,11 @@ import asyncio
 import json
 import urllib.request
 from typing import Any, Callable, Dict, List, Optional, Sequence
+
 from src.core.domain.enums import Judgment
-from src.core.domain.models import AuditableUnit, AuditFinding, AuditRule
+from src.core.domain.report import AuditFinding
+from src.core.domain.rule import AuditRule
+from src.core.domain.units import AuditableUnit
 from src.core.interfaces.evaluator import BaseKevEvaluator
 
 
@@ -26,8 +29,9 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
     async def evaluate(
         self, unit: AuditableUnit, rules: Sequence[AuditRule]
     ) -> List[AuditFinding]:
-        context = self._format_context(unit)
+        context = unit.get_content()
         questions_payload = self._build_questions_payload(rules)
+
         raw_answers = await asyncio.to_thread(
             self._inference_fn, context, questions_payload
         )
@@ -46,24 +50,18 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
                     unit_id=unit.unit_id,
                     judgment=Judgment(mapped_judgment),
                     instructions=rule.instructions,
-                    file_path=unit.file_path,
-                    line_range=unit.line_range,
                     confidence=answer_data.get("confidence"),
                     probabilities=answer_data.get("probabilities"),
+                    metadata=unit.get_metadata(),
                 )
             )
 
         return findings
 
-    def _format_context(self, unit: AuditableUnit) -> str:
-        if isinstance(unit.content, dict):
-            return "\n".join(f"{k}: {v}" for k, v in unit.content.items())
-        return unit.content
-
     def _build_questions_payload(self, rules: Sequence[AuditRule]) -> Dict[str, Any]:
         return {
             rule.rule_id: {
-                "type": rule.question_type,
+                "type": rule.question_type.value,
                 "instructions": rule.instructions,
                 "criteria": rule.criteria,
             }
@@ -78,7 +76,6 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
             "state": context,
             "questions": questions,
         }
-
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"

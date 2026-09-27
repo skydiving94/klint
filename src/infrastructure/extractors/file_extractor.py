@@ -1,8 +1,8 @@
 import asyncio
 from pathlib import Path
 from typing import List
-from src.core.domain.enums import UnitType
-from src.core.domain.models import AuditableUnit
+
+from src.core.domain.units import AuditableFileUnit, AuditableUnit
 from src.core.interfaces.extractor import BaseUnitExtractor
 
 
@@ -11,12 +11,11 @@ class WholeFileExtractor(BaseUnitExtractor):
         unit = await asyncio.to_thread(self._read_file_sync, Path(target))
         return [unit]
 
-    def _read_file_sync(self, path: Path) -> AuditableUnit:
-        content = path.read_text(encoding="utf-8")
+    def _read_file_sync(self, path: Path) -> AuditableFileUnit:
+        content = path.read_text(encoding="utf-8", errors="replace")
         line_count = len(content.splitlines())
-        return AuditableUnit(
+        return AuditableFileUnit(
             unit_id=str(path),
-            unit_type=UnitType.FILE,
             content=content,
             file_path=str(path),
             start_line=1,

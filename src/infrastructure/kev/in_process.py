@@ -8,7 +8,9 @@ from kev.device import default_device
 from kev.serve import Server
 
 from src.core.domain.enums import Judgment
-from src.core.domain.models import AuditableUnit, AuditFinding, AuditRule
+from src.core.domain.report import AuditFinding
+from src.core.domain.rule import AuditRule
+from src.core.domain.units import AuditableUnit
 from src.core.interfaces.evaluator import BaseKevEvaluator
 
 
@@ -23,8 +25,6 @@ class InProcessKevEvaluator(BaseKevEvaluator):
     def _load_server_sync(self) -> None:
         if self._server is not None:
             return
-
-
         dev = default_device()
         opts = LoadOptions.from_env()
         if dev == "mps" and opts.attn is None:
@@ -53,7 +53,7 @@ class InProcessKevEvaluator(BaseKevEvaluator):
 
         req = SystemOneRequest(
             model=self._checkpoint,
-            state=self._format_context(unit),
+            state=unit.get_content(),
             questions=self._build_questions_payload(rules),
         )
         assert self._server is not None
@@ -74,24 +74,18 @@ class InProcessKevEvaluator(BaseKevEvaluator):
                     unit_id=unit.unit_id,
                     judgment=Judgment(mapped_judgment),
                     instructions=rule.instructions,
-                    file_path=unit.file_path,
-                    line_range=unit.line_range,
                     confidence=answer_data.get("confidence"),
                     probabilities=answer_data.get("probabilities"),
+                    metadata=unit.get_metadata(),
                 )
             )
 
         return findings
 
-    def _format_context(self, unit: AuditableUnit) -> str:
-        if isinstance(unit.content, dict):
-            return "\n".join(f"{k}: {v}" for k, v in unit.content.items())
-        return unit.content
-
     def _build_questions_payload(self, rules: Sequence[AuditRule]) -> Dict[str, Any]:
         return {
             rule.rule_id: {
-                "type": rule.question_type,
+                "type": rule.question_type.value,
                 "instructions": rule.instructions,
                 "criteria": rule.criteria,
             }
