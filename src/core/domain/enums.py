@@ -22,11 +22,11 @@ class Judgment(str, Enum):
     )
     IRRELEVANT = (
         "Irrelevant",
-        "The described practice does not apply to this code or directory.",
+        "The described practice does not apply to this specific code or directory.",
     )
     LACK_OF_EVIDENCE = (
         "Lack of Evidence",
-        "The required information for judging is completely absent from the provided context.",
+        "There is not enough information in the provided context to determine pass, fail, or irrelevance.",
     )
 
     @classmethod

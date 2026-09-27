@@ -1,12 +1,12 @@
 {
   "god_package": {
     "type": "choice",
-    "instructions": "Does this directory avoid being a 'god package' (i.e. it has a small, focused set of files rather than dozens of unrelated files)?",
+    "instructions": "Does this directory contain a focused, manageable set of modules rather than acting as a 'god package' with dozens of unrelated files?",
     "target_unit_types": ["project_directory"]
   },
   "junk_drawer_module": {
     "type": "choice",
-    "instructions": "Does this directory avoid being a catch-all junk-drawer package (named 'utils', 'helpers', 'misc', or 'common') filled with unrelated functions?",
+    "instructions": "Does this directory have a specific, well-defined domain responsibility rather than acting as a catch-all junk-drawer package (such as 'utils', 'helpers', 'misc', or 'common')?",
     "target_unit_types": ["project_directory"]
   },
   "flat_structure": {
@@ -21,32 +21,32 @@
   },
   "inconsistent_naming_convention": {
     "type": "choice",
-    "instructions": "Do all file names and subdirectory names in this directory follow a consistent naming convention (such as snake_case)?",
+    "instructions": "Do all file names and subdirectory names in this directory follow a consistent naming convention (such as snake_case) rather than mixing different naming styles?",
     "target_unit_types": ["project_directory"]
   },
   "trivial_subpackage": {
     "type": "choice",
-    "instructions": "If this directory has subdirectories, do they avoid being trivial single-file packages that do not need their own directory?",
+    "instructions": "Does this package contain a meaningful set of files rather than being a trivial subpackage with only one or two files?",
     "target_unit_types": ["project_directory"]
   },
   "test_structure_mismatch": {
     "type": "choice",
-    "instructions": "If this directory is a test directory (e.g. 'tests'), does its layout mirror the source tree? (Mark Irrelevant if not a test directory.)",
+    "instructions": "Do test directories mirror the package layout of the source code they cover rather than using a mismatched or disorganized test structure?",
     "target_unit_types": ["project_directory"]
   },
   "barrel_file_sprawl": {
     "type": "choice",
-    "instructions": "Does this directory avoid having excessive barrel/index files that do nothing but re-export symbols across every subpackage?",
+    "instructions": "Are package exports kept minimal and purposeful rather than sprawling excessive barrel or index files that only re-export symbols across every subpackage?",
     "target_unit_types": ["project_directory"]
   },
   "circular_package_dependencies": {
     "type": "choice",
-    "instructions": "Are the packages and subpackages in this directory tree free of circular dependencies (where Mutual Subpackage Cycles is 'none' and no two packages import from each other)?",
+    "instructions": "Do packages and subpackages in this directory tree maintain a clean, acyclic dependency flow rather than importing from each other in circular dependencies?",
     "target_unit_types": ["project_directory"]
   },
   "layering_violation": {
     "type": "choice",
-    "instructions": "Does this directory respect architectural layer boundaries (core/domain must not import from infrastructure or cli; infrastructure must not import from cli/entrypoints)?",
+    "instructions": "Do imports in this directory flow inward toward core domain abstractions (e.g. cli/entrypoints -> infrastructure -> core/domain) rather than inner layers importing from outer layers?",
     "target_unit_types": ["project_directory"]
   },
   "god_file_or_class": {
@@ -61,32 +61,32 @@
   },
   "leaky_abstraction": {
     "type": "choice",
-    "instructions": "If this directory is in the core/domain layer, does it avoid importing third-party frameworks, HTTP clients, or torch/ORM libraries? (Mark Irrelevant if not core/domain.)",
+    "instructions": "Are third-party frameworks, HTTP clients, and ML/ORM libraries confined to outer infrastructure or entrypoint layers rather than leaking into core domain models?",
     "target_unit_types": ["project_directory"]
   },
   "business_logic_in_presentation_layer": {
     "type": "choice",
-    "instructions": "If this directory is a CLI or presentation layer, does it delegate core auditing/business logic to services instead of implementing domain logic directly? (Mark Irrelevant if not CLI/presentation.)",
+    "instructions": "Do CLI, UI, and route-handler modules delegate business logic to application services rather than implementing core domain logic directly in the presentation layer?",
     "target_unit_types": ["project_directory"]
   },
   "dead_code_module": {
     "type": "choice",
-    "instructions": "Are the modules in this directory imported and used by other modules in the directory tree?",
+    "instructions": "Are the modules in this directory actively imported and used by other modules in the project rather than sitting as dead, unreferenced code?",
     "target_unit_types": ["project_directory"]
   },
   "missing_package_public_api": {
     "type": "choice",
-    "instructions": "If this directory is a multi-file library subpackage (excluding pure parent namespace directories with 0 files and CLI entrypoint folders), does it provide an __init__.py with exports?",
+    "instructions": "Does this package expose a clean public interface (such as via __init__.py exports for multi-file internal modules) rather than requiring callers to import deep internal implementation files directly?",
     "target_unit_types": ["project_directory"]
   },
   "scattered_feature_logic": {
     "type": "choice",
-    "instructions": "Are the files within this directory cohesive and focused on a single architectural concern?",
+    "instructions": "Are the files within this directory cohesive and focused on a single architectural concern rather than scattering feature logic across unrelated modules?",
     "target_unit_types": ["project_directory"]
   },
   "inconsistent_architectural_style": {
     "type": "choice",
-    "instructions": "Does the structure of this directory follow a clean layered/hexagonal architecture consistent with its subpackages?",
+    "instructions": "Does the structure of this directory follow a clean layered/hexagonal architecture consistent with its subpackages rather than mixing conflicting architectural patterns?",
     "target_unit_types": ["project_directory"]
   }
 }

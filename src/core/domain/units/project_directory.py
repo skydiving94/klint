@@ -37,9 +37,13 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
         return own
 
     def get_content(self) -> str:
+        internal_imps = sorted(
+            imp for imp in self.get_all_imports() if imp.startswith(("src.", "."))
+        )
         lines = [
             f"Target Directory Under Audit: {self.directory_path}",
             f"Summary: {len(self.files)} immediate files, {len(self.subdirectories)} immediate subdirectories",
+            f"Internal Project Imports in Tree: [{', '.join(internal_imps) if internal_imps else 'none'}]",
         ]
         rollup = self._render_dependency_rollup()
         if rollup:
@@ -64,8 +68,7 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
                 if a_to_b and b_to_a:
                     cycles.append(f"{a} <-> {b}")
         lines.append(
-            f"  Mutual Subpackage Cycles: {', '.join(cycles) if cycles else 'none'}"
-        )
+            f"  Mutual Subpackage Cycles: {', '.join(cycles) if cycles else 'none'}")
         return "\n".join(lines)
 
     def _render_tree(self, indent: int = 0) -> str:
