@@ -24,13 +24,14 @@ class AuditService:
         )
         report = AuditReport()
 
-        tasks = [
-            self._evaluator.evaluate(unit, rule)
-            for unit in units
-            for rule in rules
-            if rule.is_applicable_to(unit)
-        ]
-        for finding in await asyncio.gather(*tasks):
-            report.record(finding)
+        tasks = []
+        for unit in units:
+            applicable_rules = [r for r in rules if r.is_applicable_to(unit)]
+            if applicable_rules:
+                tasks.append(self._evaluator.evaluate(unit, applicable_rules))
+
+        for unit_findings in await asyncio.gather(*tasks):
+            for finding in unit_findings:
+                report.record(finding)
 
         return report

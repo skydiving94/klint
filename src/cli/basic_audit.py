@@ -28,6 +28,12 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Output all judgments (Pass, Fail, Irrelevant) instead of fails only",
     )
+    parser.add_argument(
+        "--min-confidence",
+        type=float,
+        default=0.0,
+        help="Minimum confidence threshold (0.0 to 1.0) required to report an issue",
+    )
     return parser.parse_args(argv)
 
 
@@ -51,7 +57,10 @@ class CLIApp:
         issues: List[Dict[str, Any]] = [
             issue
             for report in reports
-            for issue in report.get_issues(fails_only=not args.all)
+            for issue in report.get_issues(
+                fails_only=not args.all,
+                min_confidence=args.min_confidence,
+            )
         ]
         output = {
             "examined_files": [str(p) for p in target_files],

@@ -21,6 +21,7 @@ def _load_dotenv(dotenv_path: Path = Path(".env")) -> None:
 class AppSettings:
     model_name: str
     default_rules_path: Path
+    kev_mode: str = "remote"
     kev_base_url: str = "http://127.0.0.1:8009"
     kev_api_key: Optional[str] = None
 
@@ -40,6 +41,7 @@ class AppSettings:
         return cls(
             model_name=model_name,
             default_rules_path=Path(rules_path),
+            kev_mode=os.environ.get("KEV_MODE", "remote").lower(),
             kev_base_url=os.environ.get(
                 "KEV_BASE_URL", "http://127.0.0.1:8009"),
             kev_api_key=os.environ.get("KEV_API_KEY") or None,

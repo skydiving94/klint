@@ -1,18 +1,27 @@
 from src.config.settings import AppSettings
+from src.core.interfaces.evaluator import BaseKevEvaluator
 from src.core.services.audit_service import AuditService
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor
+from src.infrastructure.kev.in_process import InProcessKevEvaluator
 from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
 from src.infrastructure.rules.json_loader import JsonRuleLoader
+
+
+def _create_evaluator(settings: AppSettings) -> BaseKevEvaluator:
+    if settings.kev_mode == "local":
+        return InProcessKevEvaluator(checkpoint=settings.model_name)
+
+    return PretrainedKevEvaluator(
+        model_name=settings.model_name,
+        base_url=settings.kev_base_url,
+        api_key=settings.kev_api_key,
+    )
 
 
 def create_audit_service(settings: AppSettings) -> AuditService:
     return AuditService(
         extractor=WholeFileExtractor(),
-        evaluator=PretrainedKevEvaluator(
-            model_name=settings.model_name,
-            base_url=settings.kev_base_url,
-            api_key=settings.kev_api_key,
-        ),
+        evaluator=_create_evaluator(settings),
         rule_loader=JsonRuleLoader(
             default_rules_path=settings.default_rules_path
         ),
