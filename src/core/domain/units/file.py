@@ -1,15 +1,21 @@
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import asdict, dataclass
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
-from src.core.domain.enums import UnitType
 from src.core.domain.units.base import AuditableUnit
+
+
+@dataclass(frozen=True)
+class FileUnitMetadata:
+    file_path: Optional[str] = None
+    line_range: Optional[List[int]] = None
 
 
 @dataclass(frozen=True)
 class AuditableFileUnit(AuditableUnit):
     """Concrete auditable unit representing an entire source file."""
 
-    unit_type: UnitType = field(default=UnitType.FILE, init=False)
+    unit_type: ClassVar[str] = "file"
+
     content: str = ""
     file_path: Optional[str] = None
     start_line: Optional[int] = None
@@ -25,7 +31,8 @@ class AuditableFileUnit(AuditableUnit):
         return self.content
 
     def get_metadata(self) -> Dict[str, Any]:
-        return {
-            "file_path": self.file_path,
-            "line_range": list(self.line_range) if self.line_range else None,
-        }
+        metadata = FileUnitMetadata(
+            file_path=self.file_path,
+            line_range=list(self.line_range) if self.line_range else None,
+        )
+        return asdict(metadata)

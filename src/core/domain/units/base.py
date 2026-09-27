@@ -1,21 +1,35 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict
-
-from src.core.domain.enums import UnitType
+from typing import Any, ClassVar, Dict, List, Type
 
 
 @dataclass(frozen=True)
 class AuditableUnit(ABC):
     """Abstract base node for any auditable code or project structure unit.
 
-    Composite subclasses (e.g. project directories, Python modules, classes)
-    act like AST nodes whose get_content() aggregates auditable information
-    across their composed child units.
+    unit_type is a per-class string tag (not a per-instance field). Each
+    concrete subclass declares its own constant and is auto-registered
+    here via __init_subclass__ -- this is the tag JSON rules use in
+    target_unit_types; there's no separate enum to keep in sync.
     """
 
     unit_id: str
-    unit_type: UnitType
+
+    unit_type: ClassVar[str]
+    _registry: ClassVar[Dict[str, Type["AuditableUnit"]]] = {}
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        tag = getattr(cls, "unit_type", None)
+        if tag:
+            AuditableUnit._registry[tag] = cls
+
+    @classmethod
+    def known_unit_types(cls) -> List[str]:
+        """All unit_type tags currently registered by a concrete subclass."""
+        return sorted(AuditableUnit._registry.keys())
 
     @abstractmethod
     def get_content(self) -> str:

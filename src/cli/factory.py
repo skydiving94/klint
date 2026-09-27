@@ -2,6 +2,7 @@ from src.config.settings import AppSettings
 from src.core.interfaces.evaluator import BaseKevEvaluator
 from src.core.services.audit_service import AuditService
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor
+from src.infrastructure.extractors.project_extractor import RecursiveProjectExtractor
 from src.infrastructure.kev.in_process import InProcessKevEvaluator
 from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
 from src.infrastructure.rules.json_loader import JsonRuleLoader
@@ -23,6 +24,19 @@ def create_audit_service(settings: AppSettings) -> AuditService:
         extractor=WholeFileExtractor(),
         evaluator=_create_evaluator(settings),
         rule_loader=JsonRuleLoader(
-            default_rules_path=settings.default_rules_path
-        ),
+            default_rules_path=settings.default_rules_path),
+    )
+
+
+def create_project_audit_service(settings: AppSettings) -> AuditService:
+    if settings.default_project_rules_path is None:
+        raise EnvironmentError(
+            "KEV_DEFAULT_PROJECT_RULES_PATH must be set to use the project "
+            "structure audit CLI (src/cli/project_audit.py)."
+        )
+    return AuditService(
+        extractor=RecursiveProjectExtractor(),
+        evaluator=_create_evaluator(settings),
+        rule_loader=JsonRuleLoader(
+            default_rules_path=settings.default_project_rules_path),
     )

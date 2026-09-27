@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from src.core.domain.enums import QuestionType
 from src.core.domain.rule import AuditRule
+from src.core.domain.units import AuditableUnit
 from src.core.interfaces.rule_loader import BaseRuleLoader
 
 
@@ -25,7 +26,6 @@ class JsonRuleLoader(BaseRuleLoader):
             )
 
         merged: Dict[str, AuditRule] = dict(self._cached_default_rules)
-
         if custom_rules_source is not None:
             merged.update(self._load_from_path_sync(Path(custom_rules_source)))
 
@@ -33,12 +33,23 @@ class JsonRuleLoader(BaseRuleLoader):
 
     def _load_from_path_sync(self, path: Path) -> Dict[str, AuditRule]:
         raw_data: Dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-        return {
-            rule_id: AuditRule(
+        rules: Dict[str, AuditRule] = {}
+        for rule_id, spec in raw_data.items():
+            kwargs: Dict[str, Any] = dict(
                 rule_id=rule_id,
                 question_type=QuestionType(spec["type"]),
                 instructions=spec["instructions"],
-                criteria=spec["criteria"],
             )
-            for rule_id, spec in raw_data.items()
-        }
+            if "target_unit_types" in spec:
+                kwargs["target_unit_types"] = self._validate_unit_types(
+                    spec["target_unit_types"], rule_id)
+            rules[rule_id] = AuditRule(**kwargs)
+        return rules
+
+    def _validate_unit_types(self, raw_types: List[str], rule_id: str) -> List[str]:
+        known = set(AuditableUnit.known_unit_types())
+        unknown = [t for t in raw_types if t not in known]
+        if unknown:
+            raise ValueError(
+                f"Rule '{rule_id}' has unknown target_unit_types {unknown}; known: {sorted(known)}")
+        return list(raw_types)

@@ -25,6 +25,10 @@ class AppSettings:
     kev_base_url: str = "http://127.0.0.1:8009"
     kev_api_key: Optional[str] = None
 
+    # Optional: only needed by src/cli/project_audit.py. Left optional so
+    # existing .env files without it keep working for file audits.
+    default_project_rules_path: Optional[Path] = None
+
     @classmethod
     def from_env(cls, dotenv_path: Path = Path(".env")) -> "AppSettings":
         _load_dotenv(dotenv_path)
@@ -38,6 +42,8 @@ class AppSettings:
                 "KEV_MODEL_NAME and KEV_DEFAULT_RULES_PATH must be set."
             )
 
+        project_rules_path = os.environ.get("KEV_DEFAULT_PROJECT_RULES_PATH")
+
         return cls(
             model_name=model_name,
             default_rules_path=Path(rules_path),
@@ -45,4 +51,6 @@ class AppSettings:
             kev_base_url=os.environ.get(
                 "KEV_BASE_URL", "http://127.0.0.1:8009"),
             kev_api_key=os.environ.get("KEV_API_KEY") or None,
+            default_project_rules_path=Path(
+                project_rules_path) if project_rules_path else None,
         )

@@ -1,146 +1,66 @@
 {
   "n_plus_1_query": {
     "type": "choice",
-    "instructions": "Does the code avoid making separate database queries for each item in a list?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Does the code avoid making separate database queries for each item in a list?"
   },
   "hardcoded_secrets": {
     "type": "choice",
-    "instructions": "Is the code free of hardcoded API keys, passwords, or tokens?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Is the code free of hardcoded API keys, passwords, or tokens?"
   },
   "improper_error_handling": {
     "type": "choice",
-    "instructions": "Are exceptions handled properly without exposing sensitive stack traces?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Are exceptions handled properly without exposing sensitive stack traces?"
   },
   "sync_blocking_io": {
     "type": "choice",
-    "instructions": "Does the code avoid un-offloaded synchronous file reads or network requests that block the main event loop (e.g., by using async I/O or offloading blocking calls with asyncio.to_thread)?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Does the code avoid un-offloaded synchronous file reads or network requests that block the main event loop (e.g., by using async I/O or offloading blocking calls with asyncio.to_thread)?"
   },
   "missing_input_validation": {
     "type": "choice",
-    "instructions": "Is user input properly validated and sanitized?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Is user input properly validated and sanitized?"
   },
   "tight_coupling": {
     "type": "choice",
-    "instructions": "Are third-party APIs integrated using abstraction layers or interfaces?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Are third-party APIs integrated using abstraction layers or interfaces?"
   },
   "over_fetching_data": {
     "type": "choice",
-    "instructions": "Does the database query only request the specific fields needed?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Does the database query only request the specific fields needed?"
   },
   "prop_drilling": {
     "type": "choice",
-    "instructions": "Is the code free of excessive prop drilling through intermediate components?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Is the code free of excessive prop drilling through intermediate components?"
   },
   "ignoring_composition": {
     "type": "choice",
-    "instructions": "Does the component use 'children' or slots instead of too many configuration props?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Does the component use 'children' or slots instead of too many configuration props?"
   },
   "improper_state_colocation": {
     "type": "choice",
-    "instructions": "Is state kept close to where it is used rather than lifted too high unnecessarily?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Is state kept close to where it is used rather than lifted too high unnecessarily?"
   },
   "direct_dom_manipulation": {
     "type": "choice",
-    "instructions": "Does the code use React's useRef instead of direct DOM manipulation methods?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Does the code use React's useRef instead of direct DOM manipulation methods?"
   },
   "overusing_use_effect": {
     "type": "choice",
-    "instructions": "Is the code free of useEffect hooks used for state that could be derived during render?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Is the code free of useEffect hooks used for state that could be derived during render?"
   },
   "missing_dependency_arrays": {
     "type": "choice",
-    "instructions": "Do all useEffect and useCallback hooks include proper dependency arrays?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Do all useEffect and useCallback hooks include proper dependency arrays?"
   },
   "large_bundle_sizes": {
     "type": "choice",
-    "instructions": "Are imports optimized (e.g., importing specific functions rather than whole libraries)?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Are imports optimized (e.g., importing specific functions rather than whole libraries)?"
   },
   "inline_functions": {
     "type": "choice",
-    "instructions": "Are functions defined outside the render method or JSX to avoid unnecessary re-renders?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Are functions defined outside the render method or JSX to avoid unnecessary re-renders?"
   },
   "god_component": {
     "type": "choice",
-    "instructions": "Does the code avoid god components (class, function, file, React component, module, etc.) by keeping each component focused on a single clear responsibility?",
-    "criteria": {
-      "pass": "Pass",
-      "fail": "Fail",
-      "irrelevant": "Irrelevant"
-    }
+    "instructions": "Does the code avoid god components (class, function, file, React component, module, etc.) by keeping each component focused on a single clear responsibility?"
   }
 }

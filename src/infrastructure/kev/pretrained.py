@@ -26,15 +26,10 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
         self._timeout = timeout_seconds
         self._inference_fn = inference_fn or self._default_inference
 
-    async def evaluate(
-        self, unit: AuditableUnit, rules: Sequence[AuditRule]
-    ) -> List[AuditFinding]:
+    async def evaluate(self, unit: AuditableUnit, rules: Sequence[AuditRule]) -> List[AuditFinding]:
         context = unit.get_content()
         questions_payload = self._build_questions_payload(rules)
-
-        raw_answers = await asyncio.to_thread(
-            self._inference_fn, context, questions_payload
-        )
+        raw_answers = await asyncio.to_thread(self._inference_fn, context, questions_payload)
 
         findings: List[AuditFinding] = []
         for rule in rules:
@@ -42,51 +37,36 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
             choice_key = answer_data.get("choice")
             if choice_key is None:
                 continue
-
-            mapped_judgment = rule.criteria.get(choice_key, choice_key)
             findings.append(
                 AuditFinding(
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
-                    judgment=Judgment(mapped_judgment),
+                    judgment=Judgment[choice_key.upper()],
                     instructions=rule.instructions,
                     confidence=answer_data.get("confidence"),
                     probabilities=answer_data.get("probabilities"),
                     metadata=unit.get_metadata(),
                 )
             )
-
         return findings
 
     def _build_questions_payload(self, rules: Sequence[AuditRule]) -> Dict[str, Any]:
+        criteria = Judgment.as_criteria_payload()
         return {
-            rule.rule_id: {
-                "type": rule.question_type.value,
-                "instructions": rule.instructions,
-                "criteria": rule.criteria,
-            }
+            rule.rule_id: {"type": rule.question_type.value,
+                           "instructions": rule.instructions, "criteria": criteria}
             for rule in rules
         }
 
-    def _default_inference(
-        self, context: str, questions: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        payload = {
-            "model": self._model_name,
-            "state": context,
-            "questions": questions,
-        }
+    def _default_inference(self, context: str, questions: Dict[str, Any]) -> Dict[str, Any]:
+        payload = {"model": self._model_name,
+                   "state": context, "questions": questions}
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
-
         req = urllib.request.Request(
-            self._endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="POST",
+            self._endpoint, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST"
         )
         with urllib.request.urlopen(req, timeout=self._timeout) as response:
             response_data = json.loads(response.read().decode("utf-8"))
-
         return response_data.get("answers", {})

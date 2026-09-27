@@ -15,8 +15,6 @@ from src.core.interfaces.evaluator import BaseKevEvaluator
 
 
 class InProcessKevEvaluator(BaseKevEvaluator):
-    """Loads Kev weights in-process via kev.serve.Server and evaluates rules without HTTP."""
-
     def __init__(self, checkpoint: str = "jaredpalmer/kev-0.8b"):
         self._checkpoint = checkpoint
         self._server: Optional[Server] = None
@@ -37,14 +35,11 @@ class InProcessKevEvaluator(BaseKevEvaluator):
             opts = replace(opts, fused=fused_available())
         if opts.backend is None:
             opts = replace(opts, backend="auto")
-
         ck = Checkpoint(self._checkpoint)
         tok, model = ck.load(dev, opts)
         self._server = Server(ck, tok, model, dev)
 
-    async def evaluate(
-        self, unit: AuditableUnit, rules: Sequence[AuditRule]
-    ) -> List[AuditFinding]:
+    async def evaluate(self, unit: AuditableUnit, rules: Sequence[AuditRule]) -> List[AuditFinding]:
         async with self._lock:
             if self._server is None:
                 await asyncio.to_thread(self._load_server_sync)
@@ -66,28 +61,26 @@ class InProcessKevEvaluator(BaseKevEvaluator):
             choice_key = answer_data.get("choice")
             if choice_key is None:
                 continue
-
-            mapped_judgment = rule.criteria.get(choice_key, choice_key)
             findings.append(
                 AuditFinding(
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
-                    judgment=Judgment(mapped_judgment),
+                    judgment=Judgment[choice_key.upper()],
                     instructions=rule.instructions,
                     confidence=answer_data.get("confidence"),
                     probabilities=answer_data.get("probabilities"),
                     metadata=unit.get_metadata(),
                 )
             )
-
         return findings
 
     def _build_questions_payload(self, rules: Sequence[AuditRule]) -> Dict[str, Any]:
+        criteria = Judgment.as_criteria_payload()
         return {
             rule.rule_id: {
                 "type": rule.question_type.value,
-                "instructions": rule.instructions,
-                "criteria": rule.criteria,
+                "instructions": rule.instructions, 
+                "criteria": criteria
             }
             for rule in rules
         }

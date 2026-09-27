@@ -1,0 +1,92 @@
+{
+  "god_package": {
+    "type": "choice",
+    "instructions": "Does this directory avoid being a 'god package' (i.e. it has a small, focused set of files rather than dozens of unrelated files)?",
+    "target_unit_types": ["project_directory"]
+  },
+  "junk_drawer_module": {
+    "type": "choice",
+    "instructions": "Does this directory avoid being a catch-all junk-drawer package (named 'utils', 'helpers', 'misc', or 'common') filled with unrelated functions?",
+    "target_unit_types": ["project_directory"]
+  },
+  "flat_structure": {
+    "type": "choice",
+    "instructions": "Are files organized into subpackages when appropriate rather than dumping an excessive number of files into one flat directory?",
+    "target_unit_types": ["project_directory"]
+  },
+  "excessive_nesting_depth": {
+    "type": "choice",
+    "instructions": "Is the directory nesting depth shallow and reasonable (e.g. 3 levels or fewer) rather than excessively deep?",
+    "target_unit_types": ["project_directory"]
+  },
+  "inconsistent_naming_convention": {
+    "type": "choice",
+    "instructions": "Do all file names and subdirectory names in this directory follow a consistent naming convention (such as snake_case)?",
+    "target_unit_types": ["project_directory"]
+  },
+  "trivial_subpackage": {
+    "type": "choice",
+    "instructions": "If this directory has subdirectories, do they avoid being trivial single-file packages that do not need their own directory?",
+    "target_unit_types": ["project_directory"]
+  },
+  "test_structure_mismatch": {
+    "type": "choice",
+    "instructions": "If this directory is a test directory (e.g. 'tests'), does its layout mirror the source tree? (Mark Irrelevant if not a test directory.)",
+    "target_unit_types": ["project_directory"]
+  },
+  "barrel_file_sprawl": {
+    "type": "choice",
+    "instructions": "Does this directory avoid having excessive barrel/index files that do nothing but re-export symbols across every subpackage?",
+    "target_unit_types": ["project_directory"]
+  },
+  "circular_package_dependencies": {
+    "type": "choice",
+    "instructions": "Are the packages and subpackages in this directory tree free of circular dependencies (where Mutual Subpackage Cycles is 'none' and no two packages import from each other)?",
+    "target_unit_types": ["project_directory"]
+  },
+  "layering_violation": {
+    "type": "choice",
+    "instructions": "Does this directory respect architectural layer boundaries (core/domain must not import from infrastructure or cli; infrastructure must not import from cli/entrypoints)?",
+    "target_unit_types": ["project_directory"]
+  },
+  "god_file_or_class": {
+    "type": "choice",
+    "instructions": "Are all files in this directory reasonably sized (e.g. under 300 lines) rather than overly large 'god' files or classes?",
+    "target_unit_types": ["project_directory"]
+  },
+  "duplicate_modules": {
+    "type": "choice",
+    "instructions": "Are the files in this directory distinct in purpose rather than near-duplicate modules with redundant classes/functions?",
+    "target_unit_types": ["project_directory"]
+  },
+  "leaky_abstraction": {
+    "type": "choice",
+    "instructions": "If this directory is in the core/domain layer, does it avoid importing third-party frameworks, HTTP clients, or torch/ORM libraries? (Mark Irrelevant if not core/domain.)",
+    "target_unit_types": ["project_directory"]
+  },
+  "business_logic_in_presentation_layer": {
+    "type": "choice",
+    "instructions": "If this directory is a CLI or presentation layer, does it delegate core auditing/business logic to services instead of implementing domain logic directly? (Mark Irrelevant if not CLI/presentation.)",
+    "target_unit_types": ["project_directory"]
+  },
+  "dead_code_module": {
+    "type": "choice",
+    "instructions": "Are the modules in this directory imported and used by other modules in the directory tree?",
+    "target_unit_types": ["project_directory"]
+  },
+  "missing_package_public_api": {
+    "type": "choice",
+    "instructions": "If this directory is a multi-file library subpackage (excluding pure parent namespace directories with 0 files and CLI entrypoint folders), does it provide an __init__.py with exports?",
+    "target_unit_types": ["project_directory"]
+  },
+  "scattered_feature_logic": {
+    "type": "choice",
+    "instructions": "Are the files within this directory cohesive and focused on a single architectural concern?",
+    "target_unit_types": ["project_directory"]
+  },
+  "inconsistent_architectural_style": {
+    "type": "choice",
+    "instructions": "Does the structure of this directory follow a clean layered/hexagonal architecture consistent with its subpackages?",
+    "target_unit_types": ["project_directory"]
+  }
+}
