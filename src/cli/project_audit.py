@@ -9,6 +9,7 @@ from src.cli.factory import create_project_audit_service
 from src.cli.file_collector import collect_target_directories
 from src.cli.formatter import format_audit_report
 from src.config.settings import AppSettings
+from src.core.domain.report import AuditReport
 from src.core.services.audit_service import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
@@ -52,12 +53,19 @@ class ProjectAuditCLIApp:
         )
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
 
-        async def _audit_with_limit(dir_path: Path):
+        async def _audit_with_limit(dir_path: Path) -> Optional[AuditReport]:
             async with semaphore:
-                return await self._audit_service.run_audit(
-                    target=dir_path,
-                    custom_rules_source=args.rules,
-                )
+                try:
+                    return await self._audit_service.run_audit(
+                        target=dir_path,
+                        custom_rules_source=args.rules,
+                    )
+                except Exception as exc:
+                    print(
+                        f"[klint-project] Skipping {dir_path}: {exc}",
+                        file=sys.stderr,
+                    )
+                    return None
 
         reports = await asyncio.gather(
             *(_audit_with_limit(dir_path) for dir_path in target_dirs)
@@ -65,15 +73,21 @@ class ProjectAuditCLIApp:
         issues: List[Dict[str, Any]] = [
             issue
             for report in reports
+            if report is not None
             for issue in report.get_issues(
                 fails_only=not args.all,
                 min_confidence=args.min_confidence,
             )
         ]
-        examined = [str(d) for d in target_dirs]
+        examined = [
+            str(d) for d, report in zip(target_dirs, reports) if report is not None
+        ]
         if args.json:
-            print(json.dumps(
-                {"examined_directories": examined, "issues": issues}, indent=2))
+            print(
+                json.dumps(
+                    {"examined_directories": examined, "issues": issues}, indent=2
+                )
+            )
         else:
             print(format_audit_report(examined, issues, target_label="directories"))
         return 0

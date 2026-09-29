@@ -9,6 +9,7 @@ from src.cli.factory import create_audit_service
 from src.cli.file_collector import collect_target_files
 from src.cli.formatter import format_audit_report
 from src.config.settings import AppSettings
+from src.core.domain.report import AuditReport
 from src.core.services.audit_service import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
@@ -56,12 +57,17 @@ class CLIApp:
         target_files = await asyncio.to_thread(collect_target_files, args.file)
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
 
-        async def _audit_with_limit(file_path: Path):
+        async def _audit_with_limit(file_path: Path) -> Optional[AuditReport]:
             async with semaphore:
-                return await self._audit_service.run_audit(
-                    target=file_path,
-                    custom_rules_source=args.rules,
-                )
+                try:
+                    return await self._audit_service.run_audit(
+                        target=file_path,
+                        custom_rules_source=args.rules,
+                    )
+                except Exception as exc:
+                    print(
+                        f"[klint] Skipping {file_path}: {exc}", file=sys.stderr)
+                    return None
 
         reports = await asyncio.gather(
             *(_audit_with_limit(file_path) for file_path in target_files)
@@ -69,12 +75,15 @@ class CLIApp:
         issues: List[Dict[str, Any]] = [
             issue
             for report in reports
+            if report is not None
             for issue in report.get_issues(
                 fails_only=not args.all,
                 min_confidence=args.min_confidence,
             )
         ]
-        examined = [str(p) for p in target_files]
+        examined = [
+            str(p) for p, report in zip(target_files, reports) if report is not None
+        ]
         if args.json:
             print(json.dumps(
                 {"examined_files": examined, "issues": issues}, indent=2))
