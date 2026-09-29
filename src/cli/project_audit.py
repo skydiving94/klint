@@ -13,6 +13,7 @@ from src.core.domain.report import AuditReport
 from src.core.services.audit_service import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
+DEFAULT_FAIL_MIN_CONFIDENCE = 0.50
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -23,16 +24,21 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "directory", type=Path, help="Path to the project directory to audit"
     )
     parser.add_argument(
-        "--rules", type=Path, default=None, help="Path to user-defined rules JSON file"
+        "--rules",
+        type=Path,
+        default=None,
+        help="Path to user-defined rules JSON file",
     )
     parser.add_argument(
-        "--all", action="store_true", help="Output all judgments instead of fails only"
+        "--all",
+        action="store_true",
+        help="Output all judgments instead of fails only",
     )
     parser.add_argument(
         "--min-confidence",
         type=float,
-        default=0.0,
-        help="Minimum confidence to report an issue",
+        default=None,
+        help="Minimum confidence to report an issue (default: 0.50 for fails, 0.0 with --all)",
     )
     parser.add_argument(
         "--json",
@@ -43,13 +49,29 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 
 class ProjectAuditCLIApp:
-    def __init__(self, audit_service: AuditService):
+    def __init__(
+        self,
+        audit_service: AuditService,
+        default_custom_rules: Optional[Path] = None,
+    ):
         self._audit_service = audit_service
+        self._default_custom_rules = default_custom_rules
 
     async def run(self, argv: Optional[Sequence[str]] = None) -> int:
         args = _parse_args(argv)
-        target_dirs = await asyncio.to_thread(
-            collect_target_directories, args.directory
+        rules_source = args.rules or self._default_custom_rules
+        try:
+            target_dirs = await asyncio.to_thread(
+                collect_target_directories, args.directory
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"[klint-project] Error: {exc}", file=sys.stderr)
+            return 1
+
+        effective_min_confidence = (
+            args.min_confidence
+            if args.min_confidence is not None
+            else (0.0 if args.all else DEFAULT_FAIL_MIN_CONFIDENCE)
         )
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
 
@@ -58,7 +80,7 @@ class ProjectAuditCLIApp:
                 try:
                     return await self._audit_service.run_audit(
                         target=dir_path,
-                        custom_rules_source=args.rules,
+                        custom_rules_source=rules_source,
                     )
                 except Exception as exc:
                     print(
@@ -76,27 +98,38 @@ class ProjectAuditCLIApp:
             if report is not None
             for issue in report.get_issues(
                 fails_only=not args.all,
-                min_confidence=args.min_confidence,
+                min_confidence=effective_min_confidence,
             )
         ]
         examined = [
-            str(d) for d, report in zip(target_dirs, reports) if report is not None
+            str(d)
+            for d, report in zip(target_dirs, reports)
+            if report is not None
         ]
         if args.json:
             print(
                 json.dumps(
-                    {"examined_directories": examined, "issues": issues}, indent=2
+                    {"examined_directories": examined, "issues": issues},
+                    indent=2,
                 )
             )
         else:
-            print(format_audit_report(examined, issues, target_label="directories"))
+            print(
+                format_audit_report(
+                    examined, issues, target_label="directories"
+                )
+            )
         return 0
 
 
 async def main() -> int:
-    settings = await asyncio.to_thread(AppSettings.from_env)
+    args = _parse_args(sys.argv[1:])
+    settings = await asyncio.to_thread(
+        AppSettings.from_env, args.directory, args.rules
+    )
     app = ProjectAuditCLIApp(
-        audit_service=create_project_audit_service(settings)
+        audit_service=create_project_audit_service(settings),
+        default_custom_rules=settings.discovered_config_path,
     )
     return await app.run(sys.argv[1:])
 

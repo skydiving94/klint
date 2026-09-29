@@ -38,6 +38,8 @@ def _is_likely_binary(path: Path) -> bool:
 
 
 def collect_target_files(target: Path) -> List[Path]:
+    if not target.exists():
+        raise FileNotFoundError(f"Audit target does not exist: {target}")
     if target.is_file():
         return [target]
     return [
@@ -52,6 +54,10 @@ def collect_target_files(target: Path) -> List[Path]:
 
 
 def collect_target_directories(target: Path) -> List[Path]:
+    if not target.exists():
+        raise FileNotFoundError(
+            f"Project structure audit target does not exist: {target}"
+        )
     if not target.is_dir():
         raise ValueError(
             f"Project structure audit target must be a directory: {target}"
