@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "klint-auditor"
+version = "0.1.0"
+description = "Declarative semantic linter and architectural code auditor for local kev and System One (/v1/systemone) models"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "torch>=2.2.0",
+]
+
+[project.scripts]
+klint = "src.cli.basic_audit:cli_main"
+klint-project = "src.cli.project_audit:cli_main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

@@ -10,6 +10,8 @@ from src.cli.file_collector import collect_target_directories
 from src.config.settings import AppSettings
 from src.core.services.audit_service import AuditService
 
+MAX_CONCURRENT_AUDITS = 8
+
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -42,14 +44,17 @@ class ProjectAuditCLIApp:
         target_dirs = await asyncio.to_thread(
             collect_target_directories, args.directory
         )
-        reports = await asyncio.gather(
-            *(
-                self._audit_service.run_audit(
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
+
+        async def _audit_with_limit(dir_path: Path):
+            async with semaphore:
+                return await self._audit_service.run_audit(
                     target=dir_path,
                     custom_rules_source=args.rules,
                 )
-                for dir_path in target_dirs
-            )
+
+        reports = await asyncio.gather(
+            *(_audit_with_limit(dir_path) for dir_path in target_dirs)
         )
         issues: List[Dict[str, Any]] = [
             issue
@@ -70,9 +75,14 @@ class ProjectAuditCLIApp:
 async def main() -> int:
     settings = await asyncio.to_thread(AppSettings.from_env)
     app = ProjectAuditCLIApp(
-        audit_service=create_project_audit_service(settings))
+        audit_service=create_project_audit_service(settings)
+    )
     return await app.run(sys.argv[1:])
 
 
+def cli_main() -> int:
+    return asyncio.run(main())
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(cli_main())

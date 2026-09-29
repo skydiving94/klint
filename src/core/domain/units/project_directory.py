@@ -24,7 +24,8 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
     directory_path: str = ""
     files: List[AuditableFileMetadataUnit] = field(default_factory=list)
     subdirectories: List[AuditableProjectDirectoryUnit] = field(
-        default_factory=list)
+        default_factory=list
+    )
 
     @property
     def directory_name(self) -> str:
@@ -36,39 +37,68 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
             own.update(sub.get_all_imports())
         return own
 
+    def _get_internal_module_names(self) -> Set[str]:
+        names: Set[str] = {self.directory_name}
+        for f in self.files:
+            stem = Path(f.file_name).stem
+            if stem and stem != "__init__":
+                names.add(stem)
+        for sub in self.subdirectories:
+            names.update(sub._get_internal_module_names())
+        return names
+
+    def _is_internal_import(self, imp: str, known_modules: Set[str]) -> bool:
+        if imp.startswith("."):
+            return True
+        parts = [p for p in imp.split(".") if p]
+        return bool(parts and (parts[0] in known_modules or any(p in known_modules for p in parts)))
+
     def get_content(self) -> str:
+        known_modules = self._get_internal_module_names()
         internal_imps = sorted(
-            imp for imp in self.get_all_imports() if imp.startswith(("src.", "."))
+            imp
+            for imp in self.get_all_imports()
+            if self._is_internal_import(imp, known_modules)
         )
         lines = [
             f"Target Directory Under Audit: {self.directory_path}",
             f"Summary: {len(self.files)} immediate files, {len(self.subdirectories)} immediate subdirectories",
             f"Internal Project Imports in Tree: [{', '.join(internal_imps) if internal_imps else 'none'}]",
         ]
-        rollup = self._render_dependency_rollup()
+        rollup = self._render_dependency_rollup(known_modules)
         if rollup:
             lines.append(rollup)
         lines.append(self._render_tree(indent=0))
         return "\n".join(lines)
 
-    def _render_dependency_rollup(self) -> str:
+    def _render_dependency_rollup(self, known_modules: Set[str]) -> str:
         if not self.subdirectories:
             return ""
-        sub_imports = {d.directory_name: sorted(
-            d.get_all_imports()) for d in self.subdirectories}
+        sub_imports = {
+            d.directory_name: sorted(d.get_all_imports())
+            for d in self.subdirectories
+        }
         lines = ["Subpackage Dependency Rollup:"]
         for name, imps in sub_imports.items():
             lines.append(f"  - {name} imports: [{', '.join(imps)}]")
+
         cycles: List[str] = []
         names = list(sub_imports.keys())
         for i, a in enumerate(names):
             for b in names[i + 1:]:
-                a_to_b = any(b in imp.split(".") for imp in sub_imports[a])
-                b_to_a = any(a in imp.split(".") for imp in sub_imports[b])
+                a_internal = [
+                    imp for imp in sub_imports[a] if self._is_internal_import(imp, known_modules)
+                ]
+                b_internal = [
+                    imp for imp in sub_imports[b] if self._is_internal_import(imp, known_modules)
+                ]
+                a_to_b = any(b in imp.split(".") for imp in a_internal)
+                b_to_a = any(a in imp.split(".") for imp in b_internal)
                 if a_to_b and b_to_a:
                     cycles.append(f"{a} <-> {b}")
         lines.append(
-            f"  Mutual Subpackage Cycles: {', '.join(cycles) if cycles else 'none'}")
+            f"  Mutual Subpackage Cycles: {', '.join(cycles) if cycles else 'none'}"
+        )
         return "\n".join(lines)
 
     def _render_tree(self, indent: int = 0) -> str:
@@ -76,9 +106,11 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
         lines = [f"{prefix}Directory: {self.directory_path}"]
         if self.subdirectories:
             subdir_names = ", ".join(
-                d.directory_name for d in self.subdirectories)
+                d.directory_name for d in self.subdirectories
+            )
             lines.append(
-                f"{prefix}  Immediate Subdirectories: [{subdir_names}]")
+                f"{prefix}  Immediate Subdirectories: [{subdir_names}]"
+            )
         if self.files:
             lines.append(f"{prefix}  Files:")
             for file_unit in self.files:

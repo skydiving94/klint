@@ -4,14 +4,18 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
+
 from src.cli.factory import create_audit_service
 from src.cli.file_collector import collect_target_files
 from src.config.settings import AppSettings
 from src.core.services.audit_service import AuditService
 
+MAX_CONCURRENT_AUDITS = 8
+
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="klint - Declarative Code Auditor CLI")
+    parser = argparse.ArgumentParser(
+        description="klint - Declarative Code Auditor CLI")
     parser.add_argument(
         "file",
         type=Path,
@@ -44,16 +48,18 @@ class CLIApp:
     async def run(self, argv: Optional[Sequence[str]] = None) -> int:
         args = _parse_args(argv)
         target_files = await asyncio.to_thread(collect_target_files, args.file)
-        reports = await asyncio.gather(
-            *(
-                self._audit_service.run_audit(
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
+
+        async def _audit_with_limit(file_path: Path):
+            async with semaphore:
+                return await self._audit_service.run_audit(
                     target=file_path,
                     custom_rules_source=args.rules,
                 )
-                for file_path in target_files
-            )
-        )
 
+        reports = await asyncio.gather(
+            *(_audit_with_limit(file_path) for file_path in target_files)
+        )
         issues: List[Dict[str, Any]] = [
             issue
             for report in reports
@@ -76,5 +82,9 @@ async def main() -> int:
     return await app.run(sys.argv[1:])
 
 
+def cli_main() -> int:
+    return asyncio.run(main())
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(cli_main())
