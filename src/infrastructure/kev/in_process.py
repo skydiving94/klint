@@ -1,8 +1,14 @@
 import asyncio
+import os
 from dataclasses import replace
 from typing import Any, Dict, List, Optional, Sequence
 
+# Silence Hugging Face Hub & Xet download/reconstruction progress bars before importing kev
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TQDM_DISABLE", "1")
+
 import torch
+from huggingface_hub.utils import disable_progress_bars
 from kev.checkpoint import Checkpoint, LoadOptions, fused_available
 from kev.device import default_device
 from kev.serve import Server
@@ -12,6 +18,8 @@ from src.core.domain.report import AuditFinding
 from src.core.domain.rule import AuditRule
 from src.core.domain.units import AuditableUnit
 from src.core.interfaces.evaluator import BaseKevEvaluator
+
+disable_progress_bars()
 
 
 class InProcessKevEvaluator(BaseKevEvaluator):

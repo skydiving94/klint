@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from src.cli.factory import create_audit_service
 from src.cli.file_collector import collect_target_files
+from src.cli.formatter import format_audit_report
 from src.config.settings import AppSettings
 from src.core.services.audit_service import AuditService
 
@@ -38,6 +39,11 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=0.0,
         help="Minimum confidence threshold (0.0 to 1.0) required to report an issue",
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON instead of formatted terminal report",
+    )
     return parser.parse_args(argv)
 
 
@@ -68,11 +74,12 @@ class CLIApp:
                 min_confidence=args.min_confidence,
             )
         ]
-        output = {
-            "examined_files": [str(p) for p in target_files],
-            "issues": issues,
-        }
-        print(json.dumps(output, indent=2))
+        examined = [str(p) for p in target_files]
+        if args.json:
+            print(json.dumps(
+                {"examined_files": examined, "issues": issues}, indent=2))
+        else:
+            print(format_audit_report(examined, issues, target_label="files"))
         return 0
 
 

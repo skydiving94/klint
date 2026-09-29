@@ -1,0 +1,12 @@
+{
+  "structured_logging_only": {
+    "type": "choice",
+    "instructions": "Does the code emit logs using the structured logger rather than raw print() statements?",
+    "target_unit_types": ["file"]
+  },
+  "domain_purity": {
+    "type": "choice",
+    "instructions": "Does the core domain package remain free of database ORM and HTTP framework imports rather than coupling domain entities to infrastructure?",
+    "target_unit_types": ["project_directory"]
+  }
+}
