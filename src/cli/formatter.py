@@ -1,3 +1,4 @@
+import sys
 from collections import defaultdict
 from typing import Any, Dict, List, Sequence
 
@@ -18,6 +19,53 @@ _JUDGMENT_ORDER: Dict[str, int] = {
     "PASS": 2,
     "IRRELEVANT": 3,
 }
+
+
+class AuditProgressReporter:
+    """Renders a live single-line progress bar to stderr and clears it upon completion."""
+
+    def __init__(
+        self, total: int, label: str = "files", enabled: bool = True
+    ) -> None:
+        self._total = max(total, 1)
+        self._completed = 0
+        self._label = label
+        self._enabled = enabled and sys.stderr.isatty()
+
+    def start(self) -> None:
+        if not self._enabled:
+            return
+        self._render(
+            f"Initializing model & extracting {self._total} {self._label}...")
+
+    def advance(self, target_name: str) -> None:
+        if not self._enabled:
+            return
+        self._completed += 1
+        self._render(f"Audited {target_name}")
+
+    def finish(self) -> None:
+        if not self._enabled:
+            return
+        sys.stderr.write("\r\033[K")
+        sys.stderr.flush()
+
+    def _render(self, status_text: str, width: int = 16) -> None:
+        ratio = min(1.0, self._completed / self._total)
+        filled = round(ratio * width)
+        bar = "\u2588" * filled + "\u2591" * (width - filled)
+        pct = f"{ratio * 100:3.0f}%"
+        short_status = (
+            status_text if len(status_text) <= 48 else "..." +
+            status_text[-45:]
+        )
+        line = (
+            f"\r\033[K{_ANSI.CYAN}{bar}{_ANSI.RESET} "
+            f"{_ANSI.BOLD}{self._completed}/{self._total}{_ANSI.RESET} ({pct}) "
+            f"{_ANSI.DIM}{short_status}{_ANSI.RESET}"
+        )
+        sys.stderr.write(line)
+        sys.stderr.flush()
 
 
 def _badge(judgment: str) -> str:
@@ -108,7 +156,8 @@ def format_audit_report(
             )
             if instructions:
                 lines.append(
-                    f"      {_ANSI.DIM}\u21b3 {instructions}{_ANSI.RESET}")
+                    f"      {_ANSI.DIM}\u21b3 {instructions}{_ANSI.RESET}"
+                )
 
     lines.append("\n" + divider)
     summary_color = _ANSI.RED if fail_count > 0 else _ANSI.GREEN

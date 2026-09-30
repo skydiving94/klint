@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from src.cli.factory import create_project_audit_service
 from src.cli.file_collector import collect_target_directories
-from src.cli.formatter import format_audit_report
+from src.cli.formatter import AuditProgressReporter, format_audit_report
 from src.config.settings import AppSettings
 from src.core.domain.report import AuditReport
 from src.core.services.audit_service import AuditService
@@ -68,6 +68,10 @@ class ProjectAuditCLIApp:
             print(f"[klint-project] Error: {exc}", file=sys.stderr)
             return 1
 
+        progress = AuditProgressReporter(
+            total=len(target_dirs), label="directories", enabled=not args.json
+        )
+        progress.start()
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
 
         async def _audit_with_limit(dir_path: Path) -> Optional[AuditReport]:
@@ -78,15 +82,20 @@ class ProjectAuditCLIApp:
                         custom_rules_source=rules_source,
                     )
                 except Exception as exc:
+                    progress.finish()
                     print(
                         f"[klint-project] Skipping {dir_path}: {exc}",
                         file=sys.stderr,
                     )
                     return None
+                finally:
+                    progress.advance(str(dir_path))
 
         reports = await asyncio.gather(
             *(_audit_with_limit(dir_path) for dir_path in target_dirs)
         )
+        progress.finish()
+
         issues: List[Dict[str, Any]] = [
             issue
             for report in reports
