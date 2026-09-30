@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from src.cli.file_collector import IGNORED_DIRS, IGNORED_FILES, IGNORED_SUFFIXES
 from src.core.domain.units import (
@@ -8,7 +8,10 @@ from src.core.domain.units import (
     AuditableProjectDirectoryUnit,
     AuditableUnit,
 )
-from src.core.interfaces.extractor import BaseFileMetadataExtractor, BaseUnitExtractor
+from src.core.interfaces.extractor import (
+    BaseFileMetadataExtractor,
+    BaseUnitExtractor,
+)
 from src.infrastructure.extractors.file_metadata_extractor import (
     FallbackFileMetadataExtractor,
     PythonFileMetadataExtractor,
@@ -17,7 +20,8 @@ from src.infrastructure.extractors.file_metadata_extractor import (
 
 class RecursiveProjectExtractor(BaseUnitExtractor):
     """Builds a composite AuditableProjectDirectoryUnit containing metadata for
-    the target directory and all of its descendant subdirectories.
+    the target directory and all of its descendant subdirectories, caching
+    subtrees so each file is parsed at most once across a project audit.
     """
 
     def __init__(
@@ -29,12 +33,22 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
             if file_extractors is not None
             else (PythonFileMetadataExtractor(), FallbackFileMetadataExtractor())
         )
+        self._dir_cache: Dict[Path, Tuple[str,
+                                          AuditableProjectDirectoryUnit]] = {}
+        self._lock = asyncio.Lock()
 
     async def extract(self, target: str | Path) -> List[AuditableUnit]:
-        root_unit = await asyncio.to_thread(self._walk, Path(target))
+        target_path = Path(target)
+        async with self._lock:
+            root_unit = await asyncio.to_thread(self._walk, target_path)
         return [root_unit]
 
     def _walk(self, directory: Path) -> AuditableProjectDirectoryUnit:
+        resolved = directory.resolve()
+        cached = self._dir_cache.get(resolved)
+        if cached is not None and cached[0] == str(directory):
+            return cached[1]
+
         files: List[AuditableFileMetadataUnit] = []
         subdirs: List[AuditableProjectDirectoryUnit] = []
 
@@ -44,16 +58,21 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
                     continue
                 subdirs.append(self._walk(entry))
             elif entry.is_file():
-                if entry.name in IGNORED_FILES or entry.suffix.lower() in IGNORED_SUFFIXES:
+                if (
+                    entry.name in IGNORED_FILES
+                    or entry.suffix.lower() in IGNORED_SUFFIXES
+                ):
                     continue
                 files.append(self._extract_file_metadata(entry))
 
-        return AuditableProjectDirectoryUnit(
+        unit = AuditableProjectDirectoryUnit(
             unit_id=str(directory),
             directory_path=str(directory),
             files=files,
             subdirectories=subdirs,
         )
+        self._dir_cache[resolved] = (str(directory), unit)
+        return unit
 
     def _extract_file_metadata(self, path: Path) -> AuditableFileMetadataUnit:
         for extractor in self._file_extractors:

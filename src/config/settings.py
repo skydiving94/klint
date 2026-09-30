@@ -81,6 +81,7 @@ class AppSettings:
     def from_env(
         cls,
         target_path: Optional[Path] = None,
+        config_path: Optional[Path] = None,
         dotenv_path: Optional[Path] = None,
     ) -> "AppSettings":
         # 1. Capture any shell variables explicitly exported by the user
@@ -89,11 +90,13 @@ class AppSettings:
         # 2. Load klint's internal .env / .env.example as fallback defaults
         _load_klint_dotenv(dotenv_path)
 
-        # 3. Check for ESLint-style klint.json / .klintrc.json in target project
-        config_path = find_project_config(target_path)
-        json_env = _load_json_env_overrides(config_path)
+        # 3. Check explicit --rules config file or auto-discovered klint.json
+        active_config = config_path or find_project_config(target_path)
+        json_env = _load_json_env_overrides(active_config)
 
-        def _get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+        def _get_setting(
+            key: str, default: Optional[str] = None
+        ) -> Optional[str]:
             # Priority: Shell Export > Project klint.json "env" > klint .env > Default
             if key in shell_env and shell_env[key]:
                 return shell_env[key]
@@ -129,5 +132,5 @@ class AppSettings:
                 if project_rules_path
                 else None
             ),
-            discovered_config_path=config_path,
+            discovered_config_path=active_config,
         )

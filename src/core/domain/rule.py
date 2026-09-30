@@ -10,8 +10,7 @@ class AuditRule:
     rule_id: str
     question_type: QuestionType
     instructions: str
-    target_unit_types: List[str] = field(
-        default_factory=AuditableUnit.known_unit_types)
+    target_unit_types: List[str] = field(default_factory=lambda: ["file"])
 
     def is_applicable_to(self, unit: AuditableUnit) -> bool:
         return unit.unit_type in self.target_unit_types

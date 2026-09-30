@@ -1,66 +1,82 @@
 {
   "n_plus_1_query": {
     "type": "choice",
-    "instructions": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?"
+    "instructions": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
+    "target_unit_types": ["file"]
   },
   "hardcoded_secrets": {
     "type": "choice",
-    "instructions": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?"
+    "instructions": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
+    "target_unit_types": ["file"]
   },
   "improper_error_handling": {
     "type": "choice",
-    "instructions": "Are exceptions handled safely with clean error responses rather than exposing sensitive internal details or raw stack traces?"
+    "instructions": "Are exceptions handled safely with clean error responses rather than exposing sensitive internal details or raw stack traces?",
+    "target_unit_types": ["file"]
   },
   "sync_blocking_io": {
     "type": "choice",
-    "instructions": "Do async functions perform file and network I/O asynchronously (or offload blocking calls via asyncio.to_thread) rather than blocking the event loop synchronously?"
+    "instructions": "Do async functions perform file and network I/O asynchronously (or offload blocking calls via asyncio.to_thread) rather than blocking the event loop synchronously?",
+    "target_unit_types": ["file"]
   },
   "missing_input_validation": {
     "type": "choice",
-    "instructions": "Is external user input properly validated, sanitized, or parameterized rather than used directly in queries or operations?"
+    "instructions": "Is external user input properly validated, sanitized, or parameterized rather than used directly in queries or operations?",
+    "target_unit_types": ["file"]
   },
   "tight_coupling": {
     "type": "choice",
-    "instructions": "Are external services and third-party APIs integrated behind abstraction layers or interfaces rather than tightly coupled directly inside business logic?"
+    "instructions": "Are external services and third-party APIs integrated behind abstraction layers or interfaces rather than tightly coupled directly inside business logic?",
+    "target_unit_types": ["file"]
   },
   "over_fetching_data": {
     "type": "choice",
-    "instructions": "Do database queries select only the specific columns needed rather than over-fetching entire rows (e.g. SELECT *)?"
+    "instructions": "Do database queries select only the specific columns needed rather than over-fetching entire rows (e.g. SELECT *)?",
+    "target_unit_types": ["file"]
   },
   "prop_drilling": {
     "type": "choice",
-    "instructions": "Do components share state cleanly via composition or context rather than forwarding unused props through multiple intermediate components (prop drilling)?"
+    "instructions": "Do components share state cleanly via composition or context rather than forwarding unused props through multiple intermediate components (prop drilling)?",
+    "target_unit_types": ["file"]
   },
   "ignoring_composition": {
     "type": "choice",
-    "instructions": "Does the component use 'children' or slots for flexible layout rather than accepting an excessive number of rigid configuration props?"
+    "instructions": "Does the component use 'children' or slots for flexible layout rather than accepting an excessive number of rigid configuration props?",
+    "target_unit_types": ["file"]
   },
   "improper_state_colocation": {
     "type": "choice",
-    "instructions": "Is state kept close to the components that use it rather than lifted unnecessarily high in the component tree?"
+    "instructions": "Is state kept close to the components that use it rather than lifted unnecessarily high in the component tree?",
+    "target_unit_types": ["file"]
   },
   "direct_dom_manipulation": {
     "type": "choice",
-    "instructions": "Does the component manage DOM elements declaratively or via React's useRef rather than using direct DOM manipulation (e.g. document.getElementById)?"
+    "instructions": "Does the component manage DOM elements declaratively or via React's useRef rather than using direct DOM manipulation (e.g. document.getElementById)?",
+    "target_unit_types": ["file"]
   },
   "overusing_use_effect": {
     "type": "choice",
-    "instructions": "Is derived state computed directly during render rather than synchronizing state unnecessarily inside a useEffect hook?"
+    "instructions": "Is derived state computed directly during render rather than synchronizing state unnecessarily inside a useEffect hook?",
+    "target_unit_types": ["file"]
   },
   "missing_dependency_arrays": {
     "type": "choice",
-    "instructions": "Do all useEffect and useCallback hooks declare complete, accurate dependency arrays rather than omitting dependencies?"
+    "instructions": "Do all useEffect and useCallback hooks declare complete, accurate dependency arrays rather than omitting dependencies?",
+    "target_unit_types": ["file"]
   },
   "large_bundle_sizes": {
     "type": "choice",
-    "instructions": "Are imports scoped to specific utilities or submodules rather than importing entire heavy libraries?"
+    "instructions": "Are imports scoped to specific utilities or submodules rather than importing entire heavy libraries?",
+    "target_unit_types": ["file"]
   },
   "inline_functions": {
     "type": "choice",
-    "instructions": "Are event handlers defined outside JSX props when appropriate rather than creating complex inline anonymous functions on every render?"
+    "instructions": "Are event handlers defined outside JSX props when appropriate rather than creating complex inline anonymous functions on every render?",
+    "target_unit_types": ["file"]
   },
   "god_component": {
     "type": "choice",
-    "instructions": "Is each class, function, or component focused on a single clear responsibility rather than acting as a 'god component' that mixes unrelated concerns?"
+    "instructions": "Is each class, function, or component focused on a single clear responsibility rather than acting as a 'god component' that mixes unrelated concerns?",
+    "target_unit_types": ["file"]
   }
 }
