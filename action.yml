@@ -53,9 +53,10 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.kev_mode }}" = "local" ]; then
-          pip install "kev[serve] @ git+https://github.com/jaredpalmer/kev.git"
+          pip install --no-cache-dir torch --index-url "https://download.pytorch.org/whl/cpu"
+          pip install --no-cache-dir "kev[serve] @ git+https://[github.com/jaredpalmer/kev.git](https://github.com/jaredpalmer/kev.git)"
         fi
-        pip install -e "${{ github.action_path }}"
+        pip install --no-cache-dir -e "${{ github.action_path }}"
 
     - name: Run klint Audit
       shell: bash
