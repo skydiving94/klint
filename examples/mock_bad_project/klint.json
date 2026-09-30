@@ -1,4 +1,8 @@
 {
+  "env": {
+    "KEV_MODE": "local",
+    "KEV_MODEL_NAME": "jaredpalmer/kev-4b"
+  },
   "rules": {
     "no_raw_print_statements": {
       "type": "choice",
