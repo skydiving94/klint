@@ -13,6 +13,7 @@ class JsonRuleLoader(BaseRuleLoader):
     def __init__(self, default_rules_path: Path):
         self._default_rules_path = default_rules_path
         self._cached_default_rules: Optional[Dict[str, AuditRule]] = None
+        self._cached_custom_rules: Dict[Path, Dict[str, AuditRule]] = {}
         self._lock = asyncio.Lock()
 
     async def load_rules(
@@ -23,12 +24,18 @@ class JsonRuleLoader(BaseRuleLoader):
                 self._cached_default_rules = await asyncio.to_thread(
                     self._load_default_rules_sync
                 )
-        if custom_rules_source is None:
-            return list(self._cached_default_rules.values())
+            if custom_rules_source is None:
+                return list(self._cached_default_rules.values())
 
-        custom_rules = await asyncio.to_thread(
-            self._load_from_path_sync, Path(custom_rules_source)
-        )
+            custom_path = Path(custom_rules_source).resolve()
+            if custom_path not in self._cached_custom_rules:
+                self._cached_custom_rules[custom_path] = (
+                    await asyncio.to_thread(
+                        self._load_custom_rules_sync, custom_path
+                    )
+                )
+            custom_rules = self._cached_custom_rules[custom_path]
+
         merged: Dict[str, AuditRule] = dict(self._cached_default_rules)
         merged.update(custom_rules)
         return list(merged.values())
@@ -37,6 +44,12 @@ class JsonRuleLoader(BaseRuleLoader):
         if not self._default_rules_path.exists():
             return {}
         return self._load_from_path_sync(self._default_rules_path)
+
+    def _load_custom_rules_sync(self, path: Path) -> Dict[str, AuditRule]:
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Custom rules file does not exist: {path}")
+        return self._load_from_path_sync(path)
 
     def _load_from_path_sync(self, path: Path) -> Dict[str, AuditRule]:
         raw_data: Dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
@@ -49,7 +62,11 @@ class JsonRuleLoader(BaseRuleLoader):
         )
         rules: Dict[str, AuditRule] = {}
         for rule_id, spec in rules_block.items():
-            if not isinstance(spec, dict) or "type" not in spec or "instructions" not in spec:
+            if (
+                not isinstance(spec, dict)
+                or "type" not in spec
+                or "instructions" not in spec
+            ):
                 continue
             kwargs: Dict[str, Any] = dict(
                 rule_id=rule_id,

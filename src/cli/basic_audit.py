@@ -13,7 +13,6 @@ from src.core.domain.report import AuditReport
 from src.core.services.audit_service import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
-DEFAULT_FAIL_MIN_CONFIDENCE = 0.50
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -39,8 +38,8 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--min-confidence",
         type=float,
-        default=None,
-        help="Minimum confidence threshold (0.0 to 1.0) required to report an issue (default: 0.50 for fails, 0.0 with --all)",
+        default=0.0,
+        help="Minimum confidence threshold (0.0 to 1.0) required to report an issue",
     )
     parser.add_argument(
         "--json",
@@ -66,15 +65,11 @@ class CLIApp:
             target_files = await asyncio.to_thread(
                 collect_target_files, args.file
             )
-        except (FileNotFoundError, ValueError) as exc:
+            await self._audit_service._rule_loader.load_rules(rules_source)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
             print(f"[klint] Error: {exc}", file=sys.stderr)
             return 1
 
-        effective_min_confidence = (
-            args.min_confidence
-            if args.min_confidence is not None
-            else (0.0 if args.all else DEFAULT_FAIL_MIN_CONFIDENCE)
-        )
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
 
         async def _audit_with_limit(file_path: Path) -> Optional[AuditReport]:
@@ -99,7 +94,7 @@ class CLIApp:
             if report is not None
             for issue in report.get_issues(
                 fails_only=not args.all,
-                min_confidence=effective_min_confidence,
+                min_confidence=args.min_confidence,
             )
         ]
         examined = [
@@ -128,6 +123,7 @@ async def main() -> int:
         default_custom_rules=settings.discovered_config_path,
     )
     return await app.run(sys.argv[1:])
+
 
 def cli_main() -> int:
     return asyncio.run(main())

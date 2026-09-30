@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Set
+from typing import Any, ClassVar, Dict, List, Set, Tuple
 
 from src.core.domain.units.base import AuditableUnit
 from src.core.domain.units.file_metadata import AuditableFileMetadataUnit
@@ -26,10 +26,18 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
     subdirectories: List[AuditableProjectDirectoryUnit] = field(
         default_factory=list
     )
+    project_module_names: Tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def directory_name(self) -> str:
-        return Path(self.directory_path).name or self.directory_path
+        path = Path(self.directory_path)
+        return path.name or path.resolve().name or self.directory_path
+
+    @property
+    def display_path(self) -> str:
+        if self.directory_path in (".", "./"):
+            return self.directory_name
+        return self.directory_path
 
     def get_all_imports(self) -> Set[str]:
         own = {imp for f in self.files for imp in f.imports}
@@ -38,7 +46,10 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
         return own
 
     def _get_internal_module_names(self) -> Set[str]:
-        names: Set[str] = {self.directory_name}
+        names: Set[str] = {self.directory_name, *self.project_module_names}
+        for part in Path(self.directory_path).parts:
+            if part not in ("", ".", "/", "\\") and not part.endswith(":"):
+                names.add(part)
         for f in self.files:
             stem = Path(f.file_name).stem
             if stem and stem != "__init__":
@@ -51,7 +62,13 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
         if imp.startswith("."):
             return True
         parts = [p for p in imp.split(".") if p]
-        return bool(parts and (parts[0] in known_modules or any(p in known_modules for p in parts)))
+        return bool(
+            parts
+            and (
+                parts[0] in known_modules
+                or any(p in known_modules for p in parts)
+            )
+        )
 
     def get_content(self) -> str:
         known_modules = self._get_internal_module_names()
@@ -61,7 +78,7 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
             if self._is_internal_import(imp, known_modules)
         )
         lines = [
-            f"Target Directory Under Audit: {self.directory_path}",
+            f"Target Directory Under Audit: {self.display_path}",
             f"Summary: {len(self.files)} immediate files, {len(self.subdirectories)} immediate subdirectories",
             f"Internal Project Imports in Tree: [{', '.join(internal_imps) if internal_imps else 'none'}]",
         ]
@@ -87,10 +104,14 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
         for i, a in enumerate(names):
             for b in names[i + 1:]:
                 a_internal = [
-                    imp for imp in sub_imports[a] if self._is_internal_import(imp, known_modules)
+                    imp
+                    for imp in sub_imports[a]
+                    if self._is_internal_import(imp, known_modules)
                 ]
                 b_internal = [
-                    imp for imp in sub_imports[b] if self._is_internal_import(imp, known_modules)
+                    imp
+                    for imp in sub_imports[b]
+                    if self._is_internal_import(imp, known_modules)
                 ]
                 a_to_b = any(b in imp.split(".") for imp in a_internal)
                 b_to_a = any(a in imp.split(".") for imp in b_internal)
@@ -103,7 +124,7 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
 
     def _render_tree(self, indent: int = 0) -> str:
         prefix = "  " * indent
-        lines = [f"{prefix}Directory: {self.directory_path}"]
+        lines = [f"{prefix}Directory: {self.display_path}"]
         if self.subdirectories:
             subdir_names = ", ".join(
                 d.directory_name for d in self.subdirectories

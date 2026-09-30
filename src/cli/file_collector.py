@@ -14,6 +14,12 @@ IGNORED_DIRS = {
 }
 IGNORED_FILES = {
     ".DS_Store",
+    ".env",
+    ".env.example",
+    ".gitignore",
+    "klint.json",
+    ".klintrc.json",
+    ".klintrc",
     "package-lock.json",
     "yarn.lock",
     "pnpm-lock.yaml",

@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "no_raw_print_statements": {
+      "type": "choice",
+      "instructions": "Does the code use a structured logger rather than raw print() statements for application logging?",
+      "target_unit_types": ["file"]
+    }
+  }
+}

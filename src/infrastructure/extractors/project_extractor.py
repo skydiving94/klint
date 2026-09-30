@@ -1,6 +1,7 @@
 import asyncio
+from dataclasses import replace
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from src.cli.file_collector import IGNORED_DIRS, IGNORED_FILES, IGNORED_SUFFIXES
 from src.core.domain.units import (
@@ -35,13 +36,44 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
         )
         self._dir_cache: Dict[Path, Tuple[str,
                                           AuditableProjectDirectoryUnit]] = {}
+        self._known_project_modules: Set[str] = set()
         self._lock = asyncio.Lock()
 
     async def extract(self, target: str | Path) -> List[AuditableUnit]:
         target_path = Path(target)
         async with self._lock:
-            root_unit = await asyncio.to_thread(self._walk, target_path)
+            root_unit = await asyncio.to_thread(
+                self._extract_with_project_context, target_path
+            )
         return [root_unit]
+
+    def _extract_with_project_context(
+        self, target_path: Path
+    ) -> AuditableProjectDirectoryUnit:
+        unit = self._walk(target_path)
+        self._known_project_modules.update(unit._get_internal_module_names())
+        shared_modules = tuple(sorted(self._known_project_modules))
+        if unit.project_module_names != shared_modules:
+            unit = self._attach_project_modules(unit, shared_modules)
+        return unit
+
+    def _attach_project_modules(
+        self,
+        unit: AuditableProjectDirectoryUnit,
+        shared_modules: Tuple[str, ...],
+    ) -> AuditableProjectDirectoryUnit:
+        updated_subdirs = [
+            self._attach_project_modules(sub, shared_modules)
+            for sub in unit.subdirectories
+        ]
+        updated = replace(
+            unit,
+            subdirectories=updated_subdirs,
+            project_module_names=shared_modules,
+        )
+        resolved = Path(unit.directory_path).resolve()
+        self._dir_cache[resolved] = (unit.directory_path, updated)
+        return updated
 
     def _walk(self, directory: Path) -> AuditableProjectDirectoryUnit:
         resolved = directory.resolve()
@@ -70,6 +102,7 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
             directory_path=str(directory),
             files=files,
             subdirectories=subdirs,
+            project_module_names=tuple(sorted(self._known_project_modules)),
         )
         self._dir_cache[resolved] = (str(directory), unit)
         return unit
