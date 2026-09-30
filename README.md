@@ -86,6 +86,20 @@
   klint-project src/ --min-confidence 0.25 --json
   ~~~
 
+### 3. GitHub Actions CI/CD Integration
+You can run `klint` or `klint-project` directly in your GitHub Actions workflows:
+
+~~~yaml
+- name: Run klint Architectural Audit
+  uses: skydiving94/klint@main
+  with:
+    target: "src/"
+    mode: "file"                        # "file" (klint) or "project" (klint-project)
+    min_confidence: "0.65"
+    kev_mode: "local"                   # Or "remote" with kev_base_url / kev_api_key
+    kev_model_name: "jaredpalmer/kev-4b"
+~~~
+
 ## Configuration & Custom Rules (`klint.json`)
 
 Like ESLint, `klint` works out of the box from any directory on your machine and automatically discovers a **`klint.json`** (or **`.klintrc.json`**) file in the target project root. You can also pass any custom JSON file explicitly via `--rules ./custom_rules.json`.
@@ -179,12 +193,12 @@ You can configure `klint` via shell environment variables (`export KEV_...`), th
 ## Roadmap & Upcoming Features
 
 1. **Recursive Code Component Analysis & Context-Window Slicing**: Extracting granular AST units (`AuditablePythonClassUnit`, `AuditablePythonFunctionUnit`) so every unit stays inside `kev`'s high-accuracy `<512` token sweet spot while reporting exact method-level line numbers.
-2. **Git Diff Mode (`--diff`)**: Sub-second pre-commit auditing targeting only modified files and diff hunks.
+2. **Git Diff Mode (`--diff`)**: Sub-second pre-commit and PR auditing targeting only modified files and diff hunks.
 3. **Claude Code Hooks & MCP Server Integration**: Exposing `klint` as a deterministic agent supervision hook and local MCP server so AI coding assistants (Claude Code, Cursor, Codex) can audit code in real time.
 4. **Multi-Language AST Metadata Extractors**: Extending `BaseFileMetadataExtractor` to support TypeScript/JavaScript (`.ts`, `.tsx`) and Go for `klint-project`.
-5. **GitHub Actions Integration (`klint-action`)**: Zero-friction CI/CD action to scan pull requests for architectural layering violations and circular dependencies.
+5. **Inline GitHub PR Review Annotations**: Extending the GitHub Action with `--fail-on-issues` gating and inline pull-request review comments on flagged line ranges.
 6. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings and batching multiple small units per inference pass.
-
+7. 
 ## Contributing: Getting Started Guide
 
 Contributions of all kinds—new language AST extractors, community rule packs, performance optimizations, or CI/editor integrations—are warmly welcomed!

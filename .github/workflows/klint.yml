@@ -1,0 +1,28 @@
+name: klint Self-Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run klint Project Structure Audit on src/
+        uses: ./
+        with:
+          target: "src/"
+          mode: "project"
+          min_confidence: "0.50"
+
+      - name: Run klint File Audit on src/
+        uses: ./
+        with:
+          target: "src/"
+          mode: "file"
+          min_confidence: "0.75"

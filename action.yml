@@ -1,0 +1,76 @@
+name: "klint - Semantic & Architectural Code Auditor"
+description: "Audit files and package trees for architectural antipatterns using local kev or remote /v1/systemone models."
+inputs:
+  target:
+    description: "File or directory path to audit"
+    required: false
+    default: "."
+  mode:
+    description: "Audit mode: 'file' (klint) or 'project' (klint-project)"
+    required: false
+    default: "file"
+  min_confidence:
+    description: "Minimum confidence threshold (0.0 to 1.0)"
+    required: false
+    default: "0.60"
+  rules:
+    description: "Optional path to custom rules JSON file"
+    required: false
+    default: ""
+  kev_mode:
+    description: "'local' (in-process kev) or 'remote' (/v1/systemone endpoint)"
+    required: false
+    default: "local"
+  kev_model_name:
+    description: "Model checkpoint or name (e.g. jaredpalmer/kev-0.8b, jaredpalmer/kev-4b, jev-latest)"
+    required: false
+    default: "jaredpalmer/kev-4b"
+  kev_base_url:
+    description: "Remote /v1/systemone base URL when kev_mode is 'remote'"
+    required: false
+    default: "http://127.0.0.1:8009"
+  kev_api_key:
+    description: "Optional API key for remote /v1/systemone endpoint"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Cache Hugging Face model weights
+      if: inputs.kev_mode == 'local'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface/hub
+        key: ${{ runner.os }}-hf-${{ inputs.kev_model_name }}
+
+    - name: Install klint
+      shell: bash
+      run: |
+        if [ "${{ inputs.kev_mode }}" = "local" ]; then
+          pip install "kev[serve] @ git+https://github.com/jaredpalmer/kev.git"
+        fi
+        pip install -e "${{ github.action_path }}"
+
+    - name: Run klint Audit
+      shell: bash
+      env:
+        KEV_MODE: ${{ inputs.kev_mode }}
+        KEV_MODEL_NAME: ${{ inputs.kev_model_name }}
+        KEV_BASE_URL: ${{ inputs.kev_base_url }}
+        KEV_API_KEY: ${{ inputs.kev_api_key }}
+      run: |
+        CLI_CMD="klint"
+        if [ "${{ inputs.mode }}" = "project" ]; then
+          CLI_CMD="klint-project"
+        fi
+        RULES_FLAG=""
+        if [ -n "${{ inputs.rules }}" ]; then
+          RULES_FLAG="--rules ${{ inputs.rules }}"
+        fi
+        $CLI_CMD "${{ inputs.target }}" --min-confidence "${{ inputs.min_confidence }}" $RULES_FLAG
