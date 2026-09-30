@@ -199,7 +199,7 @@ You can configure `klint` via shell environment variables (`export KEV_...`), th
 4. **Multi-Language AST Metadata Extractors**: Extending `BaseFileMetadataExtractor` to support TypeScript/JavaScript (`.ts`, `.tsx`) and Go for `klint-project`.
 5. **Inline GitHub PR Review Annotations**: Extending the GitHub Action with `--fail-on-issues` gating and inline pull-request review comments on flagged line ranges.
 6. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings and batching multiple small units per inference pass.
-7. 
+7. **Multi Media Auditing**: Supporting parsing and analyzing text files, latex etc. as writing assistant.
 ## Contributing: Getting Started Guide
 
 Contributions of all kinds—new language AST extractors, community rule packs, performance optimizations, or CI/editor integrations—are warmly welcomed!
