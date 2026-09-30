@@ -24,7 +24,7 @@ inputs:
   kev_model_name:
     description: "Model checkpoint or name (e.g. jaredpalmer/kev-0.8b, jaredpalmer/kev-4b, jev-latest)"
     required: false
-    default: "jaredpalmer/kev-4b"
+    default: "jaredpalmer/kev-0.8b"
   kev_base_url:
     description: "Remote /v1/systemone base URL when kev_mode is 'remote'"
     required: false

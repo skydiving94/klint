@@ -1,4 +1,5 @@
 name: klint Self-Audit
+run-name: klint Audit on ${{ github.ref_name }} by @${{ github.actor }}
 
 on:
   push:
@@ -19,6 +20,7 @@ jobs:
           target: "src/"
           mode: "project"
           min_confidence: "0.50"
+          kev_model_name: "jaredpalmer/kev-0.8b"
 
       - name: Run klint File Audit on src/
         uses: ./
