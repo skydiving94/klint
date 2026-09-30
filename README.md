@@ -1,7 +1,8 @@
 # klint
-> The first declarative semantic linter and architectural code auditor for local open-weight `kev` and remote System One (`jev` / `/v1/systemone`) models.
+> **Semantic code auditing at the speed of Ruff, with the depth of an LLM—at zero token-generation cost.**
 
-`klint` bridges the gap between fast, rigid deterministic linters (like ESLint or Ruff) and slow, expensive generative LLM code reviewers. By leveraging the System One (`/v1/systemone`) pointer-head specification, it checks files and package trees against default and custom JSON rule packs in a single forward pass with zero token-generation overhead.
+`klint` bridges the gap between rigid, syntax-bound linters (like ESLint or Ruff) and slow, expensive LLM code reviewers (like PR bots streaming tokens for 40 seconds). 
+By leveraging the **System One (`/v1/systemone`)** pointer-head specification, `klint` evaluates files and recursive package trees against custom JSON rule packs in a **single forward pass with zero decoded tokens**.
 
 ![klint CLI Output](docs/assets/cli-demo.png)
 
