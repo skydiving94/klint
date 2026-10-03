@@ -19,6 +19,7 @@ dev = [
     "ruff>=0.16.10",
     "mypy>=2.4.0",
     "pre-commit>=4.0",
+    "import-linter>=2.0",
 ]
 
 [project.scripts]
@@ -74,3 +75,19 @@ strict = true
 [[tool.mypy.overrides]]
 module = "src.*"
 follow_imports = "silent"
+
+# Checked with `lint-imports`. A layer may import from the layers listed
+# below it, never from one above. src/resources holds data only.
+[tool.importlinter]
+root_package = "src"
+
+[[tool.importlinter.contracts]]
+name = "Layers: cli > app > catalog > infra > core"
+type = "layers"
+layers = [
+    "src.cli",
+    "src.app",
+    "src.catalog",
+    "src.infra",
+    "src.core",
+]
