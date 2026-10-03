@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Dict, List, Sequence
 
-from src.core.interfaces.evaluator import BaseKevEvaluator
+from src.core.interfaces.judge import BaseJudge
 from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.interfaces.rule_loader import BaseRuleLoader
 from src.core.models.report import AuditFinding, AuditReport
@@ -10,16 +10,16 @@ from src.core.models.scale import AnswerScale
 from src.core.models.unit import AuditableUnit
 
 
-class AuditService:
+class Auditor:
     def __init__(
         self,
         extractor: BaseUnitExtractor,
-        evaluator: BaseKevEvaluator,
+        judge: BaseJudge,
         rule_loader: BaseRuleLoader,
         scale: AnswerScale,
     ):
         self._extractor = extractor
-        self._evaluator = evaluator
+        self._judge = judge
         self._rule_loader = rule_loader
         self._scale = scale
 
@@ -47,7 +47,7 @@ class AuditService:
         self, unit: AuditableUnit, rules: Sequence[AuditRule]
     ) -> List[AuditFinding]:
         """Ask the judge every rule about one unit and turn the answers into findings."""
-        answers = await self._evaluator.answer(
+        answers = await self._judge.answer(
             unit.get_content(), self._build_questions(rules)
         )
         findings: List[AuditFinding] = []

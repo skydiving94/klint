@@ -10,12 +10,13 @@ import pytest
 
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.core.auditor import AuditService
+from src.core.auditor import Auditor
+from src.core.interfaces.judge import BaseJudge
 from src.core.models.location import Location
 from src.core.models.report import AuditFinding
 from src.core.models.scale import Choice
 from src.infra.rule_loader.json_loader import JsonRuleLoader
-from src.infra.system_one.remote import PretrainedKevEvaluator
+from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.helpers import (
     FAIL,
     IRRELEVANT,
@@ -40,16 +41,16 @@ def target(tmp_path: Path) -> Path:
     return path
 
 
-def _findings(evaluator: PretrainedKevEvaluator, target: Path) -> list[AuditFinding]:
+def _findings(judge: BaseJudge, target: Path) -> list[AuditFinding]:
     """Audit ``target`` against RULES and return every finding."""
     rules_path = write_json(target.parent / "rules.json", RULES)
-    service = AuditService(
+    auditor = Auditor(
         extractor=WholeFileExtractor(),
-        evaluator=evaluator,
+        judge=judge,
         rule_loader=JsonRuleLoader([rules_path], UNIT_REGISTRY),
         scale=PASS_FAIL_SCALE,
     )
-    return asyncio.run(service.run_audit(target)).get_findings(fails_only=False)
+    return asyncio.run(auditor.run_audit(target)).get_findings(fails_only=False)
 
 
 class FakeEndpoint:
@@ -74,7 +75,7 @@ def test_unit_content_is_sent_as_state_with_one_question_per_rule(
 ) -> None:
     judge = fake_judge()
 
-    _findings(judge.evaluator(), target)
+    _findings(judge, target)
 
     ((state, questions),) = judge.calls
     assert state == "x = 1\n"
@@ -103,7 +104,7 @@ def test_unit_content_is_sent_as_state_with_one_question_per_rule(
 def test_each_answer_maps_to_its_choice(
     fake_judge: type[FakeJudge], target: Path, key: str, choice: Choice
 ) -> None:
-    findings = _findings(fake_judge(default=key).evaluator(), target)
+    findings = _findings(fake_judge(default=key), target)
     assert [f.choice for f in findings] == [choice, choice]
 
 
@@ -112,7 +113,7 @@ def test_finding_carries_the_answer_and_the_unit_location(
 ) -> None:
     judge = fake_judge(choices={"first": "fail"}, confidence=0.75)
 
-    first, second = _findings(judge.evaluator(), target)
+    first, second = _findings(judge, target)
 
     assert first == AuditFinding(
         rule_id="first",
@@ -131,7 +132,7 @@ def test_finding_carries_the_answer_and_the_unit_location(
 def test_rule_without_an_answer_produces_no_finding(
     fake_judge: type[FakeJudge], target: Path
 ) -> None:
-    findings = _findings(fake_judge(choices={"first": None}).evaluator(), target)
+    findings = _findings(fake_judge(choices={"first": None}), target)
     assert [f.rule_id for f in findings] == ["second"]
 
 
@@ -139,7 +140,7 @@ def test_unknown_answer_raises_key_error(
     fake_judge: type[FakeJudge], target: Path
 ) -> None:
     with pytest.raises(KeyError, match="maybe"):
-        _findings(fake_judge(default="maybe").evaluator(), target)
+        _findings(fake_judge(default="maybe"), target)
 
 
 # --- HTTP transport --------------------------------------------------------
@@ -150,14 +151,14 @@ def test_request_is_posted_to_the_systemone_endpoint(
 ) -> None:
     endpoint = FakeEndpoint({"first": {"choice": "fail", "confidence": 0.6}})
     monkeypatch.setattr(urllib.request, "urlopen", endpoint)
-    evaluator = PretrainedKevEvaluator(
+    judge = RemoteSystemOneJudge(
         model_name="kev-latest",
         base_url="http://judge.test:8009/",
         api_key="secret",
         timeout_seconds=12.0,
     )
 
-    findings = _findings(evaluator, target)
+    findings = _findings(judge, target)
 
     (request,) = endpoint.requests
     assert request.full_url == "http://judge.test:8009/v1/systemone"
@@ -181,7 +182,7 @@ def test_no_authorization_header_without_an_api_key(
     endpoint = FakeEndpoint({})
     monkeypatch.setattr(urllib.request, "urlopen", endpoint)
 
-    findings = _findings(PretrainedKevEvaluator(model_name="kev-latest"), target)
+    findings = _findings(RemoteSystemOneJudge(model_name="kev-latest"), target)
 
     (request,) = endpoint.requests
     assert request.full_url == "http://127.0.0.1:8009/v1/systemone"

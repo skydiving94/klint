@@ -1,25 +1,25 @@
-"""The audit service: which rules reach the judge and what comes back."""
+"""The auditor: which rules reach the judge and what comes back."""
 
 import asyncio
 from pathlib import Path
 
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.core.auditor import AuditService
+from src.core.auditor import Auditor
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from tests.helpers import DIR_RULE, FILE_RULE, UNIT_REGISTRY, FakeJudge, write_json
 
 
-def _service(rules_path: Path, judge: FakeJudge) -> AuditService:
-    return AuditService(
+def _auditor(rules_path: Path, judge: FakeJudge) -> Auditor:
+    return Auditor(
         extractor=WholeFileExtractor(),
-        evaluator=judge.evaluator(),
+        judge=judge,
         rule_loader=JsonRuleLoader([rules_path], UNIT_REGISTRY),
         scale=PASS_FAIL_SCALE,
     )
 
 
-def test_service_asks_only_rules_that_apply_to_the_unit(
+def test_auditor_asks_only_rules_that_apply_to_the_unit(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
     rules = write_json(
@@ -29,7 +29,7 @@ def test_service_asks_only_rules_that_apply_to_the_unit(
     target.write_text("x = 1\ny = 2\n", encoding="utf-8")
     judge = fake_judge(default="fail")
 
-    report = asyncio.run(_service(rules, judge).run_audit(target))
+    report = asyncio.run(_auditor(rules, judge).run_audit(target))
 
     assert judge.asked_rule_ids() == [["for_file"]]
     assert judge.calls[0][0] == "x = 1\ny = 2\n"
@@ -40,7 +40,7 @@ def test_service_asks_only_rules_that_apply_to_the_unit(
     assert issue["line_range"] == [1, 2]
 
 
-def test_service_does_not_call_the_judge_when_no_rule_applies(
+def test_auditor_does_not_call_the_judge_when_no_rule_applies(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
     rules = write_json(tmp_path / "rules.json", {"for_dir": DIR_RULE})
@@ -48,13 +48,13 @@ def test_service_does_not_call_the_judge_when_no_rule_applies(
     target.write_text("x = 1\n", encoding="utf-8")
     judge = fake_judge()
 
-    report = asyncio.run(_service(rules, judge).run_audit(target))
+    report = asyncio.run(_auditor(rules, judge).run_audit(target))
 
     assert judge.calls == []
     assert report.get_issues(fails_only=False) == []
 
 
-def test_service_skips_a_language_rule_for_a_unit_of_unknown_language(
+def test_auditor_skips_a_language_rule_for_a_unit_of_unknown_language(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
     rules = write_json(
@@ -68,7 +68,7 @@ def test_service_skips_a_language_rule_for_a_unit_of_unknown_language(
     target.write_text("x = 1\n", encoding="utf-8")
     judge = fake_judge()
 
-    asyncio.run(_service(rules, judge).run_audit(target))
+    asyncio.run(_auditor(rules, judge).run_audit(target))
 
     # The extracted unit has no language, so the Python-only rule is not asked.
     assert judge.asked_rule_ids() == [["any_language"]]

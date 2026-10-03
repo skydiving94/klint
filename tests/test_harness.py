@@ -1,5 +1,6 @@
 """Checks on the test harness itself."""
 
+import asyncio
 import socket
 import sys
 
@@ -10,7 +11,7 @@ from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS, FakeJudge
 
 def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
     judge = fake_judge(choices={"b": "fail", "c": None})
-    answers = judge("some state", {"a": {}, "b": {}, "c": {}})
+    answers = asyncio.run(judge.answer("some state", {"a": {}, "b": {}, "c": {}}))
     assert answers["a"]["choice"] == "pass"
     assert answers["b"]["choice"] == "fail"
     assert "c" not in answers

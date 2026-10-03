@@ -1,14 +1,14 @@
 """Test doubles and repo paths shared by the test modules."""
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
 from src import catalog
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from src.core.interfaces.judge import BaseJudge
 from src.core.registry import UnitRegistry
-from src.infra.system_one.remote import PretrainedKevEvaluator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT_DIR = Path(__file__).resolve().parent / "snapshots"
@@ -52,13 +52,8 @@ def write_json(path: Path, data: dict[str, Any]) -> Path:
     return path
 
 
-class FakeJudge:
-    """Stands in for the System One model.
-
-    It is a plain ``(state, questions) -> answers`` callable, plugged into the
-    real remote evaluator through its ``inference_fn`` hook, so the evaluator's
-    own request building and answer mapping still run.
-    """
+class FakeJudge(BaseJudge):
+    """Stands in for the model: answers from canned choices and records every call."""
 
     def __init__(
         self,
@@ -75,8 +70,8 @@ class FakeJudge:
         self.confidence = confidence
         self.calls: list[tuple[str, Questions]] = []
 
-    def __call__(self, state: str, questions: Questions) -> Answers:
-        self.calls.append((state, questions))
+    async def answer(self, state: str, questions: Mapping[str, Any]) -> Answers:
+        self.calls.append((state, dict(questions)))
         answers: Answers = {}
         for rule_id in questions:
             choice = self.choices.get(rule_id, self.default)
@@ -92,7 +87,3 @@ class FakeJudge:
     def asked_rule_ids(self) -> list[list[str]]:
         """Return the rule ids asked in each call, in call order."""
         return [sorted(questions) for _, questions in self.calls]
-
-    def evaluator(self) -> PretrainedKevEvaluator:
-        """Return the real remote evaluator, answering through this fake."""
-        return PretrainedKevEvaluator(model_name="fake", inference_fn=self)

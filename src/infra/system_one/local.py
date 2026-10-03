@@ -13,12 +13,12 @@ from kev.checkpoint import Checkpoint, LoadOptions, fused_available
 from kev.device import default_device
 from kev.serve import Server
 
-from src.core.interfaces.evaluator import BaseKevEvaluator
+from src.core.interfaces.judge import BaseJudge
 
 disable_progress_bars()
 
 
-class InProcessKevEvaluator(BaseKevEvaluator):
+class LocalKevJudge(BaseJudge):
     def __init__(self, checkpoint: str = "jaredpalmer/kev-0.8b"):
         self._checkpoint = checkpoint
         self._server: Optional[Server] = None

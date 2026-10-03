@@ -3,10 +3,10 @@ import json
 import urllib.request
 from typing import Any, Callable, Dict, Mapping, Optional
 
-from src.core.interfaces.evaluator import BaseKevEvaluator
+from src.core.interfaces.judge import BaseJudge
 
 
-class PretrainedKevEvaluator(BaseKevEvaluator):
+class RemoteSystemOneJudge(BaseJudge):
     def __init__(
         self,
         model_name: str,

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Mapping
 
 
-class BaseKevEvaluator(ABC):
+class BaseJudge(ABC):
     @abstractmethod
     async def answer(
         self, state: str, questions: Mapping[str, Any]

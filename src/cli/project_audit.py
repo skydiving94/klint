@@ -5,12 +5,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from src.app.wiring import create_project_audit_service
+from src.app.wiring import create_project_auditor
 from src.catalog.common.extractors.file_collector import collect_target_directories
 from src.cli.formatter import AuditProgressReporter, format_audit_report
 from src.app.settings import AppSettings
 from src.core.models.report import AuditFinding, AuditReport
-from src.core.auditor import AuditService
+from src.core.auditor import Auditor
 
 MAX_CONCURRENT_AUDITS = 8
 
@@ -50,10 +50,10 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 class ProjectAuditCLIApp:
     def __init__(
         self,
-        audit_service: AuditService,
+        auditor: Auditor,
         default_custom_rules: Optional[Path] = None,
     ):
-        self._audit_service = audit_service
+        self._auditor = auditor
         self._default_custom_rules = default_custom_rules
 
     async def run(self, argv: Optional[Sequence[str]] = None) -> int:
@@ -63,7 +63,7 @@ class ProjectAuditCLIApp:
             target_dirs = await asyncio.to_thread(
                 collect_target_directories, args.directory
             )
-            await self._audit_service._rule_loader.load_rules(rules_source)
+            await self._auditor._rule_loader.load_rules(rules_source)
         except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
             print(f"[klint-project] Error: {exc}", file=sys.stderr)
             return 1
@@ -77,7 +77,7 @@ class ProjectAuditCLIApp:
         async def _audit_with_limit(dir_path: Path) -> Optional[AuditReport]:
             async with semaphore:
                 try:
-                    return await self._audit_service.run_audit(
+                    return await self._auditor.run_audit(
                         target=dir_path,
                         custom_rules_source=rules_source,
                     )
@@ -135,7 +135,7 @@ async def main() -> int:
         AppSettings.from_env, args.directory, args.rules
     )
     app = ProjectAuditCLIApp(
-        audit_service=create_project_audit_service(settings),
+        auditor=create_project_auditor(settings),
         default_custom_rules=settings.discovered_config_path,
     )
     return await app.run(sys.argv[1:])

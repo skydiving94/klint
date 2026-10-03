@@ -13,9 +13,10 @@ from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.cli.basic_audit import CLIApp
 from src.cli.project_audit import ProjectAuditCLIApp
-from src.core.auditor import AuditService
+from src.core.auditor import Auditor
+from src.core.interfaces.judge import BaseJudge
 from src.infra.rule_loader.json_loader import JsonRuleLoader
-from src.infra.system_one.remote import PretrainedKevEvaluator
+from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.helpers import (
     DEFAULT_PROJECT_RULES,
     DEFAULT_RULE_PACKS,
@@ -32,24 +33,24 @@ MOCK_PROJECT = "examples/mock_bad_project"
 Capture = pytest.CaptureFixture[str]
 
 
-def _file_app(evaluator: PretrainedKevEvaluator) -> CLIApp:
-    service = AuditService(
+def _file_app(judge: BaseJudge) -> CLIApp:
+    auditor = Auditor(
         extractor=WholeFileExtractor(),
-        evaluator=evaluator,
+        judge=judge,
         rule_loader=JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY),
         scale=PASS_FAIL_SCALE,
     )
-    return CLIApp(audit_service=service)
+    return CLIApp(auditor=auditor)
 
 
-def _project_app(evaluator: PretrainedKevEvaluator) -> ProjectAuditCLIApp:
-    service = AuditService(
+def _project_app(judge: BaseJudge) -> ProjectAuditCLIApp:
+    auditor = Auditor(
         extractor=RecursiveProjectExtractor(),
-        evaluator=evaluator,
+        judge=judge,
         rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES], UNIT_REGISTRY),
         scale=PASS_FAIL_SCALE,
     )
-    return ProjectAuditCLIApp(audit_service=service)
+    return ProjectAuditCLIApp(auditor=auditor)
 
 
 def _run(app: CLIApp | ProjectAuditCLIApp, *argv: str | Path) -> int:
@@ -70,7 +71,7 @@ def test_file_audit_json_matches_snapshot(
 ) -> None:
     judge = fake_judge(choices={"hardcoded_secrets": "fail", "n_plus_1_query": "fail"})
 
-    exit_code = _run(_file_app(judge.evaluator()), EXAMPLE_FILE, "--json")
+    exit_code = _run(_file_app(judge), EXAMPLE_FILE, "--json")
 
     assert exit_code == 0  # failures do not change the exit code today
     assert_snapshot("cli_file_audit.json", capsys.readouterr().out)
@@ -82,7 +83,7 @@ def test_all_flag_reports_every_judgment(
 ) -> None:
     judge = fake_judge(choices={"hardcoded_secrets": "fail"})
 
-    _run(_file_app(judge.evaluator()), EXAMPLE_FILE, "--json", "--all")
+    _run(_file_app(judge), EXAMPLE_FILE, "--json", "--all")
 
     judgments = [issue["judgment"] for issue in _json_output(capsys)["issues"]]
     assert judgments == ["Fail"] + ["Pass"] * 15
@@ -94,9 +95,7 @@ def test_min_confidence_hides_low_confidence_findings(
 ) -> None:
     judge = fake_judge(default="fail", confidence=0.4)
 
-    _run(
-        _file_app(judge.evaluator()), EXAMPLE_FILE, "--json", "--min-confidence", "0.5"
-    )
+    _run(_file_app(judge), EXAMPLE_FILE, "--json", "--min-confidence", "0.5")
 
     assert _json_output(capsys) == {"examined_files": [EXAMPLE_FILE], "issues": []}
 
@@ -110,7 +109,7 @@ def test_directory_audit_skips_ignored_and_binary_files(
     (tmp_path / "blob.dat").write_bytes(b"\x00\x01")
     judge = fake_judge()
 
-    _run(_file_app(judge.evaluator()), tmp_path, "--json")
+    _run(_file_app(judge), tmp_path, "--json")
 
     examined = _json_output(capsys)["examined_files"]
     assert examined == [str(tmp_path / "a.py"), str(tmp_path / "b.tsx")]
@@ -124,7 +123,7 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
     custom = write_json(tmp_path / "custom.json", {"house_rule": FILE_RULE})
     judge = fake_judge(choices={"house_rule": "fail"})
 
-    _run(_file_app(judge.evaluator()), EXAMPLE_FILE, "--json", "--rules", custom)
+    _run(_file_app(judge), EXAMPLE_FILE, "--json", "--rules", custom)
 
     assert [i["rule_id"] for i in _json_output(capsys)["issues"]] == ["house_rule"]
     assert len(judge.asked_rule_ids()[0]) == 17
@@ -133,7 +132,7 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
 def test_missing_target_or_rules_file_exits_with_an_error(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    app = _file_app(fake_judge().evaluator())
+    app = _file_app(fake_judge())
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
 
@@ -147,9 +146,9 @@ def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> 
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
     broken_judge = Mock(side_effect=RuntimeError("judge is down"))
-    evaluator = PretrainedKevEvaluator(model_name="fake", inference_fn=broken_judge)
+    judge = RemoteSystemOneJudge(model_name="fake", inference_fn=broken_judge)
 
-    exit_code = _run(_file_app(evaluator), target, "--json")
+    exit_code = _run(_file_app(judge), target, "--json")
 
     captured = capsys.readouterr()
     assert exit_code == 0
@@ -161,11 +160,11 @@ def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> 
 def test_terminal_report_shows_findings_and_summary(
     fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    _run(_file_app(fake_judge().evaluator()), EXAMPLE_FILE)
+    _run(_file_app(fake_judge()), EXAMPLE_FILE)
     assert "No architectural or semantic issues found." in capsys.readouterr().out
 
     judge = fake_judge(choices={"hardcoded_secrets": "fail"})
-    _run(_file_app(judge.evaluator()), EXAMPLE_FILE)
+    _run(_file_app(judge), EXAMPLE_FILE)
 
     report = capsys.readouterr().out
     assert "klint Audit Report" in report
@@ -185,7 +184,7 @@ def test_project_audit_json_matches_snapshot(
 ) -> None:
     judge = fake_judge(choices={"circular_package_dependencies": "fail"})
 
-    exit_code = _run(_project_app(judge.evaluator()), MOCK_PROJECT, "--json")
+    exit_code = _run(_project_app(judge), MOCK_PROJECT, "--json")
 
     assert exit_code == 0
     assert_snapshot("cli_project_audit.json", capsys.readouterr().out)
@@ -197,7 +196,7 @@ def test_project_audit_json_matches_snapshot(
 def test_project_audit_rejects_a_file_target(
     fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    exit_code = _run(_project_app(fake_judge().evaluator()), EXAMPLE_FILE)
+    exit_code = _run(_project_app(fake_judge()), EXAMPLE_FILE)
 
     assert exit_code == 1
     assert "must be a directory" in capsys.readouterr().err
