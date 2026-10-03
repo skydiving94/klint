@@ -1,7 +1,7 @@
 # Run once after cloning: pip install -e ".[dev]" && pre-commit install
 #
 # The hooks cover tests/ only for now. src/ joins once the restructuring is
-# nearly done (tracked in issue 5); until then it is left as it is.
+# nearly done (tracked in issue 6); until then it is left as it is.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.10
