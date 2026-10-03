@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from src.core.models.units import AuditableFileUnit, AuditableProjectDirectoryUnit
+from src.catalog.code.common.units.directory import AuditableProjectDirectoryUnit
+from src.catalog.common.units.file import AuditableFileUnit
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from src.infrastructure.extractors.file_metadata_extractor import (
     FallbackFileMetadataExtractor,

@@ -16,7 +16,7 @@ from kev.serve import Server
 from src.core.models.judgment import Judgment
 from src.core.models.report import AuditFinding
 from src.core.models.rule import AuditRule
-from src.core.models.units import AuditableUnit
+from src.core.models.unit import AuditableUnit
 from src.core.interfaces.evaluator import BaseKevEvaluator
 
 disable_progress_bars()

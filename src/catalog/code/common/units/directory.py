@@ -4,8 +4,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Set, Tuple
 
-from src.core.models.units.base import AuditableUnit
-from src.core.models.units.file_metadata import AuditableFileMetadataUnit
+from src.core.models.unit import AuditableUnit
+from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 
 
 @dataclass(frozen=True)

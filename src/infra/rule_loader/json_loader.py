@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
-from src.core.models.units import AuditableUnit
+from src.core.models.unit import AuditableUnit
 from src.core.interfaces.rule_loader import BaseRuleLoader
 
 

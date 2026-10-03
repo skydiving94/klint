@@ -2,7 +2,8 @@ import asyncio
 from pathlib import Path
 from typing import List
 
-from src.core.models.units import AuditableFileUnit, AuditableUnit
+from src.catalog.common.units.file import AuditableFileUnit
+from src.core.models.unit import AuditableUnit
 from src.core.interfaces.extractor import BaseUnitExtractor
 
 

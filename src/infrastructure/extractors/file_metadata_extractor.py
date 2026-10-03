@@ -2,8 +2,10 @@ import ast
 from pathlib import Path
 from typing import List
 
-from src.core.models.units import AuditableFileMetadataUnit
-from src.core.interfaces.extractor import BaseFileMetadataExtractor
+from src.catalog.code.common.extractors.file_metadata_base import (
+    BaseFileMetadataExtractor,
+)
+from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):

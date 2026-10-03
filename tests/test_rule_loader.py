@@ -6,9 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from src.catalog.common.units.file import AuditableFileUnit
 from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
-from src.core.models.units import AuditableFileUnit, AuditableUnit
+from src.core.models.unit import AuditableUnit
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from tests.helpers import DEFAULT_RULES, DIR_RULE, FILE_RULE, write_json
 

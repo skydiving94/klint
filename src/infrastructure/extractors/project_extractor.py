@@ -4,15 +4,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from src.catalog.common.extractors.file_collector import IGNORED_DIRS, IGNORED_FILES, IGNORED_SUFFIXES
-from src.core.models.units import (
-    AuditableFileMetadataUnit,
-    AuditableProjectDirectoryUnit,
-    AuditableUnit,
-)
-from src.core.interfaces.extractor import (
+from src.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
-    BaseUnitExtractor,
 )
+from src.catalog.code.common.units.directory import AuditableProjectDirectoryUnit
+from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from src.core.interfaces.extractor import BaseUnitExtractor
+from src.core.models.unit import AuditableUnit
 from src.infrastructure.extractors.file_metadata_extractor import (
     FallbackFileMetadataExtractor,
     PythonFileMetadataExtractor,
