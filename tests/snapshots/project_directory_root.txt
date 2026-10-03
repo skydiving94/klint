@@ -1,0 +1,24 @@
+Target Directory Under Audit: examples/mock_bad_project (package name: 'mock_bad_project')
+Summary: 0 immediate files (0 non-init modules: []), 3 immediate subdirectories
+Package Public API Status: not applicable (no immediate .py files in this directory)
+Internal Project Imports in Tree: [.checkout_routes, .checkout_routes.handle_checkout_request, .order_entity, api, api.checkout_routes, domain.order_entity, utils, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]
+External / Third-Party / Stdlib Imports in Tree: [pathlib, sqlite3, traceback, urllib.request]
+Subpackage Dependency Rollup:
+  - api imports: [.checkout_routes, .checkout_routes.handle_checkout_request, domain.order_entity, sqlite3, traceback, urllib.request, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]
+  - domain imports: [.order_entity, api, api.checkout_routes, sqlite3, urllib.request, utils, utils.misc_helpers]
+  - utils imports: [domain.order_entity, pathlib]
+  Mutual Subpackage Cycles: api <-> domain, domain <-> utils
+Directory: examples/mock_bad_project
+  Immediate Subdirectories: [api, domain, utils]
+  Files: []
+  Directory: examples/mock_bad_project/api
+    Files:
+      - __init__.py (lines=3; exports=[handle_checkout_request]; imports=[.checkout_routes, .checkout_routes.handle_checkout_request])
+      - checkout_routes.py (lines=50; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
+  Directory: examples/mock_bad_project/domain
+    Files:
+      - __init__.py (lines=3; exports=[OrderEntity]; imports=[.order_entity])
+      - order_entity.py (lines=29; imports=[sqlite3, urllib.request, api, api.checkout_routes, utils, utils.misc_helpers]; classes=[OrderEntity])
+  Directory: examples/mock_bad_project/utils
+    Files:
+      - misc_helpers.py (lines=13; imports=[pathlib, domain.order_entity]; functions=[format_currency_and_temp_file])

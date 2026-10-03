@@ -1,0 +1,24 @@
+# Run once after cloning: pip install -e ".[dev]" && pre-commit install
+#
+# The hooks cover tests/ only for now. src/ joins once the restructuring is
+# nearly done (tracked in issue 6); until then it is left as it is.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^tests/
+      - id: ruff-format
+        files: ^tests/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.4.0
+    hooks:
+      - id: mypy
+        # Check the whole tests package using [tool.mypy] in pyproject.toml,
+        # not only the files in the commit.
+        args: []
+        pass_filenames: false
+        files: ^(tests/|pyproject\.toml$)
+        additional_dependencies: ["pytest>=8.0"]

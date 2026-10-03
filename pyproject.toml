@@ -13,6 +13,14 @@ dependencies = [
     "torch>=2.2.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.16.10",
+    "mypy>=2.4.0",
+    "pre-commit>=4.0",
+]
+
 [project.scripts]
 klint = "src.cli.basic_audit:cli_main"
 klint-project = "src.cli.project_audit:cli_main"
@@ -20,3 +28,46 @@ klint-project = "src.cli.project_audit:cli_main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+# examples/ holds deliberately bad code for klint to find; never lint it.
+extend-exclude = ["examples"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # import order
+    "N",    # naming
+    "UP",   # modern syntax for the target Python version
+    "B",    # likely bugs
+    "ANN",  # type annotations on every parameter and return
+    "ARG",  # unused function arguments
+    "D",    # docstring style
+    "PT",   # pytest style
+    "SIM",  # simplifications
+    "RUF",  # ruff-specific checks
+]
+ignore = [
+    "D1",    # docstrings are not required on every function
+    "D203",  # conflicts with D211 (no blank line before a class docstring)
+    "D213",  # conflicts with D212 (summary on the first docstring line)
+]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["tests"]
+strict = true
+
+# src/ is not held to these checks yet: type-check what tests import from it,
+# but do not report errors inside it.
+[[tool.mypy.overrides]]
+module = "src.*"
+follow_imports = "silent"

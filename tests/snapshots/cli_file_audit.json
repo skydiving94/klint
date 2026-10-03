@@ -1,0 +1,37 @@
+{
+  "examined_files": [
+    "examples/backend_data_and_security.py"
+  ],
+  "issues": [
+    {
+      "rule_id": "hardcoded_secrets",
+      "unit_id": "examples/backend_data_and_security.py",
+      "judgment": "Fail",
+      "confidence": 0.9,
+      "probabilities": {
+        "fail": 0.9
+      },
+      "instructions": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
+      "file_path": "examples/backend_data_and_security.py",
+      "line_range": [
+        1,
+        43
+      ]
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "unit_id": "examples/backend_data_and_security.py",
+      "judgment": "Fail",
+      "confidence": 0.9,
+      "probabilities": {
+        "fail": 0.9
+      },
+      "instructions": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
+      "file_path": "examples/backend_data_and_security.py",
+      "line_range": [
+        1,
+        43
+      ]
+    }
+  ]
+}
