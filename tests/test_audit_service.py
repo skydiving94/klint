@@ -50,3 +50,23 @@ def test_service_does_not_call_the_judge_when_no_rule_applies(
 
     assert judge.calls == []
     assert report.get_issues(fails_only=False) == []
+
+
+def test_service_skips_a_language_rule_for_a_unit_of_unknown_language(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    rules = write_json(
+        tmp_path / "rules.json",
+        {
+            "any_language": FILE_RULE,
+            "python_only": {**FILE_RULE, "languages": ["python"]},
+        },
+    )
+    target = tmp_path / "a.py"
+    target.write_text("x = 1\n", encoding="utf-8")
+    judge = fake_judge()
+
+    asyncio.run(_service(rules, judge).run_audit(target))
+
+    # The extracted unit has no language, so the Python-only rule is not asked.
+    assert judge.asked_rule_ids() == [["any_language"]]

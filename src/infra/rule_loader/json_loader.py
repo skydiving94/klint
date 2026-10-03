@@ -80,6 +80,11 @@ class JsonRuleLoader(BaseRuleLoader):
                 kwargs["target_unit_types"] = self._validate_unit_types(
                     spec["target_unit_types"], rule_id
                 )
+            for field_name in ("languages", "tags"):
+                if field_name in spec:
+                    kwargs[field_name] = self._validate_string_list(
+                        spec[field_name], field_name, rule_id
+                    )
             rules[rule_id] = AuditRule(**kwargs)
         return rules
 
@@ -93,3 +98,14 @@ class JsonRuleLoader(BaseRuleLoader):
                 f"Rule '{rule_id}' has unknown target_unit_types {unknown}; known: {sorted(known)}"
             )
         return list(raw_types)
+
+    def _validate_string_list(
+        self, raw_value: Any, field_name: str, rule_id: str
+    ) -> List[str]:
+        if not isinstance(raw_value, list) or not all(
+            isinstance(item, str) for item in raw_value
+        ):
+            raise ValueError(
+                f"Rule '{rule_id}' has invalid {field_name} {raw_value!r}; expected a list of strings"
+            )
+        return list(raw_value)
