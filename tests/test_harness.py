@@ -6,7 +6,8 @@ import sys
 
 import pytest
 
-from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS, FakeJudge
+from tests.support.fakes import FakeJudge
+from tests.support.paths import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS
 
 
 def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
