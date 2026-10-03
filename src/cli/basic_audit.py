@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.app.wiring import create_audit_service
-from src.cli.file_collector import collect_target_files
+from src.catalog.common.extractors.file_collector import collect_target_files
 from src.cli.formatter import AuditProgressReporter, format_audit_report
 from src.app.settings import AppSettings
 from src.core.models.report import AuditReport

@@ -3,7 +3,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
-from src.cli.file_collector import IGNORED_DIRS, IGNORED_FILES, IGNORED_SUFFIXES
+from src.catalog.common.extractors.file_collector import IGNORED_DIRS, IGNORED_FILES, IGNORED_SUFFIXES
 from src.core.models.units import (
     AuditableFileMetadataUnit,
     AuditableProjectDirectoryUnit,
