@@ -1,6 +1,7 @@
 """Test doubles and repo paths shared by the test modules."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ DEFAULT_PROJECT_RULES = REPO_ROOT / "resources" / "default_project_rules.json"
 Questions = dict[str, Any]
 Answers = dict[str, Any]
 RuleSpec = dict[str, Any]
+SnapshotAsserter = Callable[[str, str], None]
 
 FILE_RULE: RuleSpec = {"type": "choice", "instructions": "Is it tidy?"}
 DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}

@@ -2,14 +2,12 @@
 
 import os
 import socket
-from collections.abc import Callable
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
-from tests.helpers import REPO_ROOT, SNAPSHOT_DIR, FakeJudge
-
-SnapshotAsserter = Callable[[str, str], None]
+from tests.helpers import REPO_ROOT, SNAPSHOT_DIR, FakeJudge, SnapshotAsserter
 
 
 @pytest.fixture
@@ -21,11 +19,8 @@ def fake_judge() -> type[FakeJudge]:
 @pytest.fixture(autouse=True)
 def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that tries to open a network connection."""
-
-    def _blocked(*args: object, **kwargs: object) -> None:
-        raise RuntimeError("network access is not allowed in tests")
-
-    monkeypatch.setattr(socket.socket, "connect", _blocked)
+    blocked = Mock(side_effect=RuntimeError("network access is not allowed in tests"))
+    monkeypatch.setattr(socket.socket, "connect", blocked)
 
 
 @pytest.fixture

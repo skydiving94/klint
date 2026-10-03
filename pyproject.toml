@@ -49,6 +49,7 @@ select = [
     "UP",   # modern syntax for the target Python version
     "B",    # likely bugs
     "ANN",  # type annotations on every parameter and return
+    "ARG",  # unused function arguments
     "D",    # docstring style
     "PT",   # pytest style
     "SIM",  # simplifications

@@ -1,0 +1,9 @@
+Target Directory Under Audit: examples/mock_bad_project/api (package name: 'api')
+Summary: 2 immediate files (1 non-init modules: ['checkout_routes.py']), 0 immediate subdirectories
+Package Public API Status: present (__init__.py exports: [handle_checkout_request])
+Internal Project Imports in Tree: [.checkout_routes, .checkout_routes.handle_checkout_request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]
+External / Third-Party / Stdlib Imports in Tree: [sqlite3, traceback, urllib.request]
+Directory: examples/mock_bad_project/api
+  Files:
+    - __init__.py (lines=3; exports=[handle_checkout_request]; imports=[.checkout_routes, .checkout_routes.handle_checkout_request])
+    - checkout_routes.py (lines=50; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
