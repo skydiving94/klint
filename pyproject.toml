@@ -13,6 +13,11 @@ dependencies = [
     "torch>=2.2.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
 [project.scripts]
 klint = "src.cli.basic_audit:cli_main"
 klint-project = "src.cli.project_audit:cli_main"
@@ -20,3 +25,7 @@ klint-project = "src.cli.project_audit:cli_main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
