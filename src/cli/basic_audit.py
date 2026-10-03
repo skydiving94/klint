@@ -5,12 +5,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from src.cli.factory import create_audit_service
-from src.cli.file_collector import collect_target_files
+from src.app.wiring import create_audit_service
+from src.catalog.common.extractors.file_collector import collect_target_files
 from src.cli.formatter import AuditProgressReporter, format_audit_report
-from src.config.settings import AppSettings
-from src.core.domain.report import AuditReport
-from src.core.services.audit_service import AuditService
+from src.app.settings import AppSettings
+from src.core.models.report import AuditReport
+from src.core.auditor import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
 

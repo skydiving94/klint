@@ -8,16 +8,16 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.cli.basic_audit import CLIApp
 from src.cli.project_audit import ProjectAuditCLIApp
-from src.core.services.audit_service import AuditService
-from src.infrastructure.extractors.file_extractor import WholeFileExtractor
-from src.infrastructure.extractors.project_extractor import RecursiveProjectExtractor
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
-from src.infrastructure.rules.json_loader import JsonRuleLoader
+from src.core.auditor import AuditService
+from src.infra.rule_loader.json_loader import JsonRuleLoader
+from src.infra.system_one.remote import PretrainedKevEvaluator
 from tests.helpers import (
     DEFAULT_PROJECT_RULES,
-    DEFAULT_RULES,
+    DEFAULT_RULE_PACKS,
     FILE_RULE,
     FakeJudge,
     SnapshotAsserter,
@@ -34,7 +34,7 @@ def _file_app(evaluator: PretrainedKevEvaluator) -> CLIApp:
     service = AuditService(
         extractor=WholeFileExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader(DEFAULT_RULES),
+        rule_loader=JsonRuleLoader(DEFAULT_RULE_PACKS),
     )
     return CLIApp(audit_service=service)
 
@@ -43,7 +43,7 @@ def _project_app(evaluator: PretrainedKevEvaluator) -> ProjectAuditCLIApp:
     service = AuditService(
         extractor=RecursiveProjectExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader(DEFAULT_PROJECT_RULES),
+        rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES]),
     )
     return ProjectAuditCLIApp(audit_service=service)
 

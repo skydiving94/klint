@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Sequence
 
-from src.core.domain.report import AuditFinding
-from src.core.domain.rule import AuditRule
-from src.core.domain.units import AuditableUnit
+from src.core.models.report import AuditFinding
+from src.core.models.rule import AuditRule
+from src.core.models.unit import AuditableUnit
 
 
 class BaseKevEvaluator(ABC):

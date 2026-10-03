@@ -7,11 +7,12 @@ import urllib.request
 
 import pytest
 
-from src.core.domain.enums import Judgment, QuestionType
-from src.core.domain.report import AuditFinding
-from src.core.domain.rule import AuditRule
-from src.core.domain.units import AuditableFileUnit
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
+from src.catalog.common.units.file import AuditableFileUnit
+from src.core.models.judgment import Judgment
+from src.core.models.question_type import QuestionType
+from src.core.models.report import AuditFinding
+from src.core.models.rule import AuditRule
+from src.infra.system_one.remote import PretrainedKevEvaluator
 from tests.helpers import Answers, FakeJudge
 
 UNIT = AuditableFileUnit(

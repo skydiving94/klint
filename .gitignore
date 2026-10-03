@@ -220,3 +220,6 @@ __marimo__/
 **/.vscode/
 
 **/.DS_Store
+
+# import-linter
+.import_linter_cache/

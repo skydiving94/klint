@@ -5,12 +5,18 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
+from src.infra.system_one.remote import PretrainedKevEvaluator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT_DIR = Path(__file__).resolve().parent / "snapshots"
-DEFAULT_RULES = REPO_ROOT / "resources" / "default_rules.json"
-DEFAULT_PROJECT_RULES = REPO_ROOT / "resources" / "default_project_rules.json"
+RULE_PACKS = REPO_ROOT / "src" / "resources" / "catalog" / "code"
+# The built-in file-audit packs, in the order klint loads them.
+DEFAULT_RULE_PACKS = (
+    RULE_PACKS / "common" / "backend.json",
+    RULE_PACKS / "typescript" / "react.json",
+    RULE_PACKS / "common" / "structure.json",
+)
+DEFAULT_PROJECT_RULES = RULE_PACKS / "python" / "project_structure.json"
 
 Questions = dict[str, Any]
 Answers = dict[str, Any]

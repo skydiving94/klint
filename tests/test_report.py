@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from src.core.domain.enums import Judgment
-from src.core.domain.report import AuditFinding, AuditReport
+from src.core.models.judgment import Judgment
+from src.core.models.report import AuditFinding, AuditReport
 
 
 def test_judgment_criteria_cover_the_four_choices() -> None:

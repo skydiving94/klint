@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULES, FakeJudge
+from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS, FakeJudge
 
 
 def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
@@ -28,5 +28,5 @@ def test_no_model_runtime_is_loaded() -> None:
 
 
 def test_default_rule_packs_exist() -> None:
-    assert DEFAULT_RULES.is_file()
+    assert all(pack.is_file() for pack in DEFAULT_RULE_PACKS)
     assert DEFAULT_PROJECT_RULES.is_file()
