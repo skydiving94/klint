@@ -8,13 +8,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.cli.basic_audit import CLIApp
 from src.cli.project_audit import ProjectAuditCLIApp
 from src.core.auditor import AuditService
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import PretrainedKevEvaluator
-from src.infrastructure.extractors.file_extractor import WholeFileExtractor
-from src.infrastructure.extractors.project_extractor import RecursiveProjectExtractor
 from tests.helpers import (
     DEFAULT_PROJECT_RULES,
     DEFAULT_RULES,

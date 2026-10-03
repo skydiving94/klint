@@ -11,8 +11,10 @@ from src.catalog.code.common.units.directory import AuditableProjectDirectoryUni
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.models.unit import AuditableUnit
-from src.infrastructure.extractors.file_metadata_extractor import (
+from src.catalog.code.common.extractors.fallback_file_metadata import (
     FallbackFileMetadataExtractor,
+)
+from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
 

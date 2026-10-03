@@ -5,14 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.code.common.units.directory import AuditableProjectDirectoryUnit
-from src.catalog.common.units.file import AuditableFileUnit
-from src.infrastructure.extractors.file_extractor import WholeFileExtractor
-from src.infrastructure.extractors.file_metadata_extractor import (
+from src.catalog.code.common.extractors.fallback_file_metadata import (
     FallbackFileMetadataExtractor,
+)
+from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from src.catalog.code.common.units.directory import AuditableProjectDirectoryUnit
+from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
-from src.infrastructure.extractors.project_extractor import RecursiveProjectExtractor
+from src.catalog.common.extractors.whole_file import WholeFileExtractor
+from src.catalog.common.units.file import AuditableFileUnit
 from tests.helpers import SnapshotAsserter
 
 MOCK_PROJECT = Path("examples/mock_bad_project")

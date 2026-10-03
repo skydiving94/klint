@@ -1,8 +1,8 @@
 from src.app.settings import AppSettings
 from src.core.interfaces.evaluator import BaseKevEvaluator
 from src.core.auditor import AuditService
-from src.infrastructure.extractors.file_extractor import WholeFileExtractor
-from src.infrastructure.extractors.project_extractor import (
+from src.catalog.common.extractors.whole_file import WholeFileExtractor
+from src.catalog.code.common.extractors.project import (
     RecursiveProjectExtractor,
 )
 from src.infra.system_one.remote import PretrainedKevEvaluator

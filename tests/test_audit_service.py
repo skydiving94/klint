@@ -3,9 +3,9 @@
 import asyncio
 from pathlib import Path
 
+from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.core.auditor import AuditService
 from src.infra.rule_loader.json_loader import JsonRuleLoader
-from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from tests.helpers import DIR_RULE, FILE_RULE, FakeJudge, write_json
 
 
