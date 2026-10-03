@@ -5,12 +5,15 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
-from src.core.models.unit import AuditableUnit
 from src.core.interfaces.rule_loader import BaseRuleLoader
+from src.core.registry import UnitRegistry
 
 
 class JsonRuleLoader(BaseRuleLoader):
-    def __init__(self, default_rules_paths: Sequence[Path]):
+    def __init__(
+        self, default_rules_paths: Sequence[Path], unit_registry: UnitRegistry
+    ):
+        self._unit_registry = unit_registry
         self._default_rules_paths: List[Path] = list(default_rules_paths)
         self._cached_default_rules: Optional[Dict[str, AuditRule]] = None
         self._cached_custom_rules: Dict[Path, Dict[str, AuditRule]] = {}
@@ -91,7 +94,7 @@ class JsonRuleLoader(BaseRuleLoader):
     def _validate_unit_types(
         self, raw_types: List[str], rule_id: str
     ) -> List[str]:
-        known = set(AuditableUnit.known_unit_types())
+        known = set(self._unit_registry.known_unit_types())
         unknown = [t for t in raw_types if t not in known]
         if unknown:
             raise ValueError(

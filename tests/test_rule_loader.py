@@ -9,13 +9,13 @@ import pytest
 from src.catalog.common.units.file import AuditableFileUnit
 from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
-from src.core.models.unit import AuditableUnit
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from tests.helpers import (
     DEFAULT_PROJECT_RULES,
     DEFAULT_RULE_PACKS,
     DIR_RULE,
     FILE_RULE,
+    UNIT_REGISTRY,
     write_json,
 )
 
@@ -48,7 +48,7 @@ def test_default_packs_load_every_rule_in_the_original_order() -> None:
     raw: dict[str, dict[str, str]] = {}
     for pack in DEFAULT_RULE_PACKS:
         raw.update(json.loads(pack.read_text(encoding="utf-8")))
-    rules = _load(JsonRuleLoader(DEFAULT_RULE_PACKS))
+    rules = _load(JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY))
     # The judge is asked the rules in this order, so the split must keep it.
     assert list(rules) == BUILT_IN_RULE_IDS
     assert list(raw) == BUILT_IN_RULE_IDS
@@ -65,8 +65,8 @@ def test_custom_rules_merge_and_override_by_id(tmp_path: Path) -> None:
             "extra": FILE_RULE,
         },
     )
-    defaults = _load(JsonRuleLoader(DEFAULT_RULE_PACKS))
-    merged = _load(JsonRuleLoader(DEFAULT_RULE_PACKS), custom)
+    defaults = _load(JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY))
+    merged = _load(JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY), custom)
     assert len(merged) == len(defaults) + 1
     assert merged["hardcoded_secrets"].instructions == "Overridden?"
     assert merged["extra"].instructions == "Is it tidy?"
@@ -78,7 +78,7 @@ def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
         tmp_path / "klint.json",
         {"env": {"KEV_MODE": "local"}, "rules": {"only": FILE_RULE}},
     )
-    assert list(_load(JsonRuleLoader([config]))) == ["only"]
+    assert list(_load(JsonRuleLoader([config], UNIT_REGISTRY))) == ["only"]
 
 
 def test_entries_without_type_or_instructions_are_skipped(tmp_path: Path) -> None:
@@ -91,14 +91,14 @@ def test_entries_without_type_or_instructions_are_skipped(tmp_path: Path) -> Non
             "junk": 1,
         },
     )
-    assert list(_load(JsonRuleLoader([pack]))) == ["ok"]
+    assert list(_load(JsonRuleLoader([pack], UNIT_REGISTRY))) == ["ok"]
 
 
 def test_target_unit_types_default_to_file_and_explicit_ones_are_kept(
     tmp_path: Path,
 ) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE, "b": DIR_RULE})
-    rules = _load(JsonRuleLoader([pack]))
+    rules = _load(JsonRuleLoader([pack], UNIT_REGISTRY))
     assert rules["a"].target_unit_types == ["file"]
     assert rules["b"].target_unit_types == ["project_directory"]
 
@@ -108,22 +108,24 @@ def test_unknown_target_unit_type_is_rejected(tmp_path: Path) -> None:
         tmp_path / "pack.json", {"a": {**FILE_RULE, "target_unit_types": ["nope"]}}
     )
     with pytest.raises(ValueError, match="unknown target_unit_types"):
-        _load(JsonRuleLoader([pack]))
+        _load(JsonRuleLoader([pack], UNIT_REGISTRY))
 
 
 def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": {**FILE_RULE, "type": "essay"}})
     with pytest.raises(ValueError, match="essay"):
-        _load(JsonRuleLoader([pack]))
+        _load(JsonRuleLoader([pack], UNIT_REGISTRY))
 
 
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        _load(JsonRuleLoader(DEFAULT_RULE_PACKS), tmp_path / "absent.json")
+        _load(
+            JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY), tmp_path / "absent.json"
+        )
 
 
 def test_missing_default_file_gives_no_rules(tmp_path: Path) -> None:
-    assert _load(JsonRuleLoader([tmp_path / "absent.json"])) == {}
+    assert _load(JsonRuleLoader([tmp_path / "absent.json"], UNIT_REGISTRY)) == {}
 
 
 def test_several_default_packs_are_merged_in_order(tmp_path: Path) -> None:
@@ -136,7 +138,7 @@ def test_several_default_packs_are_merged_in_order(tmp_path: Path) -> None:
         {"shared": {**FILE_RULE, "instructions": "From second?"}, "b": FILE_RULE},
     )
 
-    rules = _load(JsonRuleLoader([first, second]))
+    rules = _load(JsonRuleLoader([first, second], UNIT_REGISTRY))
 
     assert list(rules) == ["shared", "a", "b"]
     assert rules["shared"].instructions == "From second?"
@@ -145,7 +147,7 @@ def test_several_default_packs_are_merged_in_order(tmp_path: Path) -> None:
 def test_missing_default_pack_is_skipped_among_several(tmp_path: Path) -> None:
     present = write_json(tmp_path / "present.json", {"a": FILE_RULE})
 
-    rules = _load(JsonRuleLoader([tmp_path / "absent.json", present]))
+    rules = _load(JsonRuleLoader([tmp_path / "absent.json", present], UNIT_REGISTRY))
 
     assert list(rules) == ["a"]
 
@@ -157,7 +159,7 @@ def test_custom_rules_override_every_default_pack(tmp_path: Path) -> None:
         tmp_path / "custom.json", {"a": {**FILE_RULE, "instructions": "Custom?"}}
     )
 
-    rules = _load(JsonRuleLoader([first, second]), custom)
+    rules = _load(JsonRuleLoader([first, second], UNIT_REGISTRY), custom)
 
     assert list(rules) == ["a", "b"]
     assert rules["a"].instructions == "Custom?"
@@ -173,7 +175,7 @@ def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
         },
     )
 
-    rules = _load(JsonRuleLoader([pack]))
+    rules = _load(JsonRuleLoader([pack], UNIT_REGISTRY))
 
     assert rules["scoped"].languages == ["python"]
     assert rules["scoped"].tags == ["security"]
@@ -191,17 +193,19 @@ def test_malformed_languages_or_tags_are_rejected(
         tmp_path / "pack.json", {"broken": {**FILE_RULE, field_name: bad_value}}
     )
     with pytest.raises(ValueError, match=f"Rule 'broken' has invalid {field_name}"):
-        _load(JsonRuleLoader([pack]))
+        _load(JsonRuleLoader([pack], UNIT_REGISTRY))
 
 
 def test_built_in_packs_do_not_restrict_languages_or_set_tags() -> None:
-    rules = _load(JsonRuleLoader([*DEFAULT_RULE_PACKS, DEFAULT_PROJECT_RULES]))
+    rules = _load(
+        JsonRuleLoader([*DEFAULT_RULE_PACKS, DEFAULT_PROJECT_RULES], UNIT_REGISTRY)
+    )
     assert len(rules) == 34
     assert all(rule.languages == [] and rule.tags == [] for rule in rules.values())
 
 
 def test_builtin_unit_types_are_registered() -> None:
-    known = set(AuditableUnit.known_unit_types())
+    known = set(UNIT_REGISTRY.known_unit_types())
     assert {"file", "file_metadata", "project_directory"} <= known
 
 

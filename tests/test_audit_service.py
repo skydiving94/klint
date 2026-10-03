@@ -4,16 +4,18 @@ import asyncio
 from pathlib import Path
 
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
+from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.core.auditor import AuditService
 from src.infra.rule_loader.json_loader import JsonRuleLoader
-from tests.helpers import DIR_RULE, FILE_RULE, FakeJudge, write_json
+from tests.helpers import DIR_RULE, FILE_RULE, UNIT_REGISTRY, FakeJudge, write_json
 
 
 def _service(rules_path: Path, judge: FakeJudge) -> AuditService:
     return AuditService(
         extractor=WholeFileExtractor(),
         evaluator=judge.evaluator(),
-        rule_loader=JsonRuleLoader([rules_path]),
+        rule_loader=JsonRuleLoader([rules_path], UNIT_REGISTRY),
+        scale=PASS_FAIL_SCALE,
     )
 
 

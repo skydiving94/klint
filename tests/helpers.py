@@ -5,6 +5,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from src import catalog
+from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from src.core.registry import UnitRegistry
 from src.infra.system_one.remote import PretrainedKevEvaluator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +28,22 @@ SnapshotAsserter = Callable[[str, str], None]
 
 FILE_RULE: RuleSpec = {"type": "choice", "instructions": "Is it tidy?"}
 DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
+
+
+def build_unit_registry() -> UnitRegistry:
+    """Return a registry holding the unit types of every built-in suite."""
+    registry = UnitRegistry()
+    catalog.register(registry)
+    return registry
+
+
+UNIT_REGISTRY = build_unit_registry()
+
+# The four answers of the default scale, for building and checking findings.
+PASS = PASS_FAIL_SCALE.choice("pass")
+FAIL = PASS_FAIL_SCALE.choice("fail")
+IRRELEVANT = PASS_FAIL_SCALE.choice("irrelevant")
+LACK_OF_EVIDENCE = PASS_FAIL_SCALE.choice("lack_of_evidence")
 
 
 def write_json(path: Path, data: dict[str, Any]) -> Path:

@@ -1,12 +1,21 @@
+from src import catalog
 from src.app.settings import AppSettings
 from src.core.interfaces.evaluator import BaseKevEvaluator
 from src.core.auditor import AuditService
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
+from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.catalog.code.common.extractors.project import (
     RecursiveProjectExtractor,
 )
 from src.infra.system_one.remote import PretrainedKevEvaluator
+from src.core.registry import UnitRegistry
 from src.infra.rule_loader.json_loader import JsonRuleLoader
+
+
+def _create_unit_registry() -> UnitRegistry:
+    registry = UnitRegistry()
+    catalog.register(registry)
+    return registry
 
 
 def _create_evaluator(settings: AppSettings) -> BaseKevEvaluator:
@@ -26,8 +35,10 @@ def create_audit_service(settings: AppSettings) -> AuditService:
         extractor=WholeFileExtractor(),
         evaluator=_create_evaluator(settings),
         rule_loader=JsonRuleLoader(
-            default_rules_paths=settings.default_rules_paths
+            default_rules_paths=settings.default_rules_paths,
+            unit_registry=_create_unit_registry(),
         ),
+        scale=PASS_FAIL_SCALE,
     )
 
 
@@ -41,6 +52,8 @@ def create_project_audit_service(settings: AppSettings) -> AuditService:
         extractor=RecursiveProjectExtractor(),
         evaluator=_create_evaluator(settings),
         rule_loader=JsonRuleLoader(
-            default_rules_paths=settings.default_project_rules_paths
+            default_rules_paths=settings.default_project_rules_paths,
+            unit_registry=_create_unit_registry(),
         ),
+        scale=PASS_FAIL_SCALE,
     )

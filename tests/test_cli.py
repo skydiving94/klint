@@ -10,6 +10,7 @@ import pytest
 
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
+from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.cli.basic_audit import CLIApp
 from src.cli.project_audit import ProjectAuditCLIApp
 from src.core.auditor import AuditService
@@ -19,6 +20,7 @@ from tests.helpers import (
     DEFAULT_PROJECT_RULES,
     DEFAULT_RULE_PACKS,
     FILE_RULE,
+    UNIT_REGISTRY,
     FakeJudge,
     SnapshotAsserter,
     write_json,
@@ -34,7 +36,8 @@ def _file_app(evaluator: PretrainedKevEvaluator) -> CLIApp:
     service = AuditService(
         extractor=WholeFileExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader(DEFAULT_RULE_PACKS),
+        rule_loader=JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY),
+        scale=PASS_FAIL_SCALE,
     )
     return CLIApp(audit_service=service)
 
@@ -43,7 +46,8 @@ def _project_app(evaluator: PretrainedKevEvaluator) -> ProjectAuditCLIApp:
     service = AuditService(
         extractor=RecursiveProjectExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES]),
+        rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES], UNIT_REGISTRY),
+        scale=PASS_FAIL_SCALE,
     )
     return ProjectAuditCLIApp(audit_service=service)
 

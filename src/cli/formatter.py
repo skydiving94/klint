@@ -1,6 +1,8 @@
 import sys
 from collections import defaultdict
-from typing import Any, Dict, List, Sequence
+from typing import Dict, List, Sequence
+
+from src.core.models.report import AuditFinding
 
 
 class _ANSI:
@@ -11,14 +13,6 @@ class _ANSI:
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
     CYAN = "\033[96m"
-
-
-_JUDGMENT_ORDER: Dict[str, int] = {
-    "FAIL": 0,
-    "LACK OF EVIDENCE": 1,
-    "PASS": 2,
-    "IRRELEVANT": 3,
-}
 
 
 class AuditProgressReporter:
@@ -94,20 +88,14 @@ def _confidence_bar(confidence: float | None, width: int = 10) -> str:
     return f"{color}{bar}{_ANSI.RESET} {_ANSI.BOLD}{pct}{_ANSI.RESET}"
 
 
-def _sort_key(issue: Dict[str, Any]) -> tuple:
-    judgment = str(issue.get("judgment", "")).upper()
-    conf = issue.get("confidence")
-    conf_val = float(conf) if isinstance(conf, (int, float)) else -1.0
-    return (
-        _JUDGMENT_ORDER.get(judgment, 99),
-        -conf_val,
-        str(issue.get("rule_id", "")),
-    )
+def _sort_key(finding: AuditFinding) -> tuple:
+    confidence = finding.confidence if finding.confidence is not None else -1.0
+    return (finding.choice.priority, -confidence, finding.rule_id)
 
 
 def format_audit_report(
     examined_targets: Sequence[str],
-    issues: List[Dict[str, Any]],
+    findings: Sequence[AuditFinding],
     target_label: str = "files",
 ) -> str:
     divider = "\u2500" * 72
@@ -118,45 +106,38 @@ def format_audit_report(
     )
     lines.append(divider)
 
-    if not issues:
+    if not findings:
         lines.append(
             f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 No architectural or semantic issues found.{_ANSI.RESET}\n"
         )
         return "\n".join(lines)
 
-    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for issue in issues:
-        unit_id = str(issue.get("unit_id", "unknown"))
-        grouped[unit_id].append(issue)
+    grouped: Dict[str, List[AuditFinding]] = defaultdict(list)
+    for finding in findings:
+        grouped[finding.unit_id].append(finding)
 
-    fail_count = sum(
-        1 for i in issues if str(i.get("judgment", "")).upper() == "FAIL"
-    )
+    fail_count = sum(1 for finding in findings if finding.is_failure())
 
-    for unit_id, unit_issues in grouped.items():
+    for unit_id, unit_findings in grouped.items():
         lines.append(
             f"\n{_ANSI.BOLD}Target:{_ANSI.RESET} {_ANSI.CYAN}{unit_id}{_ANSI.RESET}"
         )
-        for issue in sorted(unit_issues, key=_sort_key):
-            judgment = str(issue.get("judgment", "UNKNOWN"))
-            rule_id = str(issue.get("rule_id", "unknown_rule"))
-            confidence = issue.get("confidence")
-            instructions = str(issue.get("instructions", ""))
-            line_range = issue.get("line_range")
+        for finding in sorted(unit_findings, key=_sort_key):
+            line_range = finding.location.line_range if finding.location else None
 
             loc_suffix = ""
-            if isinstance(line_range, list) and len(line_range) == 2:
+            if line_range is not None:
                 loc_suffix = (
                     f" {_ANSI.DIM}(lines {line_range[0]}-{line_range[1]}){_ANSI.RESET}"
                 )
 
             lines.append(
-                f"  {_badge(judgment)} {_ANSI.BOLD}{rule_id}{_ANSI.RESET}{loc_suffix}  "
-                f"Confidence: {_confidence_bar(confidence)}"
+                f"  {_badge(finding.choice.label)} {_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
+                f"Confidence: {_confidence_bar(finding.confidence)}"
             )
-            if instructions:
+            if finding.instructions:
                 lines.append(
-                    f"      {_ANSI.DIM}\u21b3 {instructions}{_ANSI.RESET}"
+                    f"      {_ANSI.DIM}\u21b3 {finding.instructions}{_ANSI.RESET}"
                 )
 
     lines.append("\n" + divider)
@@ -165,6 +146,6 @@ def format_audit_report(
         f"{_ANSI.BOLD}Summary:{_ANSI.RESET} "
         f"{len(examined_targets)} {target_label} examined | "
         f"{summary_color}{_ANSI.BOLD}{fail_count} failure(s){_ANSI.RESET} | "
-        f"{len(issues)} total finding(s) displayed\n"
+        f"{len(findings)} total finding(s) displayed\n"
     )
     return "\n".join(lines)

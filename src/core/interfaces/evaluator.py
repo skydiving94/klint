@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import List, Sequence
-
-from src.core.models.report import AuditFinding
-from src.core.models.rule import AuditRule
-from src.core.models.unit import AuditableUnit
+from typing import Any, Mapping
 
 
 class BaseKevEvaluator(ABC):
     @abstractmethod
-    async def evaluate(
-        self, unit: AuditableUnit, rules: Sequence[AuditRule]
-    ) -> List[AuditFinding]:
+    async def answer(
+        self, state: str, questions: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        """Answer every question about ``state``.
+
+        ``questions`` maps a question id to its type, instructions and
+        criteria. The result maps each answered id to the chosen key, with
+        an optional confidence and probabilities.
+        """
         pass

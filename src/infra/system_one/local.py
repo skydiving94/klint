@@ -1,7 +1,7 @@
 import asyncio
 import os
 from dataclasses import replace
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Mapping, Optional
 
 # Silence Hugging Face Hub & Xet download/reconstruction progress bars before importing kev
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
@@ -13,10 +13,6 @@ from kev.checkpoint import Checkpoint, LoadOptions, fused_available
 from kev.device import default_device
 from kev.serve import Server
 
-from src.core.models.judgment import Judgment
-from src.core.models.report import AuditFinding
-from src.core.models.rule import AuditRule
-from src.core.models.unit import AuditableUnit
 from src.core.interfaces.evaluator import BaseKevEvaluator
 
 disable_progress_bars()
@@ -47,7 +43,9 @@ class InProcessKevEvaluator(BaseKevEvaluator):
         tok, model = ck.load(dev, opts)
         self._server = Server(ck, tok, model, dev)
 
-    async def evaluate(self, unit: AuditableUnit, rules: Sequence[AuditRule]) -> List[AuditFinding]:
+    async def answer(
+        self, state: str, questions: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
         async with self._lock:
             if self._server is None:
                 await asyncio.to_thread(self._load_server_sync)
@@ -56,39 +54,10 @@ class InProcessKevEvaluator(BaseKevEvaluator):
 
         req = SystemOneRequest(
             model=self._checkpoint,
-            state=unit.get_content(),
-            questions=self._build_questions_payload(rules),
+            state=state,
+            questions=dict(questions),
         )
         assert self._server is not None
         response_data = await self._server.answer_async(req)
-        raw_answers = response_data.get("answers", {})
-
-        findings: List[AuditFinding] = []
-        for rule in rules:
-            answer_data = raw_answers.get(rule.rule_id, {})
-            choice_key = answer_data.get("choice")
-            if choice_key is None:
-                continue
-            findings.append(
-                AuditFinding(
-                    rule_id=rule.rule_id,
-                    unit_id=unit.unit_id,
-                    judgment=Judgment[choice_key.upper()],
-                    instructions=rule.instructions,
-                    confidence=answer_data.get("confidence"),
-                    probabilities=answer_data.get("probabilities"),
-                    metadata=unit.get_metadata(),
-                )
-            )
-        return findings
-
-    def _build_questions_payload(self, rules: Sequence[AuditRule]) -> Dict[str, Any]:
-        criteria = Judgment.as_criteria_payload()
-        return {
-            rule.rule_id: {
-                "type": rule.question_type.value,
-                "instructions": rule.instructions, 
-                "criteria": criteria
-            }
-            for rule in rules
-        }
+        answers: Mapping[str, Any] = response_data.get("answers", {})
+        return answers

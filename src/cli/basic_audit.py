@@ -9,7 +9,7 @@ from src.app.wiring import create_audit_service
 from src.catalog.common.extractors.file_collector import collect_target_files
 from src.cli.formatter import AuditProgressReporter, format_audit_report
 from src.app.settings import AppSettings
-from src.core.models.report import AuditReport
+from src.core.models.report import AuditFinding, AuditReport
 from src.core.auditor import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
@@ -97,11 +97,11 @@ class CLIApp:
         )
         progress.finish()
 
-        issues: List[Dict[str, Any]] = [
-            issue
+        findings: List[AuditFinding] = [
+            finding
             for report in reports
             if report is not None
-            for issue in report.get_issues(
+            for finding in report.get_findings(
                 fails_only=not args.all,
                 min_confidence=args.min_confidence,
             )
@@ -114,11 +114,15 @@ class CLIApp:
         if args.json:
             print(
                 json.dumps(
-                    {"examined_files": examined, "issues": issues}, indent=2
+                    {
+                        "examined_files": examined,
+                        "issues": [finding.to_dict() for finding in findings],
+                    },
+                    indent=2,
                 )
             )
         else:
-            print(format_audit_report(examined, issues, target_label="files"))
+            print(format_audit_report(examined, findings, target_label="files"))
         return 0
 
 

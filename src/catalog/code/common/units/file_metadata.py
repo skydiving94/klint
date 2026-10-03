@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass, field
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, Optional
 
+from src.core.models.location import Location
 from src.core.models.unit import AuditableUnit
 
 
@@ -40,6 +41,9 @@ class AuditableFileMetadataUnit(AuditableUnit):
         if self.functions:
             details.append(f"functions=[{', '.join(self.functions)}]")
         return f"{self.file_name} ({'; '.join(details)})"
+
+    def get_location(self) -> Optional[Location]:
+        return Location(source=self.file_path or self.unit_id)
 
     def get_metadata(self) -> Dict[str, Any]:
         payload = FileMetadataPayload(

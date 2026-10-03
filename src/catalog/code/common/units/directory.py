@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Set, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple
 
+from src.core.models.location import Location
 from src.core.models.unit import AuditableUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 
@@ -165,6 +166,9 @@ class AuditableProjectDirectoryUnit(AuditableUnit):
         for subdir in self.subdirectories:
             lines.append(subdir._render_tree(indent=indent + 1))
         return "\n".join(lines)
+
+    def get_location(self) -> Optional[Location]:
+        return Location(source=self.directory_path or self.unit_id)
 
     def get_metadata(self) -> Dict[str, Any]:
         metadata = ProjectDirectoryUnitMetadata(
