@@ -11,7 +11,13 @@ from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
 from src.core.models.unit import AuditableUnit
 from src.infra.rule_loader.json_loader import JsonRuleLoader
-from tests.helpers import DEFAULT_RULE_PACKS, DIR_RULE, FILE_RULE, write_json
+from tests.helpers import (
+    DEFAULT_PROJECT_RULES,
+    DEFAULT_RULE_PACKS,
+    DIR_RULE,
+    FILE_RULE,
+    write_json,
+)
 
 
 def _load(loader: JsonRuleLoader, custom: Path | None = None) -> dict[str, AuditRule]:
@@ -155,6 +161,43 @@ def test_custom_rules_override_every_default_pack(tmp_path: Path) -> None:
 
     assert list(rules) == ["a", "b"]
     assert rules["a"].instructions == "Custom?"
+
+
+def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        {
+            "scoped": {**FILE_RULE, "languages": ["python"], "tags": ["security"]},
+            "plain": FILE_RULE,
+            "empty": {**FILE_RULE, "languages": [], "tags": []},
+        },
+    )
+
+    rules = _load(JsonRuleLoader([pack]))
+
+    assert rules["scoped"].languages == ["python"]
+    assert rules["scoped"].tags == ["security"]
+    assert (rules["plain"].languages, rules["plain"].tags) == ([], [])
+    assert (rules["empty"].languages, rules["empty"].tags) == ([], [])
+    assert rules["plain"].target_unit_types == ["file"]
+
+
+@pytest.mark.parametrize("field_name", ["languages", "tags"])
+@pytest.mark.parametrize("bad_value", ["python", ["python", 3], {"a": 1}, None])
+def test_malformed_languages_or_tags_are_rejected(
+    tmp_path: Path, field_name: str, bad_value: object
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json", {"broken": {**FILE_RULE, field_name: bad_value}}
+    )
+    with pytest.raises(ValueError, match=f"Rule 'broken' has invalid {field_name}"):
+        _load(JsonRuleLoader([pack]))
+
+
+def test_built_in_packs_do_not_restrict_languages_or_set_tags() -> None:
+    rules = _load(JsonRuleLoader([*DEFAULT_RULE_PACKS, DEFAULT_PROJECT_RULES]))
+    assert len(rules) == 34
+    assert all(rule.languages == [] and rule.tags == [] for rule in rules.values())
 
 
 def test_builtin_unit_types_are_registered() -> None:
