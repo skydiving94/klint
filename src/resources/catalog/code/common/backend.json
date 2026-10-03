@@ -1,0 +1,37 @@
+{
+  "n_plus_1_query": {
+    "type": "choice",
+    "instructions": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
+    "target_unit_types": ["file"]
+  },
+  "hardcoded_secrets": {
+    "type": "choice",
+    "instructions": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
+    "target_unit_types": ["file"]
+  },
+  "improper_error_handling": {
+    "type": "choice",
+    "instructions": "Are exceptions handled safely with clean error responses rather than exposing sensitive internal details or raw stack traces?",
+    "target_unit_types": ["file"]
+  },
+  "sync_blocking_io": {
+    "type": "choice",
+    "instructions": "Do async functions perform file and network I/O asynchronously (or offload blocking calls via asyncio.to_thread) rather than blocking the event loop synchronously?",
+    "target_unit_types": ["file"]
+  },
+  "missing_input_validation": {
+    "type": "choice",
+    "instructions": "Is external user input properly validated, sanitized, or parameterized rather than used directly in queries or operations?",
+    "target_unit_types": ["file"]
+  },
+  "tight_coupling": {
+    "type": "choice",
+    "instructions": "Are external services and third-party APIs integrated behind abstraction layers or interfaces rather than tightly coupled directly inside business logic?",
+    "target_unit_types": ["file"]
+  },
+  "over_fetching_data": {
+    "type": "choice",
+    "instructions": "Do database queries select only the specific columns needed rather than over-fetching entire rows (e.g. SELECT *)?",
+    "target_unit_types": ["file"]
+  }
+}

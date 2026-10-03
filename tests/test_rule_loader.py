@@ -11,17 +11,41 @@ from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
 from src.core.models.unit import AuditableUnit
 from src.infra.rule_loader.json_loader import JsonRuleLoader
-from tests.helpers import DEFAULT_RULES, DIR_RULE, FILE_RULE, write_json
+from tests.helpers import DEFAULT_RULE_PACKS, DIR_RULE, FILE_RULE, write_json
 
 
 def _load(loader: JsonRuleLoader, custom: Path | None = None) -> dict[str, AuditRule]:
     return {rule.rule_id: rule for rule in asyncio.run(loader.load_rules(custom))}
 
 
-def test_default_pack_loads_every_rule() -> None:
-    raw = json.loads(DEFAULT_RULES.read_text(encoding="utf-8"))
-    rules = _load(JsonRuleLoader([DEFAULT_RULES]))
-    assert list(rules) == list(raw)
+BUILT_IN_RULE_IDS = [
+    "n_plus_1_query",
+    "hardcoded_secrets",
+    "improper_error_handling",
+    "sync_blocking_io",
+    "missing_input_validation",
+    "tight_coupling",
+    "over_fetching_data",
+    "prop_drilling",
+    "ignoring_composition",
+    "improper_state_colocation",
+    "direct_dom_manipulation",
+    "overusing_use_effect",
+    "missing_dependency_arrays",
+    "large_bundle_sizes",
+    "inline_functions",
+    "god_component",
+]
+
+
+def test_default_packs_load_every_rule_in_the_original_order() -> None:
+    raw: dict[str, dict[str, str]] = {}
+    for pack in DEFAULT_RULE_PACKS:
+        raw.update(json.loads(pack.read_text(encoding="utf-8")))
+    rules = _load(JsonRuleLoader(DEFAULT_RULE_PACKS))
+    # The judge is asked the rules in this order, so the split must keep it.
+    assert list(rules) == BUILT_IN_RULE_IDS
+    assert list(raw) == BUILT_IN_RULE_IDS
     assert all(r.question_type is QuestionType.CHOICE for r in rules.values())
     assert all(r.target_unit_types == ["file"] for r in rules.values())
     assert rules["n_plus_1_query"].instructions == raw["n_plus_1_query"]["instructions"]
@@ -35,8 +59,8 @@ def test_custom_rules_merge_and_override_by_id(tmp_path: Path) -> None:
             "extra": FILE_RULE,
         },
     )
-    defaults = _load(JsonRuleLoader([DEFAULT_RULES]))
-    merged = _load(JsonRuleLoader([DEFAULT_RULES]), custom)
+    defaults = _load(JsonRuleLoader(DEFAULT_RULE_PACKS))
+    merged = _load(JsonRuleLoader(DEFAULT_RULE_PACKS), custom)
     assert len(merged) == len(defaults) + 1
     assert merged["hardcoded_secrets"].instructions == "Overridden?"
     assert merged["extra"].instructions == "Is it tidy?"
@@ -89,7 +113,7 @@ def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
 
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        _load(JsonRuleLoader([DEFAULT_RULES]), tmp_path / "absent.json")
+        _load(JsonRuleLoader(DEFAULT_RULE_PACKS), tmp_path / "absent.json")
 
 
 def test_missing_default_file_gives_no_rules(tmp_path: Path) -> None:

@@ -17,7 +17,7 @@ from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import PretrainedKevEvaluator
 from tests.helpers import (
     DEFAULT_PROJECT_RULES,
-    DEFAULT_RULES,
+    DEFAULT_RULE_PACKS,
     FILE_RULE,
     FakeJudge,
     SnapshotAsserter,
@@ -34,7 +34,7 @@ def _file_app(evaluator: PretrainedKevEvaluator) -> CLIApp:
     service = AuditService(
         extractor=WholeFileExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader([DEFAULT_RULES]),
+        rule_loader=JsonRuleLoader(DEFAULT_RULE_PACKS),
     )
     return CLIApp(audit_service=service)
 

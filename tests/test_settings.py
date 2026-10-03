@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.app.settings import AppSettings
-from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULES, write_json
+from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS, write_json
 
 
 @pytest.fixture
@@ -46,11 +46,11 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
 
     assert settings == AppSettings(
         model_name="jaredpalmer/kev-4b",
-        default_rules_path=DEFAULT_RULES,
+        default_rules_paths=DEFAULT_RULE_PACKS,
         kev_mode="local",
         kev_base_url="http://127.0.0.1:8009",
         kev_api_key=None,
-        default_project_rules_path=DEFAULT_PROJECT_RULES,
+        default_project_rules_paths=(DEFAULT_PROJECT_RULES,),
         discovered_config_path=None,
     )
 
@@ -133,11 +133,26 @@ def test_unreadable_klint_json_is_ignored_for_settings(tmp_path: Path) -> None:
     assert settings.discovered_config_path == project / "klint.json"
 
 
-def test_relative_rules_path_resolves_against_the_klint_repo(
+def test_rules_path_variable_replaces_every_built_in_pack(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
-    shell_env["KEV_DEFAULT_RULES_PATH"] = "resources/default_project_rules.json"
+    file_pack = write_json(tmp_path / "file_rules.json", {})
+    project_pack = write_json(tmp_path / "project_rules.json", {})
+    shell_env["KEV_DEFAULT_RULES_PATH"] = str(file_pack)
+    shell_env["KEV_DEFAULT_PROJECT_RULES_PATH"] = str(project_pack)
 
     settings = AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))
 
-    assert settings.default_rules_path == DEFAULT_PROJECT_RULES
+    assert settings.default_rules_paths == (file_pack,)
+    assert settings.default_project_rules_paths == (project_pack,)
+
+
+def test_relative_rules_path_resolves_against_the_klint_repo(
+    shell_env: dict[str, str], tmp_path: Path
+) -> None:
+    relative = "src/resources/catalog/code/python/project_structure.json"
+    shell_env["KEV_DEFAULT_RULES_PATH"] = relative
+
+    settings = AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))
+
+    assert settings.default_rules_paths == (DEFAULT_PROJECT_RULES,)

@@ -29,6 +29,9 @@ klint-project = "src.cli.project_audit:cli_main"
 where = ["."]
 include = ["src*"]
 
+[tool.setuptools.package-data]
+"src.resources" = ["**/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

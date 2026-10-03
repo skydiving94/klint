@@ -1,16 +1,20 @@
 import json
 import os
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
 _DEFAULT_KEV_MODE = "local"
-_DEFAULT_RULES_FILE = _PACKAGE_ROOT / "resources" / "default_rules.json"
-_DEFAULT_PROJECT_RULES_FILE = (
-    _PACKAGE_ROOT / "resources" / "default_project_rules.json"
+# Built-in rule packs, relative to src/resources/catalog/ and loaded in this order.
+_BUILT_IN_RULE_PACKS = (
+    "code/common/backend.json",
+    "code/typescript/react.json",
+    "code/common/structure.json",
 )
+_BUILT_IN_PROJECT_RULE_PACKS = ("code/python/project_structure.json",)
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 
 
@@ -60,6 +64,12 @@ def _load_klint_dotenv(dotenv_path: Optional[Path] = None) -> None:
         os.environ.setdefault(key, value)
 
 
+def _built_in_packs(relative_paths: Sequence[str]) -> Tuple[Path, ...]:
+    """Locate built-in rule packs inside the installed package."""
+    catalog = resources.files("src.resources") / "catalog"
+    return tuple(Path(str(catalog / relative)) for relative in relative_paths)
+
+
 def _resolve_resource_path(raw_path: str | Path) -> Path:
     candidate = Path(raw_path)
     if candidate.is_absolute() or candidate.exists():
@@ -70,11 +80,11 @@ def _resolve_resource_path(raw_path: str | Path) -> Path:
 @dataclass(frozen=True)
 class AppSettings:
     model_name: str
-    default_rules_path: Path
+    default_rules_paths: Tuple[Path, ...]
     kev_mode: str = _DEFAULT_KEV_MODE
     kev_base_url: str = "http://127.0.0.1:8009"
     kev_api_key: Optional[str] = None
-    default_project_rules_path: Optional[Path] = None
+    default_project_rules_paths: Tuple[Path, ...] = ()
     discovered_config_path: Optional[Path] = None
 
     @classmethod
@@ -105,12 +115,9 @@ class AppSettings:
             return os.environ.get(key) or default
 
         model_name = _get_setting("KEV_MODEL_NAME", _DEFAULT_MODEL_NAME)
-        rules_path = _get_setting(
-            "KEV_DEFAULT_RULES_PATH", str(_DEFAULT_RULES_FILE)
-        )
-        project_rules_path = _get_setting(
-            "KEV_DEFAULT_PROJECT_RULES_PATH", str(_DEFAULT_PROJECT_RULES_FILE)
-        )
+        # When set, each variable names one file that replaces the built-in packs.
+        rules_override = _get_setting("KEV_DEFAULT_RULES_PATH")
+        project_rules_override = _get_setting("KEV_DEFAULT_PROJECT_RULES_PATH")
         kev_mode = (
             _get_setting("KEV_MODE", _DEFAULT_KEV_MODE) or _DEFAULT_KEV_MODE
         ).lower()
@@ -120,17 +127,21 @@ class AppSettings:
         )
         kev_api_key = _get_setting("KEV_API_KEY") or None
 
-        assert model_name is not None and rules_path is not None
+        assert model_name is not None
         return cls(
             model_name=model_name,
-            default_rules_path=_resolve_resource_path(rules_path),
+            default_rules_paths=(
+                (_resolve_resource_path(rules_override),)
+                if rules_override
+                else _built_in_packs(_BUILT_IN_RULE_PACKS)
+            ),
             kev_mode=kev_mode,
             kev_base_url=kev_base_url,
             kev_api_key=kev_api_key,
-            default_project_rules_path=(
-                _resolve_resource_path(project_rules_path)
-                if project_rules_path
-                else None
+            default_project_rules_paths=(
+                (_resolve_resource_path(project_rules_override),)
+                if project_rules_override
+                else _built_in_packs(_BUILT_IN_PROJECT_RULE_PACKS)
             ),
             discovered_config_path=active_config,
         )
