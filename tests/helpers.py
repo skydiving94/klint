@@ -5,7 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
+from src.infra.system_one.remote import PretrainedKevEvaluator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT_DIR = Path(__file__).resolve().parent / "snapshots"

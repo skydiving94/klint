@@ -5,13 +5,13 @@ from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from src.infrastructure.extractors.project_extractor import (
     RecursiveProjectExtractor,
 )
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
-from src.infrastructure.rules.json_loader import JsonRuleLoader
+from src.infra.system_one.remote import PretrainedKevEvaluator
+from src.infra.rule_loader.json_loader import JsonRuleLoader
 
 
 def _create_evaluator(settings: AppSettings) -> BaseKevEvaluator:
     if settings.kev_mode == "local":
-        from src.infrastructure.kev.in_process import InProcessKevEvaluator
+        from src.infra.system_one.local import InProcessKevEvaluator
 
         return InProcessKevEvaluator(checkpoint=settings.model_name)
     return PretrainedKevEvaluator(
