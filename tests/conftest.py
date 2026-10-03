@@ -7,7 +7,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from tests.helpers import REPO_ROOT, SNAPSHOT_DIR, FakeJudge, SnapshotAsserter
+from tests.support.fakes import FakeJudge
+from tests.support.paths import REPO_ROOT, SNAPSHOT_DIR, SnapshotAsserter
 
 
 @pytest.fixture

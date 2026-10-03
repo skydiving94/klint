@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 dependencies = [
     "torch>=2.2.0",
+    "injector>=0.22",
 ]
 
 # The in-process model runtime, needed only when KEV_MODE=local. Optional for
@@ -92,6 +93,7 @@ follow_imports = "silent"
 # below it, never from one above. src/resources holds data only.
 [tool.importlinter]
 root_package = "src"
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Layers: cli > app > catalog > infra > core"
@@ -103,3 +105,23 @@ layers = [
     "src.infra",
     "src.core",
 ]
+
+[[tool.importlinter.contracts]]
+name = "Wiring: only app uses injector"
+type = "forbidden"
+source_modules = ["src.cli", "src.catalog", "src.infra", "src.core"]
+forbidden_modules = ["injector"]
+# Using what app builds is fine; importing injector directly is not.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Catalog: shared suites do not import specific ones"
+type = "forbidden"
+source_modules = ["src.catalog.common"]
+forbidden_modules = ["src.catalog.code"]
+
+[[tool.importlinter.contracts]]
+name = "Catalog: code shared across languages does not import one language"
+type = "forbidden"
+source_modules = ["src.catalog.code.common"]
+forbidden_modules = ["src.catalog.code.python"]

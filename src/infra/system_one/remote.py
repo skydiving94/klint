@@ -1,16 +1,12 @@
 import asyncio
 import json
 import urllib.request
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, Mapping, Optional
 
-from src.core.models.judgment import Judgment
-from src.core.models.report import AuditFinding
-from src.core.models.rule import AuditRule
-from src.core.models.unit import AuditableUnit
-from src.core.interfaces.evaluator import BaseKevEvaluator
+from src.core.interfaces.judge import BaseJudge
 
 
-class PretrainedKevEvaluator(BaseKevEvaluator):
+class RemoteSystemOneJudge(BaseJudge):
     def __init__(
         self,
         model_name: str,
@@ -26,37 +22,10 @@ class PretrainedKevEvaluator(BaseKevEvaluator):
         self._timeout = timeout_seconds
         self._inference_fn = inference_fn or self._default_inference
 
-    async def evaluate(self, unit: AuditableUnit, rules: Sequence[AuditRule]) -> List[AuditFinding]:
-        context = unit.get_content()
-        questions_payload = self._build_questions_payload(rules)
-        raw_answers = await asyncio.to_thread(self._inference_fn, context, questions_payload)
-
-        findings: List[AuditFinding] = []
-        for rule in rules:
-            answer_data = raw_answers.get(rule.rule_id, {})
-            choice_key = answer_data.get("choice")
-            if choice_key is None:
-                continue
-            findings.append(
-                AuditFinding(
-                    rule_id=rule.rule_id,
-                    unit_id=unit.unit_id,
-                    judgment=Judgment[choice_key.upper()],
-                    instructions=rule.instructions,
-                    confidence=answer_data.get("confidence"),
-                    probabilities=answer_data.get("probabilities"),
-                    metadata=unit.get_metadata(),
-                )
-            )
-        return findings
-
-    def _build_questions_payload(self, rules: Sequence[AuditRule]) -> Dict[str, Any]:
-        criteria = Judgment.as_criteria_payload()
-        return {
-            rule.rule_id: {"type": rule.question_type.value,
-                           "instructions": rule.instructions, "criteria": criteria}
-            for rule in rules
-        }
+    async def answer(
+        self, state: str, questions: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        return await asyncio.to_thread(self._inference_fn, state, dict(questions))
 
     def _default_inference(self, context: str, questions: Dict[str, Any]) -> Dict[str, Any]:
         payload = {"model": self._model_name,

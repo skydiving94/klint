@@ -21,4 +21,6 @@ repos:
         args: []
         pass_filenames: false
         files: ^(tests/|pyproject\.toml$)
-        additional_dependencies: ["pytest>=8.0"]
+        # The hook has its own environment: list every third-party package
+        # that tests/ imports, so mypy can see its types.
+        additional_dependencies: ["pytest>=8.0", "injector>=0.22"]

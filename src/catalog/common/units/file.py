@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass
 from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
+from src.core.models.location import Location
 from src.core.models.unit import AuditableUnit
 
 
@@ -29,6 +30,13 @@ class AuditableFileUnit(AuditableUnit):
 
     def get_content(self) -> str:
         return self.content
+
+    def get_location(self) -> Optional[Location]:
+        return Location(
+            source=self.file_path or self.unit_id,
+            start_line=self.start_line,
+            end_line=self.end_line,
+        )
 
     def get_metadata(self) -> Dict[str, Any]:
         metadata = FileUnitMetadata(

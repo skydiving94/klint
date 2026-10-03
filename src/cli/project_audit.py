@@ -1,18 +1,19 @@
 import argparse
 import asyncio
-import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Optional, Sequence
 
-from src.app.wiring import create_project_audit_service
-from src.catalog.common.extractors.file_collector import collect_target_directories
-from src.cli.formatter import AuditProgressReporter, format_audit_report
 from src.app.settings import AppSettings
-from src.core.models.report import AuditReport
-from src.core.auditor import AuditService
+from src.app.usecases.audit_path import AuditPath
+from src.app.wiring import create_project_audit_path
+from src.cli.runner import CommandStyle, run_audit_command
 
-MAX_CONCURRENT_AUDITS = 8
+_STYLE = CommandStyle(
+    name="klint-project",
+    target_label="directories",
+    json_key="examined_directories",
+)
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -50,80 +51,23 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 class ProjectAuditCLIApp:
     def __init__(
         self,
-        audit_service: AuditService,
+        audit_path: AuditPath,
         default_custom_rules: Optional[Path] = None,
-    ):
-        self._audit_service = audit_service
+    ) -> None:
+        self._audit_path = audit_path
         self._default_custom_rules = default_custom_rules
 
     async def run(self, argv: Optional[Sequence[str]] = None) -> int:
         args = _parse_args(argv)
-        rules_source = args.rules or self._default_custom_rules
-        try:
-            target_dirs = await asyncio.to_thread(
-                collect_target_directories, args.directory
-            )
-            await self._audit_service._rule_loader.load_rules(rules_source)
-        except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
-            print(f"[klint-project] Error: {exc}", file=sys.stderr)
-            return 1
-
-        progress = AuditProgressReporter(
-            total=len(target_dirs), label="directories", enabled=not args.json
+        return await run_audit_command(
+            self._audit_path,
+            _STYLE,
+            target=args.directory,
+            rules_source=args.rules or self._default_custom_rules,
+            show_all=args.all,
+            min_confidence=args.min_confidence,
+            as_json=args.json,
         )
-        progress.start()
-        semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDITS)
-
-        async def _audit_with_limit(dir_path: Path) -> Optional[AuditReport]:
-            async with semaphore:
-                try:
-                    return await self._audit_service.run_audit(
-                        target=dir_path,
-                        custom_rules_source=rules_source,
-                    )
-                except Exception as exc:
-                    progress.finish()
-                    print(
-                        f"[klint-project] Skipping {dir_path}: {exc}",
-                        file=sys.stderr,
-                    )
-                    return None
-                finally:
-                    progress.advance(str(dir_path))
-
-        reports = await asyncio.gather(
-            *(_audit_with_limit(dir_path) for dir_path in target_dirs)
-        )
-        progress.finish()
-
-        issues: List[Dict[str, Any]] = [
-            issue
-            for report in reports
-            if report is not None
-            for issue in report.get_issues(
-                fails_only=not args.all,
-                min_confidence=args.min_confidence,
-            )
-        ]
-        examined = [
-            str(d)
-            for d, report in zip(target_dirs, reports)
-            if report is not None
-        ]
-        if args.json:
-            print(
-                json.dumps(
-                    {"examined_directories": examined, "issues": issues},
-                    indent=2,
-                )
-            )
-        else:
-            print(
-                format_audit_report(
-                    examined, issues, target_label="directories"
-                )
-            )
-        return 0
 
 
 async def main() -> int:
@@ -132,7 +76,7 @@ async def main() -> int:
         AppSettings.from_env, args.directory, args.rules
     )
     app = ProjectAuditCLIApp(
-        audit_service=create_project_audit_service(settings),
+        audit_path=create_project_audit_path(settings),
         default_custom_rules=settings.discovered_config_path,
     )
     return await app.run(sys.argv[1:])

@@ -1020,6 +1020,15 @@ wheels = [
 ]
 
 [[package]]
+name = "injector"
+version = "0.24.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/6c/de0f64b2b8d7d8cd3206bd6fb54ebb0c7c2e2fe0f2d16103756ff1bf803b/injector-0.24.0.tar.gz", hash = "sha256:e85a75d1516cff2f03170f3fd1219f56acb25c9a05e307819ae0dcde3dad3d3f", size = 55988, upload-time = "2026-01-09T12:10:41.782Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5f/db/953aeee405f1466832f212f61496ee07c29f7f027f7591b71b06bd08a418/injector-0.24.0-py3-none-any.whl", hash = "sha256:47294c7a7fdb811f0d1b442a1e0152bb2fc28b2ccaaba4cba44e5e125e0da2d0", size = 21504, upload-time = "2026-01-09T12:10:40.329Z" },
+]
+
+[[package]]
 name = "jinja2"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1071,6 +1080,7 @@ name = "klint-auditor"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "injector" },
     { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.15'" },
     { name = "torch", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.15'" },
 ]
@@ -1092,6 +1102,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "injector", specifier = ">=0.22" },
     { name = "kev", extras = ["serve"], marker = "python_full_version >= '3.12' and python_full_version < '3.14' and extra == 'local'", git = "https://github.com/jaredpalmer/kev.git" },
     { name = "torch", specifier = ">=2.2.0" },
 ]
