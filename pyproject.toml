@@ -13,13 +13,25 @@ dependencies = [
     "torch>=2.2.0",
 ]
 
+# The in-process model runtime, needed only when KEV_MODE=local. Optional for
+# people installing klint; developers get it through the dev group below.
+# kev itself supports Python 3.12 and 3.13 only, so on other versions this
+# extra installs nothing.
 [project.optional-dependencies]
+local = [
+    "kev[serve] @ git+https://github.com/jaredpalmer/kev.git ; python_version >= '3.12' and python_version < '3.14'",
+]
+
+# Development tools. `uv sync` installs this group by default.
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "ruff>=0.16.10",
     "mypy>=2.4.0",
     "pre-commit>=4.0",
     "import-linter>=2.0",
+    # The local model runtime, so a plain `uv sync` gives a working checkout.
+    "klint-auditor[local]",
 ]
 
 [project.scripts]
@@ -76,7 +88,7 @@ strict = true
 module = "src.*"
 follow_imports = "silent"
 
-# Checked with `lint-imports`. A layer may import from the layers listed
+# Checked with `uv run lint-imports`. A layer may import from the layers listed
 # below it, never from one above. src/resources holds data only.
 [tool.importlinter]
 root_package = "src"
