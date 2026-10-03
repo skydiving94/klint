@@ -34,7 +34,7 @@ def _file_app(evaluator: PretrainedKevEvaluator) -> CLIApp:
     service = AuditService(
         extractor=WholeFileExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader(DEFAULT_RULES),
+        rule_loader=JsonRuleLoader([DEFAULT_RULES]),
     )
     return CLIApp(audit_service=service)
 
@@ -43,7 +43,7 @@ def _project_app(evaluator: PretrainedKevEvaluator) -> ProjectAuditCLIApp:
     service = AuditService(
         extractor=RecursiveProjectExtractor(),
         evaluator=evaluator,
-        rule_loader=JsonRuleLoader(DEFAULT_PROJECT_RULES),
+        rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES]),
     )
     return ProjectAuditCLIApp(audit_service=service)
 

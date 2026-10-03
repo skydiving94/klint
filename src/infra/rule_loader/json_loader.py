@@ -1,7 +1,7 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
@@ -10,8 +10,8 @@ from src.core.interfaces.rule_loader import BaseRuleLoader
 
 
 class JsonRuleLoader(BaseRuleLoader):
-    def __init__(self, default_rules_path: Path):
-        self._default_rules_path = default_rules_path
+    def __init__(self, default_rules_paths: Sequence[Path]):
+        self._default_rules_paths: List[Path] = list(default_rules_paths)
         self._cached_default_rules: Optional[Dict[str, AuditRule]] = None
         self._cached_custom_rules: Dict[Path, Dict[str, AuditRule]] = {}
         self._lock = asyncio.Lock()
@@ -41,9 +41,12 @@ class JsonRuleLoader(BaseRuleLoader):
         return list(merged.values())
 
     def _load_default_rules_sync(self) -> Dict[str, AuditRule]:
-        if not self._default_rules_path.exists():
-            return {}
-        return self._load_from_path_sync(self._default_rules_path)
+        """Load every default pack in order; a later pack overrides an earlier one by rule ID."""
+        rules: Dict[str, AuditRule] = {}
+        for path in self._default_rules_paths:
+            if path.exists():
+                rules.update(self._load_from_path_sync(path))
+        return rules
 
     def _load_custom_rules_sync(self, path: Path) -> Dict[str, AuditRule]:
         if not path.is_file():

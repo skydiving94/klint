@@ -13,7 +13,7 @@ def _service(rules_path: Path, judge: FakeJudge) -> AuditService:
     return AuditService(
         extractor=WholeFileExtractor(),
         evaluator=judge.evaluator(),
-        rule_loader=JsonRuleLoader(rules_path),
+        rule_loader=JsonRuleLoader([rules_path]),
     )
 
 

@@ -20,7 +20,7 @@ def _load(loader: JsonRuleLoader, custom: Path | None = None) -> dict[str, Audit
 
 def test_default_pack_loads_every_rule() -> None:
     raw = json.loads(DEFAULT_RULES.read_text(encoding="utf-8"))
-    rules = _load(JsonRuleLoader(DEFAULT_RULES))
+    rules = _load(JsonRuleLoader([DEFAULT_RULES]))
     assert list(rules) == list(raw)
     assert all(r.question_type is QuestionType.CHOICE for r in rules.values())
     assert all(r.target_unit_types == ["file"] for r in rules.values())
@@ -35,8 +35,8 @@ def test_custom_rules_merge_and_override_by_id(tmp_path: Path) -> None:
             "extra": FILE_RULE,
         },
     )
-    defaults = _load(JsonRuleLoader(DEFAULT_RULES))
-    merged = _load(JsonRuleLoader(DEFAULT_RULES), custom)
+    defaults = _load(JsonRuleLoader([DEFAULT_RULES]))
+    merged = _load(JsonRuleLoader([DEFAULT_RULES]), custom)
     assert len(merged) == len(defaults) + 1
     assert merged["hardcoded_secrets"].instructions == "Overridden?"
     assert merged["extra"].instructions == "Is it tidy?"
@@ -48,7 +48,7 @@ def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
         tmp_path / "klint.json",
         {"env": {"KEV_MODE": "local"}, "rules": {"only": FILE_RULE}},
     )
-    assert list(_load(JsonRuleLoader(config))) == ["only"]
+    assert list(_load(JsonRuleLoader([config]))) == ["only"]
 
 
 def test_entries_without_type_or_instructions_are_skipped(tmp_path: Path) -> None:
@@ -61,14 +61,14 @@ def test_entries_without_type_or_instructions_are_skipped(tmp_path: Path) -> Non
             "junk": 1,
         },
     )
-    assert list(_load(JsonRuleLoader(pack))) == ["ok"]
+    assert list(_load(JsonRuleLoader([pack]))) == ["ok"]
 
 
 def test_target_unit_types_default_to_file_and_explicit_ones_are_kept(
     tmp_path: Path,
 ) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE, "b": DIR_RULE})
-    rules = _load(JsonRuleLoader(pack))
+    rules = _load(JsonRuleLoader([pack]))
     assert rules["a"].target_unit_types == ["file"]
     assert rules["b"].target_unit_types == ["project_directory"]
 
@@ -78,22 +78,59 @@ def test_unknown_target_unit_type_is_rejected(tmp_path: Path) -> None:
         tmp_path / "pack.json", {"a": {**FILE_RULE, "target_unit_types": ["nope"]}}
     )
     with pytest.raises(ValueError, match="unknown target_unit_types"):
-        _load(JsonRuleLoader(pack))
+        _load(JsonRuleLoader([pack]))
 
 
 def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": {**FILE_RULE, "type": "essay"}})
     with pytest.raises(ValueError, match="essay"):
-        _load(JsonRuleLoader(pack))
+        _load(JsonRuleLoader([pack]))
 
 
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        _load(JsonRuleLoader(DEFAULT_RULES), tmp_path / "absent.json")
+        _load(JsonRuleLoader([DEFAULT_RULES]), tmp_path / "absent.json")
 
 
 def test_missing_default_file_gives_no_rules(tmp_path: Path) -> None:
-    assert _load(JsonRuleLoader(tmp_path / "absent.json")) == {}
+    assert _load(JsonRuleLoader([tmp_path / "absent.json"])) == {}
+
+
+def test_several_default_packs_are_merged_in_order(tmp_path: Path) -> None:
+    first = write_json(
+        tmp_path / "first.json",
+        {"shared": {**FILE_RULE, "instructions": "From first?"}, "a": FILE_RULE},
+    )
+    second = write_json(
+        tmp_path / "second.json",
+        {"shared": {**FILE_RULE, "instructions": "From second?"}, "b": FILE_RULE},
+    )
+
+    rules = _load(JsonRuleLoader([first, second]))
+
+    assert list(rules) == ["shared", "a", "b"]
+    assert rules["shared"].instructions == "From second?"
+
+
+def test_missing_default_pack_is_skipped_among_several(tmp_path: Path) -> None:
+    present = write_json(tmp_path / "present.json", {"a": FILE_RULE})
+
+    rules = _load(JsonRuleLoader([tmp_path / "absent.json", present]))
+
+    assert list(rules) == ["a"]
+
+
+def test_custom_rules_override_every_default_pack(tmp_path: Path) -> None:
+    first = write_json(tmp_path / "first.json", {"a": FILE_RULE})
+    second = write_json(tmp_path / "second.json", {"b": FILE_RULE})
+    custom = write_json(
+        tmp_path / "custom.json", {"a": {**FILE_RULE, "instructions": "Custom?"}}
+    )
+
+    rules = _load(JsonRuleLoader([first, second]), custom)
+
+    assert list(rules) == ["a", "b"]
+    assert rules["a"].instructions == "Custom?"
 
 
 def test_builtin_unit_types_are_registered() -> None:

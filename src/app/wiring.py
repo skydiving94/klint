@@ -26,7 +26,7 @@ def create_audit_service(settings: AppSettings) -> AuditService:
         extractor=WholeFileExtractor(),
         evaluator=_create_evaluator(settings),
         rule_loader=JsonRuleLoader(
-            default_rules_path=settings.default_rules_path
+            default_rules_paths=[settings.default_rules_path]
         ),
     )
 
@@ -41,6 +41,6 @@ def create_project_audit_service(settings: AppSettings) -> AuditService:
         extractor=RecursiveProjectExtractor(),
         evaluator=_create_evaluator(settings),
         rule_loader=JsonRuleLoader(
-            default_rules_path=settings.default_project_rules_path
+            default_rules_paths=[settings.default_project_rules_path]
         ),
     )
