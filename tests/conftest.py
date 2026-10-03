@@ -1,62 +1,20 @@
-"""Shared fixtures: an offline fake judge, snapshot comparison and repo paths."""
+"""Shared pytest fixtures: network block, working directory and snapshots."""
 
 import os
 import socket
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pytest
 
-from src.infrastructure.kev.pretrained import PretrainedKevEvaluator
+from tests.helpers import REPO_ROOT, SNAPSHOT_DIR, FakeJudge
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT_DIR = Path(__file__).resolve().parent / "snapshots"
-DEFAULT_RULES = REPO_ROOT / "resources" / "default_rules.json"
-DEFAULT_PROJECT_RULES = REPO_ROOT / "resources" / "default_project_rules.json"
-
-
-class FakeJudge:
-    """Stands in for the System One model.
-
-    It is a plain ``(state, questions) -> answers`` function, plugged into the
-    real remote evaluator through its ``inference_fn`` hook, so the evaluator's
-    own request building and answer mapping still run.
-    """
-
-    def __init__(
-        self,
-        choices: Optional[Dict[str, Optional[str]]] = None,
-        default: Optional[str] = "pass",
-        confidence: float = 0.9,
-    ) -> None:
-        self.choices = choices or {}
-        self.default = default
-        self.confidence = confidence
-        self.calls: List[Tuple[str, Dict[str, Any]]] = []
-
-    def __call__(self, state: str, questions: Dict[str, Any]) -> Dict[str, Any]:
-        self.calls.append((state, questions))
-        answers: Dict[str, Any] = {}
-        for rule_id in questions:
-            choice = self.choices.get(rule_id, self.default)
-            if choice is None:
-                continue
-            answers[rule_id] = {
-                "choice": choice,
-                "confidence": self.confidence,
-                "probabilities": {choice: self.confidence},
-            }
-        return answers
-
-    def asked_rule_ids(self) -> List[List[str]]:
-        return [sorted(questions) for _, questions in self.calls]
-
-    def evaluator(self) -> PretrainedKevEvaluator:
-        return PretrainedKevEvaluator(model_name="fake", inference_fn=self)
+SnapshotAsserter = Callable[[str, str], None]
 
 
 @pytest.fixture
-def fake_judge() -> Callable[..., FakeJudge]:
+def fake_judge() -> type[FakeJudge]:
+    """Return the FakeJudge class, so a test can build one with its own answers."""
     return FakeJudge
 
 
@@ -64,7 +22,7 @@ def fake_judge() -> Callable[..., FakeJudge]:
 def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that tries to open a network connection."""
 
-    def _blocked(*args: Any, **kwargs: Any) -> None:
+    def _blocked(*args: object, **kwargs: object) -> None:
         raise RuntimeError("network access is not allowed in tests")
 
     monkeypatch.setattr(socket.socket, "connect", _blocked)
@@ -78,10 +36,10 @@ def in_repo_root(monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def assert_snapshot() -> Callable[[str, str], None]:
-    """Compare text with tests/snapshots/<name>.
+def assert_snapshot() -> SnapshotAsserter:
+    """Compare text with ``tests/snapshots/<name>``.
 
-    Set UPDATE_SNAPSHOTS=1 to (re)write the stored file, then review the diff.
+    Set ``UPDATE_SNAPSHOTS=1`` to (re)write the stored file, then review it.
     """
 
     def _assert(name: str, actual: str) -> None:
