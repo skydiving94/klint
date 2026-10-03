@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.catalog.code.common.units.directory import AuditableProjectDirectoryUnit
+from src.catalog.code.python.units.package import AuditablePythonPackageUnit
 from src.catalog.common.units.file import AuditableFileUnit
 from src.core.models.question_type import QuestionType
 from src.core.models.rule import AuditRule
@@ -59,7 +59,7 @@ def test_language_names_are_compared_without_regard_to_case(
 
 
 def test_unit_type_is_checked_before_language() -> None:
-    directory = AuditableProjectDirectoryUnit(unit_id="d", language="python")
+    directory = AuditablePythonPackageUnit(unit_id="d", language="python")
     assert not _rule(languages=["python"]).is_applicable_to(directory)
 
 

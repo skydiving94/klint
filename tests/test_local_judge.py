@@ -11,12 +11,8 @@ from typing import Any
 
 import pytest
 
-from src.catalog.common.extractors.whole_file import WholeFileExtractor
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.core.auditor import Auditor
 from src.core.interfaces.judge import BaseJudge
-from src.infra.rule_loader.json_loader import JsonRuleLoader
-from tests.helpers import FILE_RULE, UNIT_REGISTRY, write_json
+from tests.helpers import FILE_RULE, file_auditor, write_json
 
 LOCAL_MODULE = "src.infra.system_one.local"
 
@@ -176,12 +172,7 @@ def test_auditor_turns_local_judge_answers_into_findings(tmp_path: Path) -> None
     rules = write_json(tmp_path / "rules.json", {"tidy": FILE_RULE})
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
-    auditor = Auditor(
-        extractor=WholeFileExtractor(),
-        judge=_local_judge(),
-        rule_loader=JsonRuleLoader([rules], UNIT_REGISTRY),
-        scale=PASS_FAIL_SCALE,
-    )
+    auditor = file_auditor(rules, _local_judge())
 
     (issue,) = asyncio.run(auditor.run_audit(target)).get_issues()
 

@@ -8,22 +8,17 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.common.extractors.whole_file import WholeFileExtractor
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from src.app.wiring import create_file_audit_path, create_project_audit_path
 from src.cli.basic_audit import CLIApp
 from src.cli.project_audit import ProjectAuditCLIApp
-from src.core.auditor import Auditor
 from src.core.interfaces.judge import BaseJudge
-from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.helpers import (
-    DEFAULT_PROJECT_RULES,
-    DEFAULT_RULE_PACKS,
     FILE_RULE,
-    UNIT_REGISTRY,
     FakeJudge,
+    JudgeOverride,
     SnapshotAsserter,
+    make_settings,
     write_json,
 )
 
@@ -34,23 +29,13 @@ Capture = pytest.CaptureFixture[str]
 
 
 def _file_app(judge: BaseJudge) -> CLIApp:
-    auditor = Auditor(
-        extractor=WholeFileExtractor(),
-        judge=judge,
-        rule_loader=JsonRuleLoader(DEFAULT_RULE_PACKS, UNIT_REGISTRY),
-        scale=PASS_FAIL_SCALE,
-    )
-    return CLIApp(auditor=auditor)
+    audit_path = create_file_audit_path(make_settings(), JudgeOverride(judge))
+    return CLIApp(audit_path=audit_path)
 
 
 def _project_app(judge: BaseJudge) -> ProjectAuditCLIApp:
-    auditor = Auditor(
-        extractor=RecursiveProjectExtractor(),
-        judge=judge,
-        rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES], UNIT_REGISTRY),
-        scale=PASS_FAIL_SCALE,
-    )
-    return ProjectAuditCLIApp(auditor=auditor)
+    audit_path = create_project_audit_path(make_settings(), JudgeOverride(judge))
+    return ProjectAuditCLIApp(audit_path=audit_path)
 
 
 def _run(app: CLIApp | ProjectAuditCLIApp, *argv: str | Path) -> int:

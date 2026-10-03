@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional, Sequence
 
 from src.core.models.location import Location
 
@@ -39,3 +39,7 @@ class AuditableUnit(ABC):
     def get_location(self) -> Optional[Location]:
         """Return where this unit sits in its source, if it has a location."""
         return None
+
+    def children(self) -> Sequence[AuditableUnit]:
+        """Return the units nested directly inside this one."""
+        return ()

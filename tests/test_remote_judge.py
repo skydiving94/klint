@@ -8,23 +8,20 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.core.auditor import Auditor
 from src.core.interfaces.judge import BaseJudge
 from src.core.models.location import Location
 from src.core.models.report import AuditFinding
 from src.core.models.scale import Choice
-from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.helpers import (
     FAIL,
     IRRELEVANT,
     LACK_OF_EVIDENCE,
     PASS,
-    UNIT_REGISTRY,
     Answers,
     FakeJudge,
+    file_auditor,
     write_json,
 )
 
@@ -44,12 +41,7 @@ def target(tmp_path: Path) -> Path:
 def _findings(judge: BaseJudge, target: Path) -> list[AuditFinding]:
     """Audit ``target`` against RULES and return every finding."""
     rules_path = write_json(target.parent / "rules.json", RULES)
-    auditor = Auditor(
-        extractor=WholeFileExtractor(),
-        judge=judge,
-        rule_loader=JsonRuleLoader([rules_path], UNIT_REGISTRY),
-        scale=PASS_FAIL_SCALE,
-    )
+    auditor = file_auditor(rules_path, judge)
     return asyncio.run(auditor.run_audit(target)).get_findings(fails_only=False)
 
 

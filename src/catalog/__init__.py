@@ -2,6 +2,7 @@
 
 from src.catalog import common
 from src.catalog.code import common as code_common
+from src.catalog.code import python as code_python
 from src.core.registry import UnitRegistry
 
 
@@ -9,3 +10,4 @@ def register(registry: UnitRegistry) -> None:
     """Add the unit types of every built-in suite to ``registry``."""
     common.register(registry)
     code_common.register(registry)
+    code_python.register(registry)

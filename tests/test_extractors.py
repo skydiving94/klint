@@ -5,14 +5,22 @@ from pathlib import Path
 
 import pytest
 
+from src.catalog.code.common.extractors.directory_factory import (
+    BaseDirectoryUnitFactory,
+)
 from src.catalog.code.common.extractors.fallback_file_metadata import (
     FallbackFileMetadataExtractor,
 )
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.code.common.units.directory import AuditableProjectDirectoryUnit
+from src.catalog.code.common.units.directory import AuditableDirectoryUnit
+from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
+from src.catalog.code.python.extractors.package_factory import (
+    PythonPackageUnitFactory,
+)
+from src.catalog.code.python.units.package import AuditablePythonPackageUnit
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.catalog.common.units.file import AuditableFileUnit
 from tests.helpers import SnapshotAsserter
@@ -50,12 +58,25 @@ def _write(path: Path, text: str) -> Path:
     return path
 
 
-def _extract_project(
-    extractor: RecursiveProjectExtractor, target: Path
-) -> AuditableProjectDirectoryUnit:
-    (unit,) = asyncio.run(extractor.extract(target))
-    assert isinstance(unit, AuditableProjectDirectoryUnit)
+def _python_project_extractor() -> RecursiveProjectExtractor:
+    return RecursiveProjectExtractor(
+        file_extractors=[PythonFileMetadataExtractor()],
+        directory_factory=PythonPackageUnitFactory(),
+    )
+
+
+def _extract_project(target: Path) -> AuditablePythonPackageUnit:
+    (unit,) = asyncio.run(_python_project_extractor().extract(target))
+    assert isinstance(unit, AuditablePythonPackageUnit)
     return unit
+
+
+def _subdirectory(
+    unit: AuditablePythonPackageUnit, name: str
+) -> AuditablePythonPackageUnit:
+    (match,) = [d for d in unit.subdirectories if d.directory_name == name]
+    assert isinstance(match, AuditablePythonPackageUnit)
+    return match
 
 
 # --- whole file ------------------------------------------------------------
@@ -154,7 +175,7 @@ def test_fallback_metadata_records_only_name_and_line_count(tmp_path: Path) -> N
 
 @pytest.mark.usefixtures("in_repo_root")
 def test_project_extractor_builds_one_root_unit() -> None:
-    unit = _extract_project(RecursiveProjectExtractor(), MOCK_PROJECT)
+    unit = _extract_project(MOCK_PROJECT)
 
     assert unit.unit_type == "project_directory"
     assert unit.unit_id == str(MOCK_PROJECT)
@@ -174,7 +195,7 @@ def test_project_extractor_skips_ignored_files_and_directories(
     _write(tmp_path / "pkg" / "__pycache__" / "kept.cpython-312.pyc", "")
     _write(tmp_path / "pkg" / "node_modules" / "dep" / "index.js", "")
 
-    unit = _extract_project(RecursiveProjectExtractor(), tmp_path / "pkg")
+    unit = _extract_project(tmp_path / "pkg")
 
     assert [f.file_name for f in unit.files] == ["kept.py"]
     assert unit.subdirectories == []
@@ -184,22 +205,112 @@ def test_project_extractor_skips_ignored_files_and_directories(
 def test_project_directory_text_matches_snapshot(
     assert_snapshot: SnapshotAsserter,
 ) -> None:
-    unit = _extract_project(RecursiveProjectExtractor(), MOCK_PROJECT)
+    unit = _extract_project(MOCK_PROJECT)
     assert_snapshot("project_directory_root.txt", unit.get_content())
 
 
 @pytest.mark.usefixtures("in_repo_root")
-def test_subdirectory_text_uses_modules_seen_in_earlier_extractions(
+def test_subdirectory_text_uses_module_names_from_the_whole_tree(
     assert_snapshot: SnapshotAsserter,
 ) -> None:
-    # The CLI extracts the root first, then each subdirectory with the same
-    # extractor, which remembers the project's module names between calls.
-    extractor = RecursiveProjectExtractor()
-    _extract_project(extractor, MOCK_PROJECT)
+    inside_tree = _subdirectory(_extract_project(MOCK_PROJECT), "api")
+    alone = _extract_project(MOCK_PROJECT / "api")
 
-    after_root = _extract_project(extractor, MOCK_PROJECT / "api")
-    alone = _extract_project(RecursiveProjectExtractor(), MOCK_PROJECT / "api")
-
-    assert_snapshot("project_directory_api.txt", after_root.get_content())
-    assert "domain" in after_root.project_module_names
+    assert_snapshot("project_directory_api.txt", inside_tree.get_content())
+    assert "domain" in inside_tree.project_module_names
     assert "domain" not in alone.project_module_names
+
+
+@pytest.mark.usefixtures("in_repo_root")
+def test_project_extractor_keeps_nothing_between_extractions() -> None:
+    extractor = _python_project_extractor()
+
+    asyncio.run(extractor.extract(MOCK_PROJECT))
+    (after_root,) = asyncio.run(extractor.extract(MOCK_PROJECT / "api"))
+
+    assert after_root == _extract_project(MOCK_PROJECT / "api")
+
+
+def test_project_extractor_uses_the_first_file_extractor_that_supports_a_file(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path / "pkg" / "a.py", "import os\n")
+    _write(tmp_path / "pkg" / "b.ts", "import fs from 'fs';\n")
+    _write(tmp_path / "pkg" / "c.txt", "import os\n")
+    fallback_first = RecursiveProjectExtractor(
+        file_extractors=[
+            FallbackFileMetadataExtractor(),
+            PythonFileMetadataExtractor(),
+        ],
+        directory_factory=PythonPackageUnitFactory(),
+    )
+
+    python_first = _extract_project(tmp_path / "pkg")
+    (shadowed,) = asyncio.run(fallback_first.extract(tmp_path / "pkg"))
+
+    # Only a.py is read as Python; c.txt holds the same text but is not.
+    assert [f.imports for f in python_first.files] == [["os"], [], []]
+    assert isinstance(shadowed, AuditableDirectoryUnit)
+    assert [f.imports for f in shadowed.files] == [[], [], []]
+
+
+# --- directory factories ---------------------------------------------------
+
+
+class PlainDirectoryUnit(AuditableDirectoryUnit):
+    """A directory described by its name alone."""
+
+    unit_type = "plain_directory"
+
+    def get_content(self) -> str:
+        return self.directory_name
+
+
+class PlainDirectoryFactory(BaseDirectoryUnitFactory):
+    def build(
+        self,
+        directory: Path,
+        files: list[AuditableFileMetadataUnit],
+        subdirectories: list[AuditableDirectoryUnit],
+    ) -> AuditableDirectoryUnit:
+        return PlainDirectoryUnit(
+            unit_id=str(directory),
+            directory_path=str(directory),
+            files=files,
+            subdirectories=subdirectories,
+        )
+
+
+def test_directory_factory_decides_the_unit_for_every_directory(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path / "docs" / "guide" / "intro.md", "# Intro\n")
+    extractor = RecursiveProjectExtractor(
+        file_extractors=[], directory_factory=PlainDirectoryFactory()
+    )
+
+    (root,) = asyncio.run(extractor.extract(tmp_path / "docs"))
+
+    assert isinstance(root, PlainDirectoryUnit)
+    assert root.get_content() == "docs"
+    (guide,) = root.subdirectories
+    assert isinstance(guide, PlainDirectoryUnit)
+    assert [f.file_name for f in guide.files] == ["intro.md"]
+
+
+def test_python_factory_gives_every_package_the_same_module_names(
+    tmp_path: Path,
+) -> None:
+    _write(tmp_path / "app" / "api" / "routes.py", "from domain import models\n")
+    _write(tmp_path / "app" / "domain" / "models.py", "x = 1\n")
+
+    root = _extract_project(tmp_path / "app")
+    api, domain = root.subdirectories
+
+    assert isinstance(api, AuditablePythonPackageUnit)
+    assert isinstance(domain, AuditablePythonPackageUnit)
+    assert {"app", "api", "domain", "routes", "models"} <= set(
+        root.project_module_names
+    )
+    assert api.project_module_names == root.project_module_names
+    assert domain.project_module_names == root.project_module_names

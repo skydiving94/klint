@@ -1,12 +1,17 @@
 """Test doubles and repo paths shared by the test modules."""
 
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from injector import Module, provider, singleton
+
 from src import catalog
+from src.app.settings import AppSettings
+from src.app.wiring import FileAuditor, ProjectAuditor, create_injector
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from src.core.auditor import Auditor
 from src.core.interfaces.judge import BaseJudge
 from src.core.registry import UnitRegistry
 
@@ -50,6 +55,44 @@ def write_json(path: Path, data: dict[str, Any]) -> Path:
     """Write ``data`` to ``path`` as JSON and return the path."""
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
+
+
+def make_settings(
+    rules_paths: Sequence[Path] = DEFAULT_RULE_PACKS,
+    project_rules_paths: Sequence[Path] = (DEFAULT_PROJECT_RULES,),
+    kev_mode: str = "remote",
+) -> AppSettings:
+    """Return settings that point at the given rule packs."""
+    return AppSettings(
+        model_name="fake",
+        default_rules_paths=tuple(rules_paths),
+        kev_mode=kev_mode,
+        default_project_rules_paths=tuple(project_rules_paths),
+    )
+
+
+class JudgeOverride(Module):
+    """Replaces the judge klint would build with the one a test supplies."""
+
+    def __init__(self, judge: BaseJudge) -> None:
+        self._judge = judge
+
+    @singleton
+    @provider
+    def provide_judge(self) -> BaseJudge:
+        return self._judge
+
+
+def file_auditor(rules_path: Path, judge: BaseJudge) -> Auditor:
+    """Return klint's file auditor with one rule pack and the given judge."""
+    settings = make_settings(rules_paths=(rules_path,))
+    return create_injector(settings, JudgeOverride(judge)).get(FileAuditor)
+
+
+def project_auditor(rules_path: Path, judge: BaseJudge) -> Auditor:
+    """Return klint's project auditor with one rule pack and the given judge."""
+    settings = make_settings(project_rules_paths=(rules_path,))
+    return create_injector(settings, JudgeOverride(judge)).get(ProjectAuditor)
 
 
 class FakeJudge(BaseJudge):
