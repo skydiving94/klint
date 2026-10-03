@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List
 
-from src.core.domain.enums import QuestionType
-from src.core.domain.units import AuditableUnit
+from src.core.models.question_type import QuestionType
+from src.core.models.units import AuditableUnit
 
 
 @dataclass(frozen=True)

@@ -9,8 +9,8 @@ from src.cli.factory import create_project_audit_service
 from src.cli.file_collector import collect_target_directories
 from src.cli.formatter import AuditProgressReporter, format_audit_report
 from src.config.settings import AppSettings
-from src.core.domain.report import AuditReport
-from src.core.services.audit_service import AuditService
+from src.core.models.report import AuditReport
+from src.core.auditor import AuditService
 
 MAX_CONCURRENT_AUDITS = 8
 

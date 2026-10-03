@@ -33,6 +33,3 @@ class Judgment(str, Enum):
     def as_criteria_payload(cls) -> Dict[str, str]:
         return {member.name.lower(): member.criterion for member in cls}
 
-
-class QuestionType(str, Enum):
-    CHOICE = "choice"

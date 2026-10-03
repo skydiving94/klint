@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-from src.core.domain.report import AuditReport
+from src.core.models.report import AuditReport
 from src.core.interfaces.evaluator import BaseKevEvaluator
 from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.interfaces.rule_loader import BaseRuleLoader

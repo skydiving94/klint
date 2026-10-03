@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, List
 
-from src.core.domain.rule import AuditRule
+from src.core.models.rule import AuditRule
 
 
 class BaseRuleLoader(ABC):

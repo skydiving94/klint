@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, List
 
-from src.core.domain.units import AuditableFileMetadataUnit, AuditableUnit
+from src.core.models.units import AuditableFileMetadataUnit, AuditableUnit
 
 
 class BaseUnitExtractor(ABC):

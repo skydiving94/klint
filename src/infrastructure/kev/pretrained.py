@@ -3,10 +3,10 @@ import json
 import urllib.request
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from src.core.domain.enums import Judgment
-from src.core.domain.report import AuditFinding
-from src.core.domain.rule import AuditRule
-from src.core.domain.units import AuditableUnit
+from src.core.models.judgment import Judgment
+from src.core.models.report import AuditFinding
+from src.core.models.rule import AuditRule
+from src.core.models.units import AuditableUnit
 from src.core.interfaces.evaluator import BaseKevEvaluator
 
 

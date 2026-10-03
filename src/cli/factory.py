@@ -1,6 +1,6 @@
 from src.config.settings import AppSettings
 from src.core.interfaces.evaluator import BaseKevEvaluator
-from src.core.services.audit_service import AuditService
+from src.core.auditor import AuditService
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from src.infrastructure.extractors.project_extractor import (
     RecursiveProjectExtractor,

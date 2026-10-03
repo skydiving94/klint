@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from src.core.domain.enums import QuestionType
-from src.core.domain.rule import AuditRule
-from src.core.domain.units import AuditableFileUnit, AuditableUnit
+from src.core.models.question_type import QuestionType
+from src.core.models.rule import AuditRule
+from src.core.models.units import AuditableFileUnit, AuditableUnit
 from src.infrastructure.rules.json_loader import JsonRuleLoader
 from tests.helpers import DEFAULT_RULES, DIR_RULE, FILE_RULE, write_json
 

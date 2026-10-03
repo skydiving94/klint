@@ -2,7 +2,7 @@ import ast
 from pathlib import Path
 from typing import List
 
-from src.core.domain.units import AuditableFileMetadataUnit
+from src.core.models.units import AuditableFileMetadataUnit
 from src.core.interfaces.extractor import BaseFileMetadataExtractor
 
 

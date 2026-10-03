@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.core.domain.units import AuditableFileUnit, AuditableProjectDirectoryUnit
+from src.core.models.units import AuditableFileUnit, AuditableProjectDirectoryUnit
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from src.infrastructure.extractors.file_metadata_extractor import (
     FallbackFileMetadataExtractor,

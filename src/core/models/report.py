@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from src.core.domain.enums import Judgment
+from src.core.models.judgment import Judgment
 
 _JUDGMENT_PRIORITY: Dict[Judgment, int] = {
     Judgment.FAIL: 0,

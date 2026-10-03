@@ -10,7 +10,7 @@ import pytest
 
 from src.cli.basic_audit import CLIApp
 from src.cli.project_audit import ProjectAuditCLIApp
-from src.core.services.audit_service import AuditService
+from src.core.auditor import AuditService
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor
 from src.infrastructure.extractors.project_extractor import RecursiveProjectExtractor
 from src.infrastructure.kev.pretrained import PretrainedKevEvaluator

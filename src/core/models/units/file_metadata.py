@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any, ClassVar, Dict, List
 
-from src.core.domain.units.base import AuditableUnit
+from src.core.models.units.base import AuditableUnit
 
 
 @dataclass(frozen=True)
