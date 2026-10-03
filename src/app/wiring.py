@@ -1,4 +1,4 @@
-from src.config.settings import AppSettings
+from src.app.settings import AppSettings
 from src.core.interfaces.evaluator import BaseKevEvaluator
 from src.core.auditor import AuditService
 from src.infrastructure.extractors.file_extractor import WholeFileExtractor

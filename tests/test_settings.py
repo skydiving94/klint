@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.config.settings import AppSettings
+from src.app.settings import AppSettings
 from tests.helpers import DEFAULT_PROJECT_RULES, DEFAULT_RULES, write_json
 
 
