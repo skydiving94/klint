@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, List, Type
+from dataclasses import dataclass, field
+from typing import Any, ClassVar, Dict, List, Optional, Type
 
 
 @dataclass(frozen=True)
@@ -13,9 +13,14 @@ class AuditableUnit(ABC):
     concrete subclass declares its own constant and is auto-registered
     here via __init_subclass__ -- this is the tag JSON rules use in
     target_unit_types; there's no separate enum to keep in sync.
+
+    language is the language this unit's content is written in, programming
+    or natural (for example "python" or "english"). It is None when unknown
+    or when the content has no language, such as an image.
     """
 
     unit_id: str
+    language: Optional[str] = field(default=None, kw_only=True)
 
     unit_type: ClassVar[str]
     _registry: ClassVar[Dict[str, Type["AuditableUnit"]]] = {}
