@@ -80,14 +80,34 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-files = ["tests"]
-strict = true
+files = ["src", "tests"]
+# Every function must be fully annotated.
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_redundant_casts = true
+warn_unused_configs = true
 
-# src/ is not held to these checks yet: type-check what tests import from it,
-# but do not report errors inside it.
+# tests/ is held to everything `mypy --strict` turns on. `strict` cannot be
+# limited to one package, so its flags are listed: the per-package ones here,
+# the rest in the main section.
 [[tool.mypy.overrides]]
-module = "src.*"
-follow_imports = "silent"
+module = "tests.*"
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_unused_ignores = true
+warn_return_any = true
+implicit_reexport = false
+strict_equality = true
+extra_checks = true
+
+# The local model runtime is optional and may be absent where mypy runs;
+# when it is, these imports are treated as untyped.
+[[tool.mypy.overrides]]
+module = ["torch.*", "kev.*", "huggingface_hub.*"]
+ignore_missing_imports = true
 
 # Checked with `uv run lint-imports`. A layer may import from the layers listed
 # below it, never from one above. src/resources holds data only.

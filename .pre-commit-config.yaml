@@ -1,26 +1,27 @@
 # Run once after cloning: uv sync && uv run pre-commit install
 #
-# The hooks cover tests/ only for now. src/ joins once the restructuring is
-# nearly done (tracked in issue 6); until then it is left as it is.
+# The hooks cover the Python files in the repository. examples/ holds
+# deliberately bad code and stays out through the ruff exclude in
+# pyproject.toml; mypy checks only what [tool.mypy] lists.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.10
     hooks:
       - id: ruff-check
         args: [--fix]
-        files: ^tests/
       - id: ruff-format
-        files: ^tests/
+        # Python files only: without this the hook also reformats the Python
+        # code blocks inside Markdown files.
+        types_or: [python, pyi]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v2.4.0
     hooks:
       - id: mypy
-        # Check the whole tests package using [tool.mypy] in pyproject.toml,
-        # not only the files in the commit.
+        # Check everything [tool.mypy] in pyproject.toml lists, not only the
+        # files in the commit.
         args: []
         pass_filenames: false
-        files: ^(tests/|pyproject\.toml$)
         # The hook has its own environment: list every third-party package
-        # that tests/ imports, so mypy can see its types.
+        # the checked code imports, so mypy can see its types.
         additional_dependencies: ["pytest>=8.0", "injector>=0.22"]

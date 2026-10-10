@@ -1,9 +1,10 @@
 import json
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
@@ -18,7 +19,7 @@ _BUILT_IN_PROJECT_RULE_PACKS = ("code/python/project_structure.json",)
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 
 
-def find_project_config(start_path: Optional[Path] = None) -> Optional[Path]:
+def find_project_config(start_path: Path | None = None) -> Path | None:
     """Search target directory (or cwd) for a klint.json / .klintrc.json file."""
     search_dir = (start_path or Path.cwd()).resolve()
     if search_dir.is_file():
@@ -31,13 +32,11 @@ def find_project_config(start_path: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def _load_json_env_overrides(config_path: Optional[Path]) -> Dict[str, str]:
+def _load_json_env_overrides(config_path: Path | None) -> dict[str, str]:
     if config_path is None or not config_path.is_file():
         return {}
     try:
-        raw: Dict[str, Any] = json.loads(
-            config_path.read_text(encoding="utf-8")
-        )
+        raw: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
     except Exception:
         return {}
     env_block = raw.get("env", {})
@@ -46,7 +45,7 @@ def _load_json_env_overrides(config_path: Optional[Path]) -> Dict[str, str]:
     return {str(k): str(v) for k, v in env_block.items() if v is not None}
 
 
-def _load_klint_dotenv(dotenv_path: Optional[Path] = None) -> None:
+def _load_klint_dotenv(dotenv_path: Path | None = None) -> None:
     """Load klint's own .env / .env.example as lowest-priority defaults."""
     target_env = dotenv_path or (_PACKAGE_ROOT / ".env")
     if not target_env.is_file():
@@ -64,7 +63,7 @@ def _load_klint_dotenv(dotenv_path: Optional[Path] = None) -> None:
         os.environ.setdefault(key, value)
 
 
-def _built_in_packs(relative_paths: Sequence[str]) -> Tuple[Path, ...]:
+def _built_in_packs(relative_paths: Sequence[str]) -> tuple[Path, ...]:
     """Locate built-in rule packs inside the installed package."""
     catalog = resources.files("src.resources") / "catalog"
     return tuple(Path(str(catalog / relative)) for relative in relative_paths)
@@ -80,19 +79,19 @@ def _resolve_resource_path(raw_path: str | Path) -> Path:
 @dataclass(frozen=True)
 class AppSettings:
     model_name: str
-    default_rules_paths: Tuple[Path, ...]
+    default_rules_paths: tuple[Path, ...]
     kev_mode: str = _DEFAULT_KEV_MODE
     kev_base_url: str = "http://127.0.0.1:8009"
-    kev_api_key: Optional[str] = None
-    default_project_rules_paths: Tuple[Path, ...] = ()
-    discovered_config_path: Optional[Path] = None
+    kev_api_key: str | None = None
+    default_project_rules_paths: tuple[Path, ...] = ()
+    discovered_config_path: Path | None = None
 
     @classmethod
     def from_env(
         cls,
-        target_path: Optional[Path] = None,
-        config_path: Optional[Path] = None,
-        dotenv_path: Optional[Path] = None,
+        target_path: Path | None = None,
+        config_path: Path | None = None,
+        dotenv_path: Path | None = None,
     ) -> "AppSettings":
         # 1. Capture any shell variables explicitly exported by the user
         shell_env = dict(os.environ)
@@ -104,13 +103,11 @@ class AppSettings:
         active_config = config_path or find_project_config(target_path)
         json_env = _load_json_env_overrides(active_config)
 
-        def _get_setting(
-            key: str, default: Optional[str] = None
-        ) -> Optional[str]:
+        def _get_setting(key: str, default: str | None = None) -> str | None:
             # Priority: Shell Export > Project klint.json "env" > klint .env > Default
-            if key in shell_env and shell_env[key]:
+            if shell_env.get(key):
                 return shell_env[key]
-            if key in json_env and json_env[key]:
+            if json_env.get(key):
                 return json_env[key]
             return os.environ.get(key) or default
 

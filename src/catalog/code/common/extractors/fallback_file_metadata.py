@@ -9,7 +9,8 @@ from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUni
 class FallbackFileMetadataExtractor(BaseFileMetadataExtractor):
     """Fallback extractor that records basic file identity and line count."""
 
-    def supports(self, path: Path) -> bool:
+    def supports(self, path: Path) -> bool:  # noqa: ARG002
+        # Every file is supported, so the path is not inspected.
         return True
 
     def extract_file(self, path: Path) -> AuditableFileMetadataUnit:

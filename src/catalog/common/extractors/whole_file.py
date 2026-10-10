@@ -1,14 +1,13 @@
 import asyncio
 from pathlib import Path
-from typing import List
 
 from src.catalog.common.units.file import AuditableFileUnit
-from src.core.models.unit import AuditableUnit
 from src.core.interfaces.extractor import BaseUnitExtractor
+from src.core.models.unit import AuditableUnit
 
 
 class WholeFileExtractor(BaseUnitExtractor):
-    async def extract(self, target: str | Path) -> List[AuditableUnit]:
+    async def extract(self, target: str | Path) -> list[AuditableUnit]:
         unit = await asyncio.to_thread(self._read_file_sync, Path(target))
         return [unit]
 

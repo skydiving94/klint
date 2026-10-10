@@ -1,8 +1,8 @@
 import argparse
 import asyncio
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence
 
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
@@ -12,10 +12,8 @@ from src.cli.runner import CommandStyle, run_audit_command
 _STYLE = CommandStyle(name="klint", target_label="files", json_key="examined_files")
 
 
-def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="klint - Declarative Code Auditor CLI"
-    )
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="klint - Declarative Code Auditor CLI")
     parser.add_argument(
         "file",
         type=Path,
@@ -30,7 +28,10 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Output all judgments (Pass, Fail, Irrelevant, Lack of Evidence) instead of fails only",
+        help=(
+            "Output all judgments (Pass, Fail, Irrelevant, Lack of Evidence) "
+            "instead of fails only"
+        ),
     )
     parser.add_argument(
         "--min-confidence",
@@ -50,12 +51,12 @@ class CLIApp:
     def __init__(
         self,
         audit_path: AuditPath,
-        default_custom_rules: Optional[Path] = None,
+        default_custom_rules: Path | None = None,
     ) -> None:
         self._audit_path = audit_path
         self._default_custom_rules = default_custom_rules
 
-    async def run(self, argv: Optional[Sequence[str]] = None) -> int:
+    async def run(self, argv: Sequence[str] | None = None) -> int:
         args = _parse_args(argv)
         return await run_audit_command(
             self._audit_path,
@@ -70,9 +71,7 @@ class CLIApp:
 
 async def main() -> int:
     args = _parse_args(sys.argv[1:])
-    settings = await asyncio.to_thread(
-        AppSettings.from_env, args.file, args.rules
-    )
+    settings = await asyncio.to_thread(AppSettings.from_env, args.file, args.rules)
     app = CLIApp(
         audit_path=create_file_audit_path(settings),
         default_custom_rules=settings.discovered_config_path,

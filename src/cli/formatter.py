@@ -1,6 +1,6 @@
 import sys
 from collections import defaultdict
-from typing import Dict, List, Sequence
+from collections.abc import Sequence
 
 from src.core.models.report import AuditFinding
 
@@ -16,11 +16,9 @@ class _ANSI:
 
 
 class AuditProgressReporter:
-    """Renders a live single-line progress bar to stderr and clears it upon completion."""
+    """Renders a live one-line progress bar on stderr and clears it on completion."""
 
-    def __init__(
-        self, total: int, label: str = "files", enabled: bool = True
-    ) -> None:
+    def __init__(self, total: int, label: str = "files", enabled: bool = True) -> None:
         self._total = max(total, 1)
         self._completed = 0
         self._label = label
@@ -29,8 +27,7 @@ class AuditProgressReporter:
     def start(self) -> None:
         if not self._enabled:
             return
-        self._render(
-            f"Initializing model & extracting {self._total} {self._label}...")
+        self._render(f"Initializing model & extracting {self._total} {self._label}...")
 
     def advance(self, target_name: str) -> None:
         if not self._enabled:
@@ -50,8 +47,7 @@ class AuditProgressReporter:
         bar = "\u2588" * filled + "\u2591" * (width - filled)
         pct = f"{ratio * 100:3.0f}%"
         short_status = (
-            status_text if len(status_text) <= 48 else "..." +
-            status_text[-45:]
+            status_text if len(status_text) <= 48 else "..." + status_text[-45:]
         )
         line = (
             f"\r\033[K{_ANSI.CYAN}{bar}{_ANSI.RESET} "
@@ -99,7 +95,7 @@ def format_audit_report(
     target_label: str = "files",
 ) -> str:
     divider = "\u2500" * 72
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append(
         f"\n{_ANSI.BOLD}klint Audit Report{_ANSI.RESET} "
         f"{_ANSI.DIM}({len(examined_targets)} {target_label} scanned){_ANSI.RESET}"
@@ -108,11 +104,12 @@ def format_audit_report(
 
     if not findings:
         lines.append(
-            f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 No architectural or semantic issues found.{_ANSI.RESET}\n"
+            f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 No architectural or semantic issues "
+            f"found.{_ANSI.RESET}\n"
         )
         return "\n".join(lines)
 
-    grouped: Dict[str, List[AuditFinding]] = defaultdict(list)
+    grouped: dict[str, list[AuditFinding]] = defaultdict(list)
     for finding in findings:
         grouped[finding.unit_id].append(finding)
 
@@ -132,7 +129,8 @@ def format_audit_report(
                 )
 
             lines.append(
-                f"  {_badge(finding.choice.label)} {_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
+                f"  {_badge(finding.choice.label)} "
+                f"{_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
                 f"Confidence: {_confidence_bar(finding.confidence)}"
             )
             if finding.instructions:

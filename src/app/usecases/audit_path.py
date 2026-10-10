@@ -1,9 +1,10 @@
 """Audit a file or directory path: the run loop shared by every front end."""
 
 import asyncio
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Awaitable, Callable, List, Optional, Protocol, Sequence
+from typing import Protocol
 
 from src.core.auditor import Auditor
 from src.core.models.report import AuditFinding, AuditReport
@@ -26,16 +27,16 @@ class AuditPlan:
     """A validated request: where to start, what will be audited, and the rules."""
 
     root: Path
-    targets: List[Path]
-    rules: List[AuditRule]
+    targets: list[Path]
+    rules: list[AuditRule]
 
 
 @dataclass(frozen=True)
 class AuditPathResult:
     """The targets audited without error, and the selected findings in target order."""
 
-    examined: List[str]
-    findings: List[AuditFinding]
+    examined: list[str]
+    findings: list[AuditFinding]
 
 
 class AuditPath:
@@ -49,7 +50,7 @@ class AuditPath:
     def __init__(
         self,
         auditor: Auditor,
-        collect_targets: Callable[[Path], List[Path]],
+        collect_targets: Callable[[Path], list[Path]],
         whole_tree: bool = False,
         max_concurrent: int = DEFAULT_MAX_CONCURRENT_AUDITS,
     ) -> None:
@@ -59,7 +60,7 @@ class AuditPath:
         self._max_concurrent = max_concurrent
 
     async def prepare(
-        self, target: Path, rules_source: Optional[Path] = None
+        self, target: Path, rules_source: Path | None = None
     ) -> AuditPlan:
         """Check the target and the rules; raise if either cannot be used."""
         targets = await asyncio.to_thread(self._collect_targets, target)
@@ -71,7 +72,7 @@ class AuditPath:
         plan: AuditPlan,
         fails_only: bool = True,
         min_confidence: float = 0.0,
-        listener: Optional[AuditListener] = None,
+        listener: AuditListener | None = None,
     ) -> AuditPathResult:
         target_names = [str(target) for target in plan.targets]
         failed: set[str] = set()
@@ -81,7 +82,7 @@ class AuditPath:
             name: str,
             get_units: Callable[[], Awaitable[Sequence[AuditableUnit]]],
             is_target: bool,
-        ) -> List[AuditFinding]:
+        ) -> list[AuditFinding]:
             async with semaphore:
                 try:
                     report = AuditReport()
@@ -130,12 +131,12 @@ class AuditPath:
         plan: AuditPlan,
         target_names: set[str],
         failed: set[str],
-        listener: Optional[AuditListener],
+        listener: AuditListener | None,
         audit: Callable[
             [str, Callable[[], Awaitable[Sequence[AuditableUnit]]], bool],
-            Awaitable[List[AuditFinding]],
+            Awaitable[list[AuditFinding]],
         ],
-    ) -> List[Awaitable[List[AuditFinding]]]:
+    ) -> list[Awaitable[list[AuditFinding]]]:
         """Extract the whole tree once and return one audit job per unit in it."""
         try:
             units = await self._auditor.extract_units(plan.root, walk_children=True)

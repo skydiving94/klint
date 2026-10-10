@@ -1,6 +1,6 @@
 import asyncio
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Sequence
 
 from src.catalog.code.common.extractors.directory_factory import (
     BaseDirectoryUnitFactory,
@@ -23,8 +23,10 @@ from src.core.models.unit import AuditableUnit
 
 
 class RecursiveProjectExtractor(BaseUnitExtractor):
-    """Builds one composite directory unit for the target, holding the metadata
-    of its files and, recursively, of every subdirectory.
+    """Builds one composite directory unit for the whole target tree.
+
+    The unit holds the metadata of the target's files and, recursively, of
+    every subdirectory.
 
     file_extractors are tried in order for each file; the first that supports
     it wins. directory_factory decides which unit describes a directory.
@@ -38,7 +40,7 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
         self._file_extractors = tuple(file_extractors)
         self._directory_factory = directory_factory
 
-    async def extract(self, target: str | Path) -> List[AuditableUnit]:
+    async def extract(self, target: str | Path) -> list[AuditableUnit]:
         root_unit = await asyncio.to_thread(self._extract_tree, Path(target))
         return [root_unit]
 
@@ -46,8 +48,8 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
         return self._directory_factory.finish(self._walk(target_path))
 
     def _walk(self, directory: Path) -> AuditableDirectoryUnit:
-        files: List[AuditableFileMetadataUnit] = []
-        subdirs: List[AuditableDirectoryUnit] = []
+        files: list[AuditableFileMetadataUnit] = []
+        subdirs: list[AuditableDirectoryUnit] = []
 
         for entry in sorted(directory.iterdir()):
             if entry.is_dir():

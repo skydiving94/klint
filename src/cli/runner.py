@@ -4,7 +4,6 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from src.app.usecases.audit_path import AuditPath
 from src.cli.formatter import AuditProgressReporter, format_audit_report
@@ -38,7 +37,7 @@ async def run_audit_command(
     audit_path: AuditPath,
     style: CommandStyle,
     target: Path,
-    rules_source: Optional[Path],
+    rules_source: Path | None,
     show_all: bool,
     min_confidence: float,
     as_json: bool,

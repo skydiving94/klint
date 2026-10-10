@@ -1,6 +1,7 @@
 """Builds klint's object graph from the settings."""
 
-from typing import Callable, NewType, Union
+from collections.abc import Callable
+from typing import NewType
 
 from injector import Binder, Injector, Module, provider, singleton
 
@@ -36,7 +37,7 @@ ProjectAuditor = NewType("ProjectAuditor", Auditor)
 FileAuditPath = NewType("FileAuditPath", AuditPath)
 ProjectAuditPath = NewType("ProjectAuditPath", AuditPath)
 
-Override = Union[Module, Callable[[Binder], None]]
+Override = Module | Callable[[Binder], None]
 
 
 class KlintModule(Module):
@@ -115,7 +116,7 @@ class KlintModule(Module):
         extractor: RecursiveProjectExtractor,
     ) -> ProjectAuditor:
         if not settings.default_project_rules_paths:
-            raise EnvironmentError(
+            raise OSError(
                 "KEV_DEFAULT_PROJECT_RULES_PATH must be set to use the project "
                 "structure audit CLI (src/cli/project_audit.py)."
             )
@@ -152,7 +153,5 @@ def create_file_audit_path(settings: AppSettings, *overrides: Override) -> Audit
     return create_injector(settings, *overrides).get(FileAuditPath)
 
 
-def create_project_audit_path(
-    settings: AppSettings, *overrides: Override
-) -> AuditPath:
+def create_project_audit_path(settings: AppSettings, *overrides: Override) -> AuditPath:
     return create_injector(settings, *overrides).get(ProjectAuditPath)

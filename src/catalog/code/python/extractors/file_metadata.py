@@ -1,6 +1,5 @@
 import ast
 from pathlib import Path
-from typing import List
 
 from src.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
@@ -9,7 +8,7 @@ from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUni
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
-    """Extracts line count, exports, imports, classes, and functions from Python files."""
+    """Extracts a Python file's line count, exports, imports, classes and functions."""
 
     def supports(self, path: Path) -> bool:
         return path.suffix.lower() == ".py"
@@ -17,27 +16,25 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
     def extract_file(self, path: Path) -> AuditableFileMetadataUnit:
         source = path.read_text(encoding="utf-8", errors="replace")
         line_count = len(source.splitlines())
-        imports: List[str] = []
-        exports: List[str] = []
-        classes: List[str] = []
-        functions: List[str] = []
+        imports: list[str] = []
+        exports: list[str] = []
+        classes: list[str] = []
+        functions: list[str] = []
 
         try:
             tree = ast.parse(source, filename=str(path))
             # Top-level declarations (exports, classes, functions)
-            for node in tree.body:
-                if isinstance(node, ast.ImportFrom) and path.name == "__init__.py":
-                    exports.extend(
-                        alias.asname or alias.name for alias in node.names
-                    )
-                elif isinstance(node, ast.Assign):
-                    exports.extend(self._extract_dunder_all(node))
-                elif isinstance(node, ast.ClassDef):
-                    classes.append(node.name)
-                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    functions.append(node.name)
+            for stmt in tree.body:
+                if isinstance(stmt, ast.ImportFrom) and path.name == "__init__.py":
+                    exports.extend(alias.asname or alias.name for alias in stmt.names)
+                elif isinstance(stmt, ast.Assign):
+                    exports.extend(self._extract_dunder_all(stmt))
+                elif isinstance(stmt, ast.ClassDef):
+                    classes.append(stmt.name)
+                elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    functions.append(stmt.name)
 
-            # Full-AST walk for imports (captures both top-level and lazy function imports)
+            # Walk the full AST for imports, both top-level and lazy function imports
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
@@ -73,10 +70,8 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
             functions=functions,
         )
 
-    def _extract_dunder_all(self, node: ast.Assign) -> List[str]:
-        if not any(
-            isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
-        ):
+    def _extract_dunder_all(self, node: ast.Assign) -> list[str]:
+        if not any(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets):
             return []
         if isinstance(node.value, (ast.List, ast.Tuple)):
             return [
