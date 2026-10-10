@@ -19,7 +19,7 @@ from src.app.wiring import (
 from src.core.interfaces.judge import BaseJudge
 from src.core.registry import UnitRegistry
 from src.infra.system_one.remote import RemoteSystemOneJudge
-from tests.support.builders import FILE_RULE, make_settings, write_json
+from tests.support.builders import FILE_RULE, make_settings, write_json, write_text
 from tests.support.fakes import FakeJudge, JudgeOverride
 
 LOCAL_MODULE = "src.infra.system_one.local"
@@ -104,6 +104,16 @@ def test_both_auditors_share_the_overridden_judge(
     asyncio.run(injector.get(ProjectAuditor).run_audit(target))
 
     assert [len(rule_ids) for rule_ids in judge.asked_rule_ids()] == [1, 18]
+
+
+def test_file_audit_cannot_be_built_from_a_broken_language_extensions_file(
+    tmp_path: Path,
+) -> None:
+    broken = write_text(tmp_path / "language_extensions.json", "{not json")
+    settings = make_settings(language_extensions_path=broken)
+
+    with pytest.raises(ValueError, match=r"language_extensions\.json' is not valid"):
+        create_file_audit_path(settings)
 
 
 def test_project_audit_needs_project_rule_packs() -> None:

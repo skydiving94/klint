@@ -79,8 +79,16 @@ def test_auditor_does_not_call_the_judge_when_no_rule_applies(
     assert report.get_issues(fails_only=False) == []
 
 
-def test_auditor_skips_a_language_rule_for_a_unit_of_unknown_language(
-    tmp_path: Path, fake_judge: type[FakeJudge]
+@pytest.mark.parametrize(
+    ("file_name", "asked"),
+    [
+        ("a.py", ["any_language", "python_only"]),
+        ("a.go", ["any_language"]),
+        ("notes.txt", ["any_language"]),
+    ],
+)
+def test_auditor_asks_a_language_rule_only_about_files_in_that_language(
+    tmp_path: Path, fake_judge: type[FakeJudge], file_name: str, asked: list[str]
 ) -> None:
     rules = write_json(
         tmp_path / "rules.json",
@@ -89,14 +97,14 @@ def test_auditor_skips_a_language_rule_for_a_unit_of_unknown_language(
             "python_only": {**FILE_RULE, "languages": ["python"]},
         },
     )
-    target = tmp_path / "a.py"
+    target = tmp_path / file_name
     target.write_text("x = 1\n", encoding="utf-8")
     judge = fake_judge()
 
     asyncio.run(file_auditor(rules, judge).run_audit(target))
 
-    # The extracted unit has no language, so the Python-only rule is not asked.
-    assert judge.asked_rule_ids() == [["any_language"]]
+    # A file in another language, or in none that is known, is not asked.
+    assert judge.asked_rule_ids() == [asked]
 
 
 def test_unit_content_is_sent_as_state_with_one_question_per_rule(

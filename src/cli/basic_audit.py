@@ -7,7 +7,7 @@ from pathlib import Path
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
 from src.app.wiring import create_file_audit_path
-from src.cli.runner import CommandStyle, run_audit_command
+from src.cli.runner import CommandStyle, report_error, run_audit_command
 
 _STYLE = CommandStyle(name="klint", target_label="files", json_key="examined_files")
 
@@ -72,8 +72,14 @@ class CLIApp:
 async def main() -> int:
     args = _parse_args(sys.argv[1:])
     settings = await asyncio.to_thread(AppSettings.from_env, args.file, args.rules)
+    try:
+        audit_path = create_file_audit_path(settings)
+    except (FileNotFoundError, ValueError) as error:
+        # A built-in data file is missing or not valid.
+        report_error(_STYLE, error)
+        return 1
     app = CLIApp(
-        audit_path=create_file_audit_path(settings),
+        audit_path=audit_path,
         default_custom_rules=settings.discovered_config_path,
     )
     return await app.run(sys.argv[1:])

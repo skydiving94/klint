@@ -2,17 +2,19 @@
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
+from src.app.settings import AppSettings
 from src.app.wiring import create_file_audit_path
-from src.cli.basic_audit import CLIApp
+from src.cli.basic_audit import CLIApp, main
 from src.core.interfaces.judge import BaseJudge
 from src.infra.system_one.remote import RemoteSystemOneJudge
-from tests.support.builders import FILE_RULE, make_settings, write_json
+from tests.support.builders import FILE_RULE, make_settings, write_json, write_text
 from tests.support.fakes import FakeJudge, JudgeOverride
 from tests.support.paths import SnapshotAsserter
 
@@ -111,6 +113,36 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert "Audit target does not exist" in capsys.readouterr().err
     assert _run(app, target, "--rules", tmp_path / "absent.json") == 1
     assert "Custom rules file does not exist" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [("{not json", "is not valid JSON"), (None, "does not exist")],
+)
+def test_unusable_language_extensions_file_stops_the_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: Capture,
+    content: str | None,
+    reason: str,
+) -> None:
+    data_file = tmp_path / "language_extensions.json"
+    if content is not None:
+        write_text(data_file, content)
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    settings = make_settings(language_extensions_path=data_file)
+    monkeypatch.setattr(AppSettings, "from_env", lambda *_args: settings)
+    monkeypatch.setattr(sys, "argv", ["klint", str(target)])
+
+    exit_code = asyncio.run(main())
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.out == ""
+    assert captured.err.startswith("[klint] Error: Language extensions file")
+    assert reason in captured.err
+    assert str(data_file) in captured.err
+    assert captured.err.count("\n") == 1
 
 
 def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> None:

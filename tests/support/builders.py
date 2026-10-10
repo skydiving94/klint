@@ -22,7 +22,11 @@ from src.core.auditor import Auditor
 from src.core.interfaces.judge import BaseJudge
 from src.core.registry import UnitRegistry
 from tests.support.fakes import JudgeOverride
-from tests.support.paths import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS
+from tests.support.paths import (
+    DEFAULT_LANGUAGE_EXTENSIONS,
+    DEFAULT_PROJECT_RULES,
+    DEFAULT_RULE_PACKS,
+)
 
 RuleSpec = dict[str, Any]
 
@@ -63,13 +67,15 @@ def make_settings(
     rules_paths: Sequence[Path] = DEFAULT_RULE_PACKS,
     project_rules_paths: Sequence[Path] = (DEFAULT_PROJECT_RULES,),
     kev_mode: str = "remote",
+    language_extensions_path: Path = DEFAULT_LANGUAGE_EXTENSIONS,
 ) -> AppSettings:
-    """Return settings that point at the given rule packs."""
+    """Return settings that point at the given rule packs and data files."""
     return AppSettings(
         model_name="fake",
         default_rules_paths=tuple(rules_paths),
         kev_mode=kev_mode,
         default_project_rules_paths=tuple(project_rules_paths),
+        language_extensions_path=language_extensions_path,
     )
 
 

@@ -33,6 +33,11 @@ class _ProgressListener:
         self._progress.advance(name)
 
 
+def report_error(style: CommandStyle, error: Exception) -> None:
+    """Print one line on stderr saying why the command stopped."""
+    print(f"[{style.name}] Error: {error}", file=sys.stderr)
+
+
 async def run_audit_command(
     audit_path: AuditPath,
     style: CommandStyle,
@@ -45,7 +50,7 @@ async def run_audit_command(
     try:
         plan = await audit_path.prepare(target, rules_source)
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
-        print(f"[{style.name}] Error: {exc}", file=sys.stderr)
+        report_error(style, exc)
         return 1
 
     progress = AuditProgressReporter(

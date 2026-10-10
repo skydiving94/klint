@@ -7,7 +7,11 @@ import pytest
 
 from src.app.settings import AppSettings
 from tests.support.builders import write_json
-from tests.support.paths import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS
+from tests.support.paths import (
+    DEFAULT_LANGUAGE_EXTENSIONS,
+    DEFAULT_PROJECT_RULES,
+    DEFAULT_RULE_PACKS,
+)
 
 
 @pytest.fixture
@@ -53,7 +57,9 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
         kev_api_key=None,
         default_project_rules_paths=(DEFAULT_PROJECT_RULES,),
         discovered_config_path=None,
+        language_extensions_path=DEFAULT_LANGUAGE_EXTENSIONS,
     )
+    assert settings.language_extensions_path.is_file()
 
 
 @pytest.mark.usefixtures("shell_env")

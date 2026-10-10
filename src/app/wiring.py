@@ -23,11 +23,18 @@ from src.catalog.common.extractors.file_collector import (
     collect_target_files,
 )
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
+from src.catalog.common.file_traits_identifiers.extension_identifier import (
+    ExtensionFileTraitsIdentifier,
+)
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.core.auditor import Auditor
+from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.judge import BaseJudge
 from src.core.models.scale import AnswerScale
 from src.core.registry import UnitRegistry
+from src.infra.language_extensions_loader.json_loader import (
+    load_language_extensions,
+)
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import RemoteSystemOneJudge
 
@@ -78,6 +85,15 @@ class KlintModule(Module):
 
     @singleton
     @provider
+    def provide_file_traits_identifier(
+        self, settings: AppSettings
+    ) -> BaseFileTraitsIdentifier:
+        return ExtensionFileTraitsIdentifier(
+            load_language_extensions(settings.language_extensions_path)
+        )
+
+    @singleton
+    @provider
     def provide_project_extractor(self) -> RecursiveProjectExtractor:
         return RecursiveProjectExtractor(
             file_extractors=(
@@ -95,10 +111,11 @@ class KlintModule(Module):
         judge: BaseJudge,
         registry: UnitRegistry,
         scale: AnswerScale,
+        file_traits_identifier: BaseFileTraitsIdentifier,
     ) -> FileAuditor:
         return FileAuditor(
             Auditor(
-                extractor=WholeFileExtractor(),
+                extractor=WholeFileExtractor(file_traits_identifier),
                 judge=judge,
                 rule_loader=JsonRuleLoader(settings.default_rules_paths, registry),
                 scale=scale,
