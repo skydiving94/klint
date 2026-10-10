@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.core.models.location import Location
 from src.core.models.scale import Choice
@@ -11,10 +11,10 @@ class AuditFinding:
     unit_id: str
     choice: Choice
     instructions: str
-    confidence: Optional[float] = None
-    probabilities: Optional[Dict[str, float]] = None
-    location: Optional[Location] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    confidence: float | None = None
+    probabilities: dict[str, float] | None = None
+    location: Location | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_failure(self) -> bool:
         return self.choice.is_finding
@@ -24,7 +24,7 @@ class AuditFinding:
             return True
         return self.confidence >= min_confidence
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "rule_id": self.rule_id,
             "unit_id": self.unit_id,
@@ -38,14 +38,14 @@ class AuditFinding:
 
 @dataclass
 class AuditReport:
-    _findings: List[AuditFinding] = field(default_factory=list)
+    _findings: list[AuditFinding] = field(default_factory=list)
 
     def record(self, finding: AuditFinding) -> None:
         self._findings.append(finding)
 
     def get_findings(
         self, fails_only: bool = True, min_confidence: float = 0.0
-    ) -> List[AuditFinding]:
+    ) -> list[AuditFinding]:
         """Return the selected findings, most important first."""
         selected = [
             f
@@ -63,5 +63,5 @@ class AuditReport:
 
     def get_issues(
         self, fails_only: bool = True, min_confidence: float = 0.0
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         return [f.to_dict() for f in self.get_findings(fails_only, min_confidence)]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar, List, Set, Tuple
+from typing import ClassVar
 
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 
@@ -11,14 +11,15 @@ from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 class AuditablePythonPackageUnit(AuditableDirectoryUnit):
     """A directory described as a Python package: its public API, the imports
     in its tree split into internal and external, and cycles between its
-    subpackages."""
+    subpackages.
+    """
 
     unit_type: ClassVar[str] = "project_directory"
 
-    project_module_names: Tuple[str, ...] = field(default_factory=tuple)
+    project_module_names: tuple[str, ...] = field(default_factory=tuple)
 
-    def internal_module_names(self) -> Set[str]:
-        names: Set[str] = {self.directory_name, *self.project_module_names}
+    def internal_module_names(self) -> set[str]:
+        names: set[str] = {self.directory_name, *self.project_module_names}
         for part in Path(self.directory_path).parts:
             if part not in ("", ".", "/", "\\") and not part.endswith(":"):
                 names.add(part)
@@ -31,7 +32,7 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
                 names.update(sub.internal_module_names())
         return names
 
-    def _is_internal_import(self, imp: str, known_modules: Set[str]) -> bool:
+    def _is_internal_import(self, imp: str, known_modules: set[str]) -> bool:
         if imp.startswith("."):
             return True
         parts = [p for p in imp.split(".") if p]
@@ -78,7 +79,7 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
         lines.append(self._render_tree(indent=0))
         return "\n".join(lines)
 
-    def _render_dependency_rollup(self, known_modules: Set[str]) -> str:
+    def _render_dependency_rollup(self, known_modules: set[str]) -> str:
         if not self.subdirectories:
             return ""
         sub_imports = {
@@ -88,7 +89,7 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
         for name, imps in sub_imports.items():
             lines.append(f"  - {name} imports: [{', '.join(imps)}]")
 
-        cycles: List[str] = []
+        cycles: list[str] = []
         names = list(sub_imports.keys())
         for i, a in enumerate(names):
             for b in names[i + 1 :]:

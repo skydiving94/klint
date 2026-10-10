@@ -1,6 +1,6 @@
 import asyncio
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Sequence
 
 from src.catalog.code.common.extractors.directory_factory import (
     BaseDirectoryUnitFactory,
@@ -38,7 +38,7 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
         self._file_extractors = tuple(file_extractors)
         self._directory_factory = directory_factory
 
-    async def extract(self, target: str | Path) -> List[AuditableUnit]:
+    async def extract(self, target: str | Path) -> list[AuditableUnit]:
         root_unit = await asyncio.to_thread(self._extract_tree, Path(target))
         return [root_unit]
 
@@ -46,8 +46,8 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
         return self._directory_factory.finish(self._walk(target_path))
 
     def _walk(self, directory: Path) -> AuditableDirectoryUnit:
-        files: List[AuditableFileMetadataUnit] = []
-        subdirs: List[AuditableDirectoryUnit] = []
+        files: list[AuditableFileMetadataUnit] = []
+        subdirs: list[AuditableDirectoryUnit] = []
 
         for entry in sorted(directory.iterdir()):
             if entry.is_dir():

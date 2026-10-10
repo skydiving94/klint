@@ -1,6 +1,5 @@
 import ast
 from pathlib import Path
-from typing import List
 
 from src.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
@@ -17,10 +16,10 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
     def extract_file(self, path: Path) -> AuditableFileMetadataUnit:
         source = path.read_text(encoding="utf-8", errors="replace")
         line_count = len(source.splitlines())
-        imports: List[str] = []
-        exports: List[str] = []
-        classes: List[str] = []
-        functions: List[str] = []
+        imports: list[str] = []
+        exports: list[str] = []
+        classes: list[str] = []
+        functions: list[str] = []
 
         try:
             tree = ast.parse(source, filename=str(path))
@@ -71,7 +70,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
             functions=functions,
         )
 
-    def _extract_dunder_all(self, node: ast.Assign) -> List[str]:
+    def _extract_dunder_all(self, node: ast.Assign) -> list[str]:
         if not any(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets):
             return []
         if isinstance(node.value, (ast.List, ast.Tuple)):

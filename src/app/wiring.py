@@ -1,6 +1,7 @@
 """Builds klint's object graph from the settings."""
 
-from typing import Callable, NewType, Union
+from collections.abc import Callable
+from typing import NewType, Union
 
 from injector import Binder, Injector, Module, provider, singleton
 
@@ -115,7 +116,7 @@ class KlintModule(Module):
         extractor: RecursiveProjectExtractor,
     ) -> ProjectAuditor:
         if not settings.default_project_rules_paths:
-            raise EnvironmentError(
+            raise OSError(
                 "KEV_DEFAULT_PROJECT_RULES_PATH must be set to use the project "
                 "structure audit CLI (src/cli/project_audit.py)."
             )

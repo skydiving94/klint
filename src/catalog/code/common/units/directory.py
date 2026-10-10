@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set
+from typing import Any
 
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from src.core.models.location import Location
@@ -12,8 +13,8 @@ from src.core.models.unit import AuditableUnit
 @dataclass(frozen=True)
 class ProjectDirectoryUnitMetadata:
     directory_path: str = ""
-    file_names: List[str] = field(default_factory=list)
-    subdirectory_names: List[str] = field(default_factory=list)
+    file_names: list[str] = field(default_factory=list)
+    subdirectory_names: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -26,8 +27,8 @@ class AuditableDirectoryUnit(AuditableUnit):
     """
 
     directory_path: str = ""
-    files: List[AuditableFileMetadataUnit] = field(default_factory=list)
-    subdirectories: List[AuditableDirectoryUnit] = field(default_factory=list)
+    files: list[AuditableFileMetadataUnit] = field(default_factory=list)
+    subdirectories: list[AuditableDirectoryUnit] = field(default_factory=list)
 
     @property
     def directory_name(self) -> str:
@@ -40,7 +41,7 @@ class AuditableDirectoryUnit(AuditableUnit):
             return self.directory_name
         return self.directory_path
 
-    def get_all_imports(self) -> Set[str]:
+    def get_all_imports(self) -> set[str]:
         own = {imp for f in self.files for imp in f.imports}
         for sub in self.subdirectories:
             own.update(sub.get_all_imports())
@@ -62,10 +63,10 @@ class AuditableDirectoryUnit(AuditableUnit):
             lines.append(subdir._render_tree(indent=indent + 1))
         return "\n".join(lines)
 
-    def get_location(self) -> Optional[Location]:
+    def get_location(self) -> Location | None:
         return Location(source=self.directory_path or self.unit_id)
 
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any]:
         metadata = ProjectDirectoryUnitMetadata(
             directory_path=self.directory_path,
             file_names=[f.file_name for f in self.files],

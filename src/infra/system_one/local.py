@@ -1,7 +1,8 @@
 import asyncio
 import os
+from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any, Mapping, Optional
+from typing import Any
 
 # Silence Hugging Face Hub & Xet download/reconstruction progress bars before importing kev
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
@@ -21,7 +22,7 @@ disable_progress_bars()
 class LocalKevJudge(BaseJudge):
     def __init__(self, checkpoint: str = "jaredpalmer/kev-0.8b"):
         self._checkpoint = checkpoint
-        self._server: Optional[Server] = None
+        self._server: Server | None = None
         self._lock = asyncio.Lock()
 
     def _load_server_sync(self) -> None:

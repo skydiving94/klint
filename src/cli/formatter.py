@@ -1,6 +1,6 @@
 import sys
 from collections import defaultdict
-from typing import Dict, List, Sequence
+from collections.abc import Sequence
 
 from src.core.models.report import AuditFinding
 
@@ -95,7 +95,7 @@ def format_audit_report(
     target_label: str = "files",
 ) -> str:
     divider = "\u2500" * 72
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append(
         f"\n{_ANSI.BOLD}klint Audit Report{_ANSI.RESET} "
         f"{_ANSI.DIM}({len(examined_targets)} {target_label} scanned){_ANSI.RESET}"
@@ -108,7 +108,7 @@ def format_audit_report(
         )
         return "\n".join(lines)
 
-    grouped: Dict[str, List[AuditFinding]] = defaultdict(list)
+    grouped: dict[str, list[AuditFinding]] = defaultdict(list)
     for finding in findings:
         grouped[finding.unit_id].append(finding)
 

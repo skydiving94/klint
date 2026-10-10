@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, ClassVar, Dict, Optional, Sequence
+from typing import Any, ClassVar
 
 from src.core.models.location import Location
 
@@ -22,7 +23,7 @@ class AuditableUnit(ABC):
     """
 
     unit_id: str
-    language: Optional[str] = field(default=None, kw_only=True)
+    language: str | None = field(default=None, kw_only=True)
 
     unit_type: ClassVar[str]
 
@@ -32,11 +33,11 @@ class AuditableUnit(ABC):
         pass
 
     @abstractmethod
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any]:
         """Return unit-specific context metadata to attach to an AuditFinding."""
         pass
 
-    def get_location(self) -> Optional[Location]:
+    def get_location(self) -> Location | None:
         """Return where this unit sits in its source, if it has a location."""
         return None
 
