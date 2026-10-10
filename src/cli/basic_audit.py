@@ -28,7 +28,10 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Output all judgments (Pass, Fail, Irrelevant, Lack of Evidence) instead of fails only",
+        help=(
+            "Output all judgments (Pass, Fail, Irrelevant, Lack of Evidence) "
+            "instead of fails only"
+        ),
     )
     parser.add_argument(
         "--min-confidence",

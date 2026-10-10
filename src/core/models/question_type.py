@@ -1,5 +1,5 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class QuestionType(str, Enum):
+class QuestionType(StrEnum):
     CHOICE = "choice"

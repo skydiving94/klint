@@ -26,8 +26,9 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
         )
 
     def finish(self, root: AuditableDirectoryUnit) -> AuditableDirectoryUnit:
-        """Give every package in the tree the module names found anywhere in it,
-        so each can tell the project's own imports from external ones.
+        """Give every package in the tree the module names found anywhere in it.
+
+        Each package can then tell the project's own imports from external ones.
         """
         if not isinstance(root, AuditablePythonPackageUnit):
             return root

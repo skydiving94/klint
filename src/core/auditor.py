@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Iterator, Sequence
+from pathlib import Path
 from typing import Any
 
 from src.core.interfaces.extractor import BaseUnitExtractor
@@ -12,7 +13,9 @@ from src.core.models.unit import AuditableUnit
 
 
 class Auditor:
-    """Extracts units from a target, asks the judge the rules that apply to
+    """Audits a target and reports what the judge finds.
+
+    Extracts units from the target, asks the judge the rules that apply to
     each one, and turns the answers into findings.
     """
 
@@ -28,14 +31,18 @@ class Auditor:
         self._rule_loader = rule_loader
         self._scale = scale
 
-    async def load_rules(self, custom_rules_source: Any = None) -> list[AuditRule]:
+    async def load_rules(
+        self, custom_rules_source: str | Path | None = None
+    ) -> list[AuditRule]:
         return await self._rule_loader.load_rules(custom_rules_source)
 
     async def extract_units(
-        self, target: Any, walk_children: bool = False
+        self, target: str | Path, walk_children: bool = False
     ) -> list[AuditableUnit]:
-        """Return the target's units; with walk_children, every unit nested
-        inside them as well, parents before children.
+        """Return the target's units.
+
+        With walk_children, every unit nested inside them is returned as well,
+        parents before children.
         """
         units = await self._extractor.extract(target)
         if not walk_children:
@@ -74,8 +81,8 @@ class Auditor:
 
     async def run_audit(
         self,
-        target: Any,
-        custom_rules_source: Any = None,
+        target: str | Path,
+        custom_rules_source: str | Path | None = None,
         walk_children: bool = False,
     ) -> AuditReport:
         units, rules = await asyncio.gather(

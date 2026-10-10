@@ -8,7 +8,7 @@ from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUni
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
-    """Extracts line count, exports, imports, classes, and functions from Python files."""
+    """Extracts a Python file's line count, exports, imports, classes and functions."""
 
     def supports(self, path: Path) -> bool:
         return path.suffix.lower() == ".py"
@@ -34,7 +34,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     functions.append(node.name)
 
-            # Full-AST walk for imports (captures both top-level and lazy function imports)
+            # Walk the full AST for imports, both top-level and lazy function imports
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:

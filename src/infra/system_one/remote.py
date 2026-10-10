@@ -15,7 +15,7 @@ class RemoteSystemOneJudge(BaseJudge):
         api_key: str | None = None,
         timeout_seconds: float = 60.0,
         inference_fn: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
-    ):
+    ) -> None:
         self._model_name = model_name
         self._endpoint = f"{base_url.rstrip('/')}/v1/systemone"
         self._api_key = api_key

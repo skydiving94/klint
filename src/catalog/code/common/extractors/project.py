@@ -23,8 +23,10 @@ from src.core.models.unit import AuditableUnit
 
 
 class RecursiveProjectExtractor(BaseUnitExtractor):
-    """Builds one composite directory unit for the target, holding the metadata
-    of its files and, recursively, of every subdirectory.
+    """Builds one composite directory unit for the whole target tree.
+
+    The unit holds the metadata of the target's files and, recursively, of
+    every subdirectory.
 
     file_extractors are tried in order for each file; the first that supports
     it wins. directory_factory decides which unit describes a directory.

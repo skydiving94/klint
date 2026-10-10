@@ -9,9 +9,10 @@ from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 
 @dataclass(frozen=True)
 class AuditablePythonPackageUnit(AuditableDirectoryUnit):
-    """A directory described as a Python package: its public API, the imports
-    in its tree split into internal and external, and cycles between its
-    subpackages.
+    """A directory described as a Python package.
+
+    The description covers its public API, the imports in its tree split into
+    internal and external, and cycles between its subpackages.
     """
 
     unit_type: ClassVar[str] = "project_directory"
@@ -47,7 +48,10 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
             return "not applicable (no immediate .py files in this directory)"
         init_file = next((f for f in py_files if f.file_name == "__init__.py"), None)
         if init_file is None:
-            return "MISSING (__init__.py is absent; internal modules are exposed without a package public API)"
+            return (
+                "MISSING (__init__.py is absent; internal modules are exposed "
+                "without a package public API)"
+            )
         if init_file.exports:
             return f"present (__init__.py exports: [{', '.join(init_file.exports)}])"
         return (
@@ -67,11 +71,16 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
             f.file_name for f in self.files if f.file_name != "__init__.py"
         ]
         lines = [
-            f"Target Directory Under Audit: {self.display_path} (package name: '{self.directory_name}')",
-            f"Summary: {len(self.files)} immediate files ({len(non_init_files)} non-init modules: {non_init_files}), {len(self.subdirectories)} immediate subdirectories",
+            f"Target Directory Under Audit: {self.display_path} "
+            f"(package name: '{self.directory_name}')",
+            f"Summary: {len(self.files)} immediate files "
+            f"({len(non_init_files)} non-init modules: {non_init_files}), "
+            f"{len(self.subdirectories)} immediate subdirectories",
             f"Package Public API Status: {self._describe_public_api()}",
-            f"Internal Project Imports in Tree: [{', '.join(internal_imps) if internal_imps else 'none'}]",
-            f"External / Third-Party / Stdlib Imports in Tree: [{', '.join(external_imps) if external_imps else 'none'}]",
+            "Internal Project Imports in Tree: "
+            f"[{', '.join(internal_imps) if internal_imps else 'none'}]",
+            "External / Third-Party / Stdlib Imports in Tree: "
+            f"[{', '.join(external_imps) if external_imps else 'none'}]",
         ]
         rollup = self._render_dependency_rollup(known_modules)
         if rollup:

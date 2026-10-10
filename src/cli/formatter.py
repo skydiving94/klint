@@ -16,7 +16,7 @@ class _ANSI:
 
 
 class AuditProgressReporter:
-    """Renders a live single-line progress bar to stderr and clears it upon completion."""
+    """Renders a live one-line progress bar on stderr and clears it on completion."""
 
     def __init__(self, total: int, label: str = "files", enabled: bool = True) -> None:
         self._total = max(total, 1)
@@ -104,7 +104,8 @@ def format_audit_report(
 
     if not findings:
         lines.append(
-            f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 No architectural or semantic issues found.{_ANSI.RESET}\n"
+            f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 No architectural or semantic issues "
+            f"found.{_ANSI.RESET}\n"
         )
         return "\n".join(lines)
 
@@ -128,7 +129,8 @@ def format_audit_report(
                 )
 
             lines.append(
-                f"  {_badge(finding.choice.label)} {_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
+                f"  {_badge(finding.choice.label)} "
+                f"{_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
                 f"Confidence: {_confidence_bar(finding.confidence)}"
             )
             if finding.instructions:

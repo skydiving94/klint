@@ -29,7 +29,7 @@ class AuditableUnit(ABC):
 
     @abstractmethod
     def get_content(self) -> str:
-        """Return the string representation of this unit (and any child units) for evaluation."""
+        """Return the text of this unit (and any child units) for evaluation."""
         pass
 
     @abstractmethod

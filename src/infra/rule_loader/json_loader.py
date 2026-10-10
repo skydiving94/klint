@@ -13,7 +13,7 @@ from src.core.registry import UnitRegistry
 class JsonRuleLoader(BaseRuleLoader):
     def __init__(
         self, default_rules_paths: Sequence[Path], unit_registry: UnitRegistry
-    ):
+    ) -> None:
         self._unit_registry = unit_registry
         self._default_rules_paths: list[Path] = list(default_rules_paths)
         self._cached_default_rules: dict[str, AuditRule] | None = None
@@ -43,7 +43,10 @@ class JsonRuleLoader(BaseRuleLoader):
         return list(merged.values())
 
     def _load_default_rules_sync(self) -> dict[str, AuditRule]:
-        """Load every default pack in order; a later pack overrides an earlier one by rule ID."""
+        """Load every default pack in order.
+
+        A later pack overrides an earlier one by rule ID.
+        """
         rules: dict[str, AuditRule] = {}
         for path in self._default_rules_paths:
             if path.exists():
@@ -57,7 +60,8 @@ class JsonRuleLoader(BaseRuleLoader):
 
     def _load_from_path_sync(self, path: Path) -> dict[str, AuditRule]:
         raw_data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-        # Support both flat rule JSON files and ESLint-style {"env": {...}, "rules": {...}} configs
+        # Support both flat rule JSON files and ESLint-style configs of the form
+        # {"env": {...}, "rules": {...}}
         rules_block = (
             raw_data["rules"]
             if isinstance(raw_data.get("rules"), dict)
@@ -94,17 +98,19 @@ class JsonRuleLoader(BaseRuleLoader):
         unknown = [t for t in raw_types if t not in known]
         if unknown:
             raise ValueError(
-                f"Rule '{rule_id}' has unknown target_unit_types {unknown}; known: {sorted(known)}"
+                f"Rule '{rule_id}' has unknown target_unit_types {unknown}; "
+                f"known: {sorted(known)}"
             )
         return list(raw_types)
 
     def _validate_string_list(
-        self, raw_value: Any, field_name: str, rule_id: str
+        self, raw_value: object, field_name: str, rule_id: str
     ) -> list[str]:
         if not isinstance(raw_value, list) or not all(
             isinstance(item, str) for item in raw_value
         ):
             raise ValueError(
-                f"Rule '{rule_id}' has invalid {field_name} {raw_value!r}; expected a list of strings"
+                f"Rule '{rule_id}' has invalid {field_name} {raw_value!r}; "
+                "expected a list of strings"
             )
         return list(raw_value)

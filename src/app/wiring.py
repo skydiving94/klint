@@ -1,7 +1,7 @@
 """Builds klint's object graph from the settings."""
 
 from collections.abc import Callable
-from typing import NewType, Union
+from typing import NewType
 
 from injector import Binder, Injector, Module, provider, singleton
 
@@ -37,7 +37,7 @@ ProjectAuditor = NewType("ProjectAuditor", Auditor)
 FileAuditPath = NewType("FileAuditPath", AuditPath)
 ProjectAuditPath = NewType("ProjectAuditPath", AuditPath)
 
-Override = Union[Module, Callable[[Binder], None]]
+Override = Module | Callable[[Binder], None]
 
 
 class KlintModule(Module):
