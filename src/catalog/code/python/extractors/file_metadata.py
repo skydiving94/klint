@@ -24,15 +24,15 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
         try:
             tree = ast.parse(source, filename=str(path))
             # Top-level declarations (exports, classes, functions)
-            for node in tree.body:
-                if isinstance(node, ast.ImportFrom) and path.name == "__init__.py":
-                    exports.extend(alias.asname or alias.name for alias in node.names)
-                elif isinstance(node, ast.Assign):
-                    exports.extend(self._extract_dunder_all(node))
-                elif isinstance(node, ast.ClassDef):
-                    classes.append(node.name)
-                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    functions.append(node.name)
+            for stmt in tree.body:
+                if isinstance(stmt, ast.ImportFrom) and path.name == "__init__.py":
+                    exports.extend(alias.asname or alias.name for alias in stmt.names)
+                elif isinstance(stmt, ast.Assign):
+                    exports.extend(self._extract_dunder_all(stmt))
+                elif isinstance(stmt, ast.ClassDef):
+                    classes.append(stmt.name)
+                elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    functions.append(stmt.name)
 
             # Walk the full AST for imports, both top-level and lazy function imports
             for node in ast.walk(tree):
