@@ -1,1 +1,1 @@
-"""Built-in rule packs, shipped as package data."""
+"""Built-in rule packs and other data files, shipped as package data."""

@@ -13,6 +13,8 @@ DEFAULT_RULE_PACKS = (
     RULE_PACKS / "common" / "structure.json",
 )
 DEFAULT_PROJECT_RULES = RULE_PACKS / "python" / "project_structure.json"
+# The built-in list of programming languages and their file extensions.
+DEFAULT_LANGUAGE_EXTENSIONS = RULE_PACKS / "common" / "language_extensions.json"
 # Relative to the repo root, so unit ids in output stay short; tests that use
 # it run from there (see the in_repo_root fixture).
 MOCK_PROJECT = Path("examples/mock_bad_project")
