@@ -8,8 +8,8 @@ from injector import Binder, Injector, Module, provider, singleton
 from src import catalog
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
-from src.catalog.code.common.extractors.fallback_file_metadata import (
-    FallbackFileMetadataExtractor,
+from src.catalog.code.common.extractors.language_neutral_file_metadata import (
+    LanguageNeutralFileMetadataExtractor,
 )
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.python.extractors.file_metadata import (
@@ -82,7 +82,7 @@ class KlintModule(Module):
         return RecursiveProjectExtractor(
             file_extractors=(
                 PythonFileMetadataExtractor(),
-                FallbackFileMetadataExtractor(),
+                LanguageNeutralFileMetadataExtractor(),
             ),
             directory_factory=PythonPackageUnitFactory(),
         )

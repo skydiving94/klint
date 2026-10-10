@@ -5,11 +5,11 @@ from pathlib import Path
 from src.catalog.code.common.extractors.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from src.catalog.code.common.extractors.fallback_file_metadata import (
-    FallbackFileMetadataExtractor,
-)
 from src.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
+)
+from src.catalog.code.common.extractors.language_neutral_file_metadata import (
+    LanguageNeutralFileMetadataExtractor,
 )
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
@@ -70,4 +70,4 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
         for extractor in self._file_extractors:
             if extractor.supports(path):
                 return extractor.extract_file(path)
-        return FallbackFileMetadataExtractor().extract_file(path)
+        return LanguageNeutralFileMetadataExtractor().extract_file(path)

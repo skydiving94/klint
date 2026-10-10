@@ -6,8 +6,8 @@ from src.catalog.code.common.extractors.file_metadata_base import (
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 
 
-class FallbackFileMetadataExtractor(BaseFileMetadataExtractor):
-    """Fallback extractor that records basic file identity and line count."""
+class LanguageNeutralFileMetadataExtractor(BaseFileMetadataExtractor):
+    """Records a file's name, path and line count, whatever its language."""
 
     def supports(self, path: Path) -> bool:  # noqa: ARG002
         # Every file is supported, so the path is not inspected.

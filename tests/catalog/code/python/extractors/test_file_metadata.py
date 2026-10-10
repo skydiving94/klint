@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from src.catalog.code.common.extractors.fallback_file_metadata import (
-    FallbackFileMetadataExtractor,
+from src.catalog.code.common.extractors.language_neutral_file_metadata import (
+    LanguageNeutralFileMetadataExtractor,
 )
 from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
@@ -94,4 +94,4 @@ def test_metadata_extractors_choose_files_by_suffix() -> None:
     assert python_extractor.supports(Path("a.py"))
     assert python_extractor.supports(Path("A.PY"))
     assert not python_extractor.supports(Path("a.ts"))
-    assert FallbackFileMetadataExtractor().supports(Path("a.ts"))
+    assert LanguageNeutralFileMetadataExtractor().supports(Path("a.ts"))

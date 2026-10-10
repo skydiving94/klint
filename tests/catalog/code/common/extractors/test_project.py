@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.code.common.extractors.fallback_file_metadata import (
-    FallbackFileMetadataExtractor,
+from src.catalog.code.common.extractors.language_neutral_file_metadata import (
+    LanguageNeutralFileMetadataExtractor,
 )
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
@@ -68,16 +68,16 @@ def test_project_extractor_uses_the_first_file_extractor_that_supports_a_file(
     write_text(tmp_path / "pkg" / "a.py", "import os\n")
     write_text(tmp_path / "pkg" / "b.ts", "import fs from 'fs';\n")
     write_text(tmp_path / "pkg" / "c.txt", "import os\n")
-    fallback_first = RecursiveProjectExtractor(
+    language_neutral_first = RecursiveProjectExtractor(
         file_extractors=[
-            FallbackFileMetadataExtractor(),
+            LanguageNeutralFileMetadataExtractor(),
             PythonFileMetadataExtractor(),
         ],
         directory_factory=PythonPackageUnitFactory(),
     )
 
     python_first = extract_python_project(tmp_path / "pkg")
-    (shadowed,) = asyncio.run(fallback_first.extract(tmp_path / "pkg"))
+    (shadowed,) = asyncio.run(language_neutral_first.extract(tmp_path / "pkg"))
 
     # Only a.py is read as Python; c.txt holds the same text but is not.
     assert [f.imports for f in python_first.files] == [["os"], [], []]
