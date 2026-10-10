@@ -152,7 +152,5 @@ def create_file_audit_path(settings: AppSettings, *overrides: Override) -> Audit
     return create_injector(settings, *overrides).get(FileAuditPath)
 
 
-def create_project_audit_path(
-    settings: AppSettings, *overrides: Override
-) -> AuditPath:
+def create_project_audit_path(settings: AppSettings, *overrides: Override) -> AuditPath:
     return create_injector(settings, *overrides).get(ProjectAuditPath)

@@ -27,9 +27,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
             # Top-level declarations (exports, classes, functions)
             for node in tree.body:
                 if isinstance(node, ast.ImportFrom) and path.name == "__init__.py":
-                    exports.extend(
-                        alias.asname or alias.name for alias in node.names
-                    )
+                    exports.extend(alias.asname or alias.name for alias in node.names)
                 elif isinstance(node, ast.Assign):
                     exports.extend(self._extract_dunder_all(node))
                 elif isinstance(node, ast.ClassDef):
@@ -74,9 +72,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
         )
 
     def _extract_dunder_all(self, node: ast.Assign) -> List[str]:
-        if not any(
-            isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
-        ):
+        if not any(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets):
             return []
         if isinstance(node.value, (ast.List, ast.Tuple)):
             return [

@@ -13,9 +13,7 @@ _STYLE = CommandStyle(name="klint", target_label="files", json_key="examined_fil
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="klint - Declarative Code Auditor CLI"
-    )
+    parser = argparse.ArgumentParser(description="klint - Declarative Code Auditor CLI")
     parser.add_argument(
         "file",
         type=Path,
@@ -70,9 +68,7 @@ class CLIApp:
 
 async def main() -> int:
     args = _parse_args(sys.argv[1:])
-    settings = await asyncio.to_thread(
-        AppSettings.from_env, args.file, args.rules
-    )
+    settings = await asyncio.to_thread(AppSettings.from_env, args.file, args.rules)
     app = CLIApp(
         audit_path=create_file_audit_path(settings),
         default_custom_rules=settings.discovered_config_path,

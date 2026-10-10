@@ -72,9 +72,7 @@ class ProjectAuditCLIApp:
 
 async def main() -> int:
     args = _parse_args(sys.argv[1:])
-    settings = await asyncio.to_thread(
-        AppSettings.from_env, args.directory, args.rules
-    )
+    settings = await asyncio.to_thread(AppSettings.from_env, args.directory, args.rules)
     app = ProjectAuditCLIApp(
         audit_path=create_project_audit_path(settings),
         default_custom_rules=settings.discovered_config_path,

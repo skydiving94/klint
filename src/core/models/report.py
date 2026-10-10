@@ -50,8 +50,7 @@ class AuditReport:
         selected = [
             f
             for f in self._findings
-            if (not fails_only or f.is_failure())
-            and f.meets_confidence(min_confidence)
+            if (not fails_only or f.is_failure()) and f.meets_confidence(min_confidence)
         ]
         selected.sort(
             key=lambda f: (

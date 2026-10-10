@@ -50,12 +50,8 @@ class AuditableDirectoryUnit(AuditableUnit):
         prefix = "  " * indent
         lines = [f"{prefix}Directory: {self.display_path}"]
         if self.subdirectories:
-            subdir_names = ", ".join(
-                d.directory_name for d in self.subdirectories
-            )
-            lines.append(
-                f"{prefix}  Immediate Subdirectories: [{subdir_names}]"
-            )
+            subdir_names = ", ".join(d.directory_name for d in self.subdirectories)
+            lines.append(f"{prefix}  Immediate Subdirectories: [{subdir_names}]")
         if self.files:
             lines.append(f"{prefix}  Files:")
             for file_unit in self.files:

@@ -37,37 +37,30 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
         parts = [p for p in imp.split(".") if p]
         return bool(
             parts
-            and (
-                parts[0] in known_modules
-                or any(p in known_modules for p in parts)
-            )
+            and (parts[0] in known_modules or any(p in known_modules for p in parts))
         )
 
     def _describe_public_api(self) -> str:
         py_files = [f for f in self.files if f.file_name.endswith(".py")]
         if not py_files:
             return "not applicable (no immediate .py files in this directory)"
-        init_file = next(
-            (f for f in py_files if f.file_name == "__init__.py"), None
-        )
+        init_file = next((f for f in py_files if f.file_name == "__init__.py"), None)
         if init_file is None:
             return "MISSING (__init__.py is absent; internal modules are exposed without a package public API)"
         if init_file.exports:
             return f"present (__init__.py exports: [{', '.join(init_file.exports)}])"
-        return "minimal (__init__.py exists but declares no explicit exports or __all__)"
+        return (
+            "minimal (__init__.py exists but declares no explicit exports or __all__)"
+        )
 
     def get_content(self) -> str:
         known_modules = self.internal_module_names()
         all_imps = self.get_all_imports()
         internal_imps = sorted(
-            imp
-            for imp in all_imps
-            if self._is_internal_import(imp, known_modules)
+            imp for imp in all_imps if self._is_internal_import(imp, known_modules)
         )
         external_imps = sorted(
-            imp
-            for imp in all_imps
-            if not self._is_internal_import(imp, known_modules)
+            imp for imp in all_imps if not self._is_internal_import(imp, known_modules)
         )
         non_init_files = [
             f.file_name for f in self.files if f.file_name != "__init__.py"
@@ -89,8 +82,7 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
         if not self.subdirectories:
             return ""
         sub_imports = {
-            d.directory_name: sorted(d.get_all_imports())
-            for d in self.subdirectories
+            d.directory_name: sorted(d.get_all_imports()) for d in self.subdirectories
         }
         lines = ["Subpackage Dependency Rollup:"]
         for name, imps in sub_imports.items():
@@ -99,7 +91,7 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
         cycles: List[str] = []
         names = list(sub_imports.keys())
         for i, a in enumerate(names):
-            for b in names[i + 1:]:
+            for b in names[i + 1 :]:
                 a_internal = [
                     imp
                     for imp in sub_imports[a]

@@ -35,9 +35,7 @@ def _load_json_env_overrides(config_path: Optional[Path]) -> Dict[str, str]:
     if config_path is None or not config_path.is_file():
         return {}
     try:
-        raw: Dict[str, Any] = json.loads(
-            config_path.read_text(encoding="utf-8")
-        )
+        raw: Dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
     except Exception:
         return {}
     env_block = raw.get("env", {})
@@ -104,9 +102,7 @@ class AppSettings:
         active_config = config_path or find_project_config(target_path)
         json_env = _load_json_env_overrides(active_config)
 
-        def _get_setting(
-            key: str, default: Optional[str] = None
-        ) -> Optional[str]:
+        def _get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
             # Priority: Shell Export > Project klint.json "env" > klint .env > Default
             if key in shell_env and shell_env[key]:
                 return shell_env[key]

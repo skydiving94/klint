@@ -18,9 +18,7 @@ class _ANSI:
 class AuditProgressReporter:
     """Renders a live single-line progress bar to stderr and clears it upon completion."""
 
-    def __init__(
-        self, total: int, label: str = "files", enabled: bool = True
-    ) -> None:
+    def __init__(self, total: int, label: str = "files", enabled: bool = True) -> None:
         self._total = max(total, 1)
         self._completed = 0
         self._label = label
@@ -29,8 +27,7 @@ class AuditProgressReporter:
     def start(self) -> None:
         if not self._enabled:
             return
-        self._render(
-            f"Initializing model & extracting {self._total} {self._label}...")
+        self._render(f"Initializing model & extracting {self._total} {self._label}...")
 
     def advance(self, target_name: str) -> None:
         if not self._enabled:
@@ -50,8 +47,7 @@ class AuditProgressReporter:
         bar = "\u2588" * filled + "\u2591" * (width - filled)
         pct = f"{ratio * 100:3.0f}%"
         short_status = (
-            status_text if len(status_text) <= 48 else "..." +
-            status_text[-45:]
+            status_text if len(status_text) <= 48 else "..." + status_text[-45:]
         )
         line = (
             f"\r\033[K{_ANSI.CYAN}{bar}{_ANSI.RESET} "

@@ -32,10 +32,8 @@ class JsonRuleLoader(BaseRuleLoader):
 
             custom_path = Path(custom_rules_source).resolve()
             if custom_path not in self._cached_custom_rules:
-                self._cached_custom_rules[custom_path] = (
-                    await asyncio.to_thread(
-                        self._load_custom_rules_sync, custom_path
-                    )
+                self._cached_custom_rules[custom_path] = await asyncio.to_thread(
+                    self._load_custom_rules_sync, custom_path
                 )
             custom_rules = self._cached_custom_rules[custom_path]
 
@@ -53,8 +51,7 @@ class JsonRuleLoader(BaseRuleLoader):
 
     def _load_custom_rules_sync(self, path: Path) -> Dict[str, AuditRule]:
         if not path.is_file():
-            raise FileNotFoundError(
-                f"Custom rules file does not exist: {path}")
+            raise FileNotFoundError(f"Custom rules file does not exist: {path}")
         return self._load_from_path_sync(path)
 
     def _load_from_path_sync(self, path: Path) -> Dict[str, AuditRule]:
@@ -91,9 +88,7 @@ class JsonRuleLoader(BaseRuleLoader):
             rules[rule_id] = AuditRule(**kwargs)
         return rules
 
-    def _validate_unit_types(
-        self, raw_types: List[str], rule_id: str
-    ) -> List[str]:
+    def _validate_unit_types(self, raw_types: List[str], rule_id: str) -> List[str]:
         known = set(self._unit_registry.known_unit_types())
         unknown = [t for t in raw_types if t not in known]
         if unknown:
