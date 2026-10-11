@@ -1,6 +1,6 @@
 """Builds klint's object graph from the settings."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import NewType
 
 from injector import Binder, Injector, Module, provider, singleton
@@ -44,6 +44,8 @@ FileAuditor = NewType("FileAuditor", Auditor)
 ProjectAuditor = NewType("ProjectAuditor", Auditor)
 FileAuditPath = NewType("FileAuditPath", AuditPath)
 ProjectAuditPath = NewType("ProjectAuditPath", AuditPath)
+# The language each file extension stands for, loaded once per injector.
+FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
 
 Override = Module | Callable[[Binder], None]
 
@@ -86,12 +88,19 @@ class KlintModule(Module):
 
     @singleton
     @provider
-    def provide_file_traits_identifier(
+    def provide_file_extension_to_language(
         self, settings: AppSettings
-    ) -> BaseFileTraitsIdentifier:
-        return ExtensionFileTraitsIdentifier(
+    ) -> FileExtensionToLanguage:
+        return FileExtensionToLanguage(
             load_file_extension_to_language(settings.language_to_file_extensions_path)
         )
+
+    @singleton
+    @provider
+    def provide_file_traits_identifier(
+        self, file_extension_to_language: FileExtensionToLanguage
+    ) -> BaseFileTraitsIdentifier:
+        return ExtensionFileTraitsIdentifier(file_extension_to_language)
 
     @singleton
     @provider
@@ -120,12 +129,17 @@ class KlintModule(Module):
         registry: UnitRegistry,
         scale: AnswerScale,
         file_traits_identifier: BaseFileTraitsIdentifier,
+        file_extension_to_language: FileExtensionToLanguage,
     ) -> FileAuditor:
         return FileAuditor(
             Auditor(
                 extractor=WholeFileExtractor(file_traits_identifier),
                 judge=judge,
-                rule_loader=JsonRuleLoader(settings.default_rules_paths, registry),
+                rule_loader=JsonRuleLoader(
+                    settings.default_rules_paths,
+                    registry,
+                    known_languages=set(file_extension_to_language.values()),
+                ),
                 scale=scale,
             )
         )
@@ -139,6 +153,7 @@ class KlintModule(Module):
         registry: UnitRegistry,
         scale: AnswerScale,
         extractor: RecursiveProjectExtractor,
+        file_extension_to_language: FileExtensionToLanguage,
     ) -> ProjectAuditor:
         if not settings.default_project_rules_paths:
             raise OSError(
@@ -150,7 +165,9 @@ class KlintModule(Module):
                 extractor=extractor,
                 judge=judge,
                 rule_loader=JsonRuleLoader(
-                    settings.default_project_rules_paths, registry
+                    settings.default_project_rules_paths,
+                    registry,
+                    known_languages=set(file_extension_to_language.values()),
                 ),
                 scale=scale,
             )

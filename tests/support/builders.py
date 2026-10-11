@@ -32,6 +32,11 @@ from tests.support.paths import (
 
 RuleSpec = dict[str, Any]
 
+# The languages a file can be identified as, from the built-in data file.
+KNOWN_LANGUAGES = frozenset(
+    load_file_extension_to_language(DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS).values()
+)
+
 FILE_RULE: RuleSpec = {"type": "choice", "instructions": "Is it tidy?"}
 DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
 

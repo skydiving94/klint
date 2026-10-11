@@ -146,6 +146,24 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     assert captured.err.count("\n") == 1
 
 
+def test_problem_in_one_rule_is_printed_as_a_warning_and_the_audit_goes_on(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json", {"typo": {**FILE_RULE, "languages": ["pyhton"]}}
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+
+    exit_code = _run(_file_app(fake_judge()), target, "--json", "--rules", custom)
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_files"] == [str(target)]
+    (warning_line,) = captured.err.splitlines()
+    assert warning_line.startswith("[klint] Warning: Rule 'typo'")
+    assert "unknown languages ['pyhton']" in warning_line
+
+
 def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> None:
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")

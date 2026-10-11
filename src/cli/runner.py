@@ -4,13 +4,16 @@ import argparse
 import asyncio
 import json
 import sys
-from collections.abc import Callable, Sequence
+import warnings
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
 from src.cli.formatter import AuditProgressReporter, format_audit_report
+from src.core.klint_warning import KlintWarning
 
 
 @dataclass(frozen=True)
@@ -50,6 +53,32 @@ class _ProgressListener:
 def print_error_line(command: AuditCommand, error: Exception) -> None:
     """Print one line on stderr saying why the command stopped."""
     print(f"[{command.name}] Error: {error}", file=sys.stderr)
+
+
+def print_warning_line(command: AuditCommand, message: str) -> None:
+    """Print one line on stderr about something ignored; the command goes on."""
+    print(f"[{command.name}] Warning: {message}", file=sys.stderr)
+
+
+@contextmanager
+def _print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]:
+    """Print each KlintWarning raised inside the block as one line.
+
+    Any other warning raised inside is passed on unchanged afterwards.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", KlintWarning)
+        try:
+            yield
+        finally:
+            for warning in caught:
+                if issubclass(warning.category, KlintWarning):
+                    print_warning_line(command, str(warning.message))
+    for warning in caught:
+        if not issubclass(warning.category, KlintWarning):
+            warnings.warn_explicit(
+                warning.message, warning.category, warning.filename, warning.lineno
+            )
 
 
 def parse_command_arguments(
@@ -101,7 +130,8 @@ async def run_audit_command(
     as_json: bool,
 ) -> int:
     try:
-        plan = await audit_path.prepare(target, rules_source)
+        with _print_klint_warnings_raised_inside(command):
+            plan = await audit_path.prepare(target, rules_source)
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
         print_error_line(command, exc)
         return 1
