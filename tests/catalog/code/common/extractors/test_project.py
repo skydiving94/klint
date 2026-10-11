@@ -5,20 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.code.common.extractors.language_neutral_file_metadata import (
-    LanguageNeutralFileMetadataExtractor,
-)
-from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.code.common.units.directory import AuditableDirectoryUnit
-from src.catalog.code.python.extractors.file_metadata import (
-    PythonFileMetadataExtractor,
-)
-from src.catalog.code.python.extractors.package_factory import (
-    PythonPackageUnitFactory,
-)
 from tests.support.builders import (
+    build_project_extractor,
     extract_python_project,
-    python_project_extractor,
     write_text,
 )
 from tests.support.paths import MOCK_PROJECT
@@ -54,32 +43,9 @@ def test_project_extractor_skips_ignored_files_and_directories(
 
 @pytest.mark.usefixtures("in_repo_root")
 def test_project_extractor_keeps_nothing_between_extractions() -> None:
-    extractor = python_project_extractor()
+    extractor = build_project_extractor()
 
     asyncio.run(extractor.extract(MOCK_PROJECT))
     (after_root,) = asyncio.run(extractor.extract(MOCK_PROJECT / "api"))
 
     assert after_root == extract_python_project(MOCK_PROJECT / "api")
-
-
-def test_project_extractor_uses_the_first_file_extractor_that_supports_a_file(
-    tmp_path: Path,
-) -> None:
-    write_text(tmp_path / "pkg" / "a.py", "import os\n")
-    write_text(tmp_path / "pkg" / "b.ts", "import fs from 'fs';\n")
-    write_text(tmp_path / "pkg" / "c.txt", "import os\n")
-    language_neutral_first = RecursiveProjectExtractor(
-        file_extractors=[
-            LanguageNeutralFileMetadataExtractor(),
-            PythonFileMetadataExtractor(),
-        ],
-        directory_factory=PythonPackageUnitFactory(),
-    )
-
-    python_first = extract_python_project(tmp_path / "pkg")
-    (shadowed,) = asyncio.run(language_neutral_first.extract(tmp_path / "pkg"))
-
-    # Only a.py is read as Python; c.txt holds the same text but is not.
-    assert [f.imports for f in python_first.files] == [["os"], [], []]
-    assert isinstance(shadowed, AuditableDirectoryUnit)
-    assert [f.imports for f in shadowed.files] == [[], [], []]

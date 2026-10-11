@@ -5,6 +5,7 @@ from pathlib import Path
 from src.catalog.code.common.extractors.language_neutral_file_metadata import (
     LanguageNeutralFileMetadataExtractor,
 )
+from src.core.models.file_traits import FileTraits
 from tests.support.builders import write_text
 
 
@@ -15,7 +16,10 @@ def test_language_neutral_metadata_records_only_name_and_line_count(
         tmp_path / "view.tsx", "import React from 'react';\nexport {};\n"
     )
 
-    unit = LanguageNeutralFileMetadataExtractor().extract_file(target)
+    traits = FileTraits(language="typescript")
+
+    unit = LanguageNeutralFileMetadataExtractor().extract_file(target, traits)
 
     assert unit.get_content() == "view.tsx (lines=2)"
     assert unit.imports == []
+    assert unit.language == "typescript"

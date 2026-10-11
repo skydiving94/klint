@@ -2,15 +2,12 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from src.core.models.file_traits import FileTraits
 
 
 class BaseFileMetadataExtractor(ABC):
-    """Language-specific strategy for extracting structural file metadata."""
+    """Extracts the structural metadata of one file."""
 
     @abstractmethod
-    def supports(self, path: Path) -> bool:
-        pass
-
-    @abstractmethod
-    def extract_file(self, path: Path) -> AuditableFileMetadataUnit:
-        pass
+    def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
+        """Return the metadata of ``path``, given the traits identified for it."""

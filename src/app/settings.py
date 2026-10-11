@@ -18,7 +18,7 @@ _BUILT_IN_RULE_PACKS = (
 _BUILT_IN_PROJECT_RULE_PACKS = ("code/python/project_structure.json",)
 # The built-in list of languages and their file extensions, relative to
 # src/resources/catalog/.
-_BUILT_IN_LANGUAGE_EXTENSIONS = "code/common/language_extensions.json"
+_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = "code/common/language_to_file_extensions.json"
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 
 
@@ -66,7 +66,7 @@ def _load_klint_dotenv(dotenv_path: Path | None = None) -> None:
         os.environ.setdefault(key, value)
 
 
-def _built_in_resource(relative_path: str) -> Path:
+def _locate_built_in_resource(relative_path: str) -> Path:
     """Locate a built-in data file inside the installed package."""
     catalog = resources.files("src.resources") / "catalog"
     return Path(str(catalog / relative_path))
@@ -74,12 +74,12 @@ def _built_in_resource(relative_path: str) -> Path:
 
 def _built_in_packs(relative_paths: Sequence[str]) -> tuple[Path, ...]:
     """Locate built-in rule packs inside the installed package."""
-    return tuple(_built_in_resource(relative) for relative in relative_paths)
+    return tuple(_locate_built_in_resource(relative) for relative in relative_paths)
 
 
-def _built_in_language_extensions() -> Path:
+def _locate_built_in_language_to_file_extensions() -> Path:
     """Locate the built-in list of languages and their file extensions."""
-    return _built_in_resource(_BUILT_IN_LANGUAGE_EXTENSIONS)
+    return _locate_built_in_resource(_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS)
 
 
 def _resolve_resource_path(raw_path: str | Path) -> Path:
@@ -99,8 +99,8 @@ class AppSettings:
     default_project_rules_paths: tuple[Path, ...] = ()
     discovered_config_path: Path | None = None
     # The file that lists each language's file extensions.
-    language_extensions_path: Path = field(
-        default_factory=_built_in_language_extensions
+    language_to_file_extensions_path: Path = field(
+        default_factory=_locate_built_in_language_to_file_extensions
     )
 
     @classmethod

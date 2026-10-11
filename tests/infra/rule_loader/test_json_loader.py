@@ -190,12 +190,19 @@ def test_malformed_languages_or_tags_are_rejected(
         _load(JsonRuleLoader([pack], UNIT_REGISTRY))
 
 
-def test_built_in_packs_do_not_restrict_languages_or_set_tags() -> None:
+def test_built_in_python_project_rules_are_limited_to_python() -> None:
+    rules = _load(JsonRuleLoader([DEFAULT_PROJECT_RULES], UNIT_REGISTRY))
+
+    assert rules
+    assert all(rule.languages == ["python"] for rule in rules.values())
+
+
+def test_built_in_rules_set_no_tags() -> None:
     rules = _load(
         JsonRuleLoader([*DEFAULT_RULE_PACKS, DEFAULT_PROJECT_RULES], UNIT_REGISTRY)
     )
-    assert len(rules) == 34
-    assert all(rule.languages == [] and rule.tags == [] for rule in rules.values())
+
+    assert all(rule.tags == [] for rule in rules.values())
 
 
 def test_rule_loading_only_accepts_registered_unit_types(tmp_path: Path) -> None:

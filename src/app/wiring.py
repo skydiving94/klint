@@ -8,10 +8,11 @@ from injector import Binder, Injector, Module, provider, singleton
 from src import catalog
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
-from src.catalog.code.common.extractors.language_neutral_file_metadata import (
-    LanguageNeutralFileMetadataExtractor,
-)
+from src.catalog.code import python as python_suite
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
+    TraitsBasedExtractionDelegator,
+)
 from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
@@ -32,8 +33,8 @@ from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.judge import BaseJudge
 from src.core.models.scale import AnswerScale
 from src.core.registry import UnitRegistry
-from src.infra.language_extensions_loader.json_loader import (
-    load_language_extensions,
+from src.infra.language_to_file_extensions_loader.json_loader import (
+    load_file_extension_to_language,
 )
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import RemoteSystemOneJudge
@@ -89,19 +90,26 @@ class KlintModule(Module):
         self, settings: AppSettings
     ) -> BaseFileTraitsIdentifier:
         return ExtensionFileTraitsIdentifier(
-            load_language_extensions(settings.language_extensions_path)
+            load_file_extension_to_language(settings.language_to_file_extensions_path)
         )
 
     @singleton
     @provider
-    def provide_project_extractor(self) -> RecursiveProjectExtractor:
-        return RecursiveProjectExtractor(
-            file_extractors=(
-                PythonFileMetadataExtractor(),
-                LanguageNeutralFileMetadataExtractor(),
-            ),
-            directory_factory=PythonPackageUnitFactory(),
+    def provide_project_extractor(
+        self, file_traits_identifier: BaseFileTraitsIdentifier
+    ) -> RecursiveProjectExtractor:
+        # What handles each language in the project audit. A language not
+        # listed here is handled in a language-neutral way.
+        delegator = TraitsBasedExtractionDelegator(
+            file_traits_identifier=file_traits_identifier,
+            language_to_file_metadata_extractor={
+                python_suite.SUITE_LANGUAGE: PythonFileMetadataExtractor(),
+            },
+            language_to_directory_unit_factory={
+                python_suite.SUITE_LANGUAGE: PythonPackageUnitFactory(),
+            },
         )
+        return RecursiveProjectExtractor(delegator)
 
     @singleton
     @provider

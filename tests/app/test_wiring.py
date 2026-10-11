@@ -106,13 +106,15 @@ def test_both_auditors_share_the_overridden_judge(
     assert [len(rule_ids) for rule_ids in judge.asked_rule_ids()] == [1, 18]
 
 
-def test_file_audit_cannot_be_built_from_a_broken_language_extensions_file(
+def test_file_audit_cannot_be_built_from_a_broken_language_to_file_extensions_file(
     tmp_path: Path,
 ) -> None:
-    broken = write_text(tmp_path / "language_extensions.json", "{not json")
-    settings = make_settings(language_extensions_path=broken)
+    broken = write_text(tmp_path / "language_to_file_extensions.json", "{not json")
+    settings = make_settings(language_to_file_extensions_path=broken)
 
-    with pytest.raises(ValueError, match=r"language_extensions\.json' is not valid"):
+    with pytest.raises(
+        ValueError, match=r"language_to_file_extensions\.json' is not valid"
+    ):
         create_file_audit_path(settings)
 
 

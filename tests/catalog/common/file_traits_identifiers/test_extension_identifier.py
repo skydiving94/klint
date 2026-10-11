@@ -7,7 +7,9 @@ import pytest
 from src.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from src.infra.language_extensions_loader.json_loader import load_language_extensions
+from src.infra.language_to_file_extensions_loader.json_loader import (
+    load_file_extension_to_language,
+)
 from tests.support.builders import write_json
 
 IDENTIFIER = ExtensionFileTraitsIdentifier({".py": "python", ".tsx": "typescript"})
@@ -53,6 +55,6 @@ def test_language_added_to_the_data_file_is_identified_without_code_change(
 ) -> None:
     path = write_json(tmp_path / "extensions.json", {"kotlin": [".kt", ".kts"]})
 
-    identifier = ExtensionFileTraitsIdentifier(load_language_extensions(path))
+    identifier = ExtensionFileTraitsIdentifier(load_file_extension_to_language(path))
 
     assert identifier.identify("Main.kt").language == "kotlin"

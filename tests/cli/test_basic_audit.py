@@ -119,18 +119,18 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     ("content", "reason"),
     [("{not json", "is not valid JSON"), (None, "does not exist")],
 )
-def test_unusable_language_extensions_file_stops_the_command(
+def test_unusable_language_to_file_extensions_file_stops_the_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: Capture,
     content: str | None,
     reason: str,
 ) -> None:
-    data_file = tmp_path / "language_extensions.json"
+    data_file = tmp_path / "language_to_file_extensions.json"
     if content is not None:
         write_text(data_file, content)
     target = write_text(tmp_path / "a.py", "x = 1\n")
-    settings = make_settings(language_extensions_path=data_file)
+    settings = make_settings(language_to_file_extensions_path=data_file)
     monkeypatch.setattr(AppSettings, "from_env", lambda *_args: settings)
     monkeypatch.setattr(sys, "argv", ["klint", str(target)])
 
@@ -139,7 +139,7 @@ def test_unusable_language_extensions_file_stops_the_command(
     captured = capsys.readouterr()
     assert exit_code == 1
     assert captured.out == ""
-    assert captured.err.startswith("[klint] Error: Language extensions file")
+    assert captured.err.startswith("[klint] Error: Language-to-file-extensions file")
     assert reason in captured.err
     assert str(data_file) in captured.err
     assert captured.err.count("\n") == 1

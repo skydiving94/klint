@@ -7,7 +7,7 @@ from pathlib import Path
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
 from src.app.wiring import create_project_audit_path
-from src.cli.runner import CommandStyle, run_audit_command
+from src.cli.runner import CommandStyle, print_error_line, run_audit_command
 
 _STYLE = CommandStyle(
     name="klint-project",
@@ -73,8 +73,14 @@ class ProjectAuditCLIApp:
 async def main() -> int:
     args = _parse_args(sys.argv[1:])
     settings = await asyncio.to_thread(AppSettings.from_env, args.directory, args.rules)
+    try:
+        audit_path = create_project_audit_path(settings)
+    except (OSError, ValueError) as error:
+        # The command cannot be set up, for example a data file is not valid.
+        print_error_line(_STYLE, error)
+        return 1
     app = ProjectAuditCLIApp(
-        audit_path=create_project_audit_path(settings),
+        audit_path=audit_path,
         default_custom_rules=settings.discovered_config_path,
     )
     return await app.run(sys.argv[1:])

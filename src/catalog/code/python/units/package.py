@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar
 
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 
@@ -14,8 +13,6 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
     The description covers its public API, the imports in its tree split into
     internal and external, and cycles between its subpackages.
     """
-
-    unit_type: ClassVar[str] = "project_directory"
 
     project_module_names: tuple[str, ...] = field(default_factory=tuple)
 
@@ -43,7 +40,7 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
         )
 
     def _describe_public_api(self) -> str:
-        py_files = [f for f in self.files if f.file_name.endswith(".py")]
+        py_files = [f for f in self.files if f.language == self.language]
         if not py_files:
             return "not applicable (no immediate .py files in this directory)"
         init_file = next((f for f in py_files if f.file_name == "__init__.py"), None)
