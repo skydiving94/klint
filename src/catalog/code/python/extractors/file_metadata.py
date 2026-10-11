@@ -5,15 +5,13 @@ from src.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from src.core.models.file_traits import FileTraits
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
     """Extracts a Python file's line count, exports, imports, classes and functions."""
 
-    def supports(self, path: Path) -> bool:
-        return path.suffix.lower() == ".py"
-
-    def extract_file(self, path: Path) -> AuditableFileMetadataUnit:
+    def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
         source = path.read_text(encoding="utf-8", errors="replace")
         line_count = len(source.splitlines())
         imports: list[str] = []
@@ -61,6 +59,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
 
         return AuditableFileMetadataUnit(
             unit_id=str(path),
+            language=traits.language,
             file_name=path.name,
             file_path=str(path),
             line_count=line_count,

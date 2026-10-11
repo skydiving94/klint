@@ -2,19 +2,22 @@
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
+from src.app.settings import AppSettings
 from src.app.wiring import create_file_audit_path
-from src.cli.basic_audit import CLIApp
+from src.cli.basic_audit import FILE_AUDIT_COMMAND
+from src.cli.runner import AuditCommandApp, run_command_from_shell
 from src.core.interfaces.judge import BaseJudge
 from src.infra.system_one.remote import RemoteSystemOneJudge
-from tests.support.builders import FILE_RULE, make_settings, write_json
+from tests.support.builders import FILE_RULE, make_settings, write_json, write_text
 from tests.support.fakes import FakeJudge, JudgeOverride
-from tests.support.paths import SnapshotAsserter
+from tests.support.paths import REACT_RULE_PACK, SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -22,12 +25,12 @@ EXAMPLE_FILE = "examples/backend_data_and_security.py"
 Capture = pytest.CaptureFixture[str]
 
 
-def _file_app(judge: BaseJudge) -> CLIApp:
+def _file_app(judge: BaseJudge) -> AuditCommandApp:
     audit_path = create_file_audit_path(make_settings(), JudgeOverride(judge))
-    return CLIApp(audit_path=audit_path)
+    return AuditCommandApp(FILE_AUDIT_COMMAND, audit_path)
 
 
-def _run(app: CLIApp, *argv: str | Path) -> int:
+def _run(app: AuditCommandApp, *argv: str | Path) -> int:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
@@ -57,7 +60,10 @@ def test_all_flag_reports_every_judgment(
     _run(_file_app(judge), EXAMPLE_FILE, "--json", "--all")
 
     judgments = [issue["judgment"] for issue in _json_output(capsys)["issues"]]
-    assert judgments == ["Fail"] + ["Pass"] * 15
+    # Every rule that was asked is reported, and only the one failed.
+    assert len(judgments) == len(judge.asked_rule_ids()[0])
+    assert sorted(set(judgments)) == ["Fail", "Pass"]
+    assert judgments.count("Fail") == 1
 
 
 @pytest.mark.usefixtures("in_repo_root")
@@ -69,6 +75,32 @@ def test_min_confidence_hides_low_confidence_findings(
     _run(_file_app(judge), EXAMPLE_FILE, "--json", "--min-confidence", "0.5")
 
     assert _json_output(capsys) == {"examined_files": [EXAMPLE_FILE], "issues": []}
+
+
+@pytest.mark.usefixtures("in_repo_root")
+def test_react_rules_are_asked_only_about_typescript_and_javascript_files(
+    fake_judge: type[FakeJudge],
+) -> None:
+    judge = fake_judge()
+
+    _run(_file_app(judge), "examples", "--json")
+
+    react_rule_ids = set(json.loads(REACT_RULE_PACK.read_text(encoding="utf-8")))
+    content_to_asked_rule_ids = {
+        content: set(questions) for content, questions in judge.calls
+    }
+
+    def asked_about(path: str) -> set[str]:
+        return content_to_asked_rule_ids[Path(path).read_text(encoding="utf-8")]
+
+    python_file = asked_about("examples/backend_data_and_security.py")
+    typescript_file = asked_about("examples/frontend_hooks_and_dom.tsx")
+    other_file = asked_about("examples/custom_rules_demo.json")
+    assert react_rule_ids <= typescript_file
+    assert react_rule_ids.isdisjoint(python_file)
+    assert react_rule_ids.isdisjoint(other_file)
+    # A rule that names no language is asked about every file.
+    assert "hardcoded_secrets" in python_file & typescript_file & other_file
 
 
 def test_directory_audit_skips_ignored_and_binary_files(
@@ -97,7 +129,9 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
     _run(_file_app(judge), EXAMPLE_FILE, "--json", "--rules", custom)
 
     assert [i["rule_id"] for i in _json_output(capsys)["issues"]] == ["house_rule"]
-    assert len(judge.asked_rule_ids()[0]) == 17
+    asked = judge.asked_rule_ids()[0]
+    assert "house_rule" in asked
+    assert "hardcoded_secrets" in asked  # the built-in rules are still asked
 
 
 def test_missing_target_or_rules_file_exits_with_an_error(
@@ -111,6 +145,54 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert "Audit target does not exist" in capsys.readouterr().err
     assert _run(app, target, "--rules", tmp_path / "absent.json") == 1
     assert "Custom rules file does not exist" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [("{not json", "is not valid JSON"), (None, "does not exist")],
+)
+def test_unusable_language_to_file_extensions_file_stops_the_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: Capture,
+    content: str | None,
+    reason: str,
+) -> None:
+    data_file = tmp_path / "language_to_file_extensions.json"
+    if content is not None:
+        write_text(data_file, content)
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    settings = make_settings(language_to_file_extensions_path=data_file)
+    monkeypatch.setattr(AppSettings, "from_env", lambda *_args: settings)
+    monkeypatch.setattr(sys, "argv", ["klint", str(target)])
+
+    exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert captured.out == ""
+    assert captured.err.startswith("[klint] Error: Language-to-file-extensions file")
+    assert reason in captured.err
+    assert str(data_file) in captured.err
+    assert captured.err.count("\n") == 1
+
+
+def test_problem_in_one_rule_is_printed_as_a_warning_and_the_audit_goes_on(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json", {"typo": {**FILE_RULE, "languages": ["pyhton"]}}
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+
+    exit_code = _run(_file_app(fake_judge()), target, "--json", "--rules", custom)
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_files"] == [str(target)]
+    (warning_line,) = captured.err.splitlines()
+    assert warning_line.startswith("[klint] Warning: Rule 'typo'")
+    assert "unknown languages ['pyhton']" in warning_line
 
 
 def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> None:

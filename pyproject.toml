@@ -49,6 +49,8 @@ include = ["src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+# A test that expects a klint warning says so; any other one is a failure.
+filterwarnings = ["error::src.core.klint_warning.KlintWarning"]
 
 [tool.ruff]
 target-version = "py311"

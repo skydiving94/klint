@@ -20,9 +20,10 @@ from tests.support.builders import (
     file_auditor,
     project_auditor,
     write_json,
+    write_text,
 )
 from tests.support.fakes import FakeJudge
-from tests.support.paths import MOCK_PROJECT
+from tests.support.paths import DEFAULT_PROJECT_RULES, MOCK_PROJECT
 
 RULES = {
     "first": {"type": "choice", "instructions": "Is the first thing done?"},
@@ -79,8 +80,16 @@ def test_auditor_does_not_call_the_judge_when_no_rule_applies(
     assert report.get_issues(fails_only=False) == []
 
 
-def test_auditor_skips_a_language_rule_for_a_unit_of_unknown_language(
-    tmp_path: Path, fake_judge: type[FakeJudge]
+@pytest.mark.parametrize(
+    ("file_name", "asked"),
+    [
+        ("a.py", ["any_language", "python_only"]),
+        ("a.go", ["any_language"]),
+        ("notes.txt", ["any_language"]),
+    ],
+)
+def test_auditor_asks_a_language_rule_only_about_files_in_that_language(
+    tmp_path: Path, fake_judge: type[FakeJudge], file_name: str, asked: list[str]
 ) -> None:
     rules = write_json(
         tmp_path / "rules.json",
@@ -89,14 +98,48 @@ def test_auditor_skips_a_language_rule_for_a_unit_of_unknown_language(
             "python_only": {**FILE_RULE, "languages": ["python"]},
         },
     )
-    target = tmp_path / "a.py"
+    target = tmp_path / file_name
     target.write_text("x = 1\n", encoding="utf-8")
     judge = fake_judge()
 
     asyncio.run(file_auditor(rules, judge).run_audit(target))
 
-    # The extracted unit has no language, so the Python-only rule is not asked.
-    assert judge.asked_rule_ids() == [["any_language"]]
+    # A file in another language, or in none that is known, is not asked.
+    assert judge.asked_rule_ids() == [asked]
+
+
+def test_project_audit_asks_a_language_rule_only_about_files_in_that_language(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    python_only = {
+        **FILE_RULE,
+        "target_unit_types": ["file_metadata"],
+        "languages": ["python"],
+    }
+    rules = write_json(tmp_path / "rules.json", {"python_only": python_only})
+    for name in ("a.py", "b.java", "c.txt"):
+        write_text(tmp_path / "pkg" / name, "x = 1\n")
+    judge = fake_judge()
+    auditor = project_auditor(rules, judge)
+
+    asyncio.run(auditor.run_audit(tmp_path / "pkg", walk_children=True))
+
+    (asked_about,) = [state for state, _ in judge.calls]
+    assert asked_about.startswith("a.py ")
+
+
+def test_python_project_rules_are_asked_only_about_directories_holding_python(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    repo = tmp_path / "repo"
+    write_text(repo / "app" / "main.py", "x = 1\n")
+    write_text(repo / "docs" / "intro.md", "# Intro\n")
+    auditor = project_auditor(DEFAULT_PROJECT_RULES, fake_judge())
+
+    report = asyncio.run(auditor.run_audit(repo, walk_children=True))
+
+    judged = {finding.unit_id for finding in report.get_findings(fails_only=False)}
+    assert judged == {str(repo), str(repo / "app")}
 
 
 def test_unit_content_is_sent_as_state_with_one_question_per_rule(

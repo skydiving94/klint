@@ -2,13 +2,13 @@
 
 from pathlib import Path
 
-from src.catalog.code.common.extractors.fallback_file_metadata import (
-    FallbackFileMetadataExtractor,
-)
 from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
+from src.core.models.file_traits import FileTraits
 from tests.support.builders import write_text
+
+PYTHON = FileTraits(language="python")
 
 MODULE_SOURCE = """\
 import os
@@ -40,7 +40,7 @@ def test_python_metadata_lists_imports_exports_classes_and_functions(
 ) -> None:
     target = write_text(tmp_path / "module.py", MODULE_SOURCE)
 
-    unit = PythonFileMetadataExtractor().extract_file(target)
+    unit = PythonFileMetadataExtractor().extract_file(target, PYTHON)
 
     assert unit.unit_type == "file_metadata"
     assert unit.file_name == "module.py"
@@ -66,10 +66,10 @@ def test_python_metadata_lists_imports_exports_classes_and_functions(
 def test_init_file_exports_the_names_it_imports(tmp_path: Path) -> None:
     source = "from .a import Foo, bar as baz\n"
     init_unit = PythonFileMetadataExtractor().extract_file(
-        write_text(tmp_path / "__init__.py", source)
+        write_text(tmp_path / "__init__.py", source), PYTHON
     )
     plain_unit = PythonFileMetadataExtractor().extract_file(
-        write_text(tmp_path / "plain.py", source)
+        write_text(tmp_path / "plain.py", source), PYTHON
     )
     assert init_unit.exports == ["Foo", "baz"]
     assert plain_unit.exports == []
@@ -78,7 +78,7 @@ def test_init_file_exports_the_names_it_imports(tmp_path: Path) -> None:
 def test_python_metadata_survives_a_syntax_error(tmp_path: Path) -> None:
     target = write_text(tmp_path / "broken.py", "def (:\n    pass\n")
 
-    unit = PythonFileMetadataExtractor().extract_file(target)
+    unit = PythonFileMetadataExtractor().extract_file(target, PYTHON)
 
     assert unit.line_count == 2
     assert (unit.imports, unit.exports, unit.classes, unit.functions) == (
@@ -87,11 +87,3 @@ def test_python_metadata_survives_a_syntax_error(tmp_path: Path) -> None:
         [],
         [],
     )
-
-
-def test_metadata_extractors_choose_files_by_suffix() -> None:
-    python_extractor = PythonFileMetadataExtractor()
-    assert python_extractor.supports(Path("a.py"))
-    assert python_extractor.supports(Path("A.PY"))
-    assert not python_extractor.supports(Path("a.ts"))
-    assert FallbackFileMetadataExtractor().supports(Path("a.ts"))

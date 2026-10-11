@@ -25,6 +25,22 @@ def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
+    """Give the test a private environment with no KEV_* variables set.
+
+    Settings loading writes into ``os.environ``, so each test gets its own
+    copy. The working directory moves to an empty folder so that no stray
+    klint.json is discovered there.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("KEV_")}
+    monkeypatch.setattr(os, "environ", env)
+    workdir = tmp_path / "cwd"
+    workdir.mkdir()
+    monkeypatch.chdir(workdir)
+    return env
+
+
+@pytest.fixture
 def in_repo_root(monkeypatch: pytest.MonkeyPatch) -> Path:
     """Run from the repo root so unit ids and paths in output stay relative."""
     monkeypatch.chdir(REPO_ROOT)

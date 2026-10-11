@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from src.core.models.location import Location
@@ -21,10 +21,11 @@ class ProjectDirectoryUnitMetadata:
 class AuditableDirectoryUnit(AuditableUnit):
     """Composite directory unit: its files' metadata and its subdirectories.
 
-    This base holds what is true of a directory in any language. A subclass
-    declares the unit_type and decides how the directory is described to
-    the judge.
+    On its own it describes a directory in a way that fits any language. A
+    subclass describes the directory the way one language sees it.
     """
+
+    unit_type: ClassVar[str] = "project_directory"
 
     directory_path: str = ""
     files: list[AuditableFileMetadataUnit] = field(default_factory=list)
@@ -61,6 +62,15 @@ class AuditableDirectoryUnit(AuditableUnit):
             lines.append(f"{prefix}  Files: []")
         for subdir in self.subdirectories:
             lines.append(subdir._render_tree(indent=indent + 1))
+        return "\n".join(lines)
+
+    def get_content(self) -> str:
+        lines = [
+            f"Target Directory Under Audit: {self.display_path}",
+            f"Summary: {len(self.files)} immediate files, "
+            f"{len(self.subdirectories)} immediate subdirectories",
+            self._render_tree(indent=0),
+        ]
         return "\n".join(lines)
 
     def get_location(self) -> Location | None:

@@ -1,29 +1,17 @@
 """Settings precedence: shell variables, klint.json, klint's own .env, defaults."""
 
-import os
 from pathlib import Path
 
 import pytest
 
 from src.app.settings import AppSettings
+from src.core.klint_warning import KlintWarning
 from tests.support.builders import write_json
-from tests.support.paths import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS
-
-
-@pytest.fixture
-def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
-    """Give the test a private environment with no KEV_* variables set.
-
-    Settings loading writes into ``os.environ``, so each test gets its own
-    copy. The working directory moves to an empty folder so that no stray
-    klint.json is discovered there.
-    """
-    env = {k: v for k, v in os.environ.items() if not k.startswith("KEV_")}
-    monkeypatch.setattr(os, "environ", env)
-    workdir = tmp_path / "cwd"
-    workdir.mkdir()
-    monkeypatch.chdir(workdir)
-    return env
+from tests.support.paths import (
+    DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
+    DEFAULT_PROJECT_RULES,
+    DEFAULT_RULE_PACKS,
+)
 
 
 def _dotenv(tmp_path: Path, text: str = "") -> Path:
@@ -53,7 +41,9 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
         kev_api_key=None,
         default_project_rules_paths=(DEFAULT_PROJECT_RULES,),
         discovered_config_path=None,
+        language_to_file_extensions_path=DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     )
+    assert settings.language_to_file_extensions_path.is_file()
 
 
 @pytest.mark.usefixtures("shell_env")
@@ -124,14 +114,70 @@ def test_explicit_config_path_wins_over_a_discovered_one(tmp_path: Path) -> None
 
 
 @pytest.mark.usefixtures("shell_env")
-def test_unreadable_klint_json_is_ignored_for_settings(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [("{not json", "is not valid JSON"), ("[]", "must be a JSON object")],
+)
+def test_klint_json_that_cannot_be_read_stops_with_an_error_naming_it(
+    tmp_path: Path, content: str, reason: str
+) -> None:
     project = _project(tmp_path)
-    (project / "klint.json").write_text("{not json", encoding="utf-8")
+    (project / "klint.json").write_text(content, encoding="utf-8")
 
+    with pytest.raises(ValueError, match=rf"klint\.json' {reason}"):
+        AppSettings.from_env(project, None, _dotenv(tmp_path))
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_env_block_that_is_not_an_object_is_ignored_with_a_warning(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path)
+    write_json(project / "klint.json", {"env": "KEV_MODE=remote", "rules": {}})
+
+    with pytest.warns(KlintWarning, match="'env' block .* is ignored"):
+        settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
+
+    assert settings.kev_mode == "local"
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_unknown_env_key_is_ignored_with_a_warning_and_the_rest_applies(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path, {"KEV_MODLE_NAME": "typo", "KEV_MODE": "remote"})
+
+    with pytest.warns(KlintWarning, match=r"unknown keys \['KEV_MODLE_NAME'\]"):
+        settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
+
+    assert settings.kev_mode == "remote"
+    assert settings.model_name == "jaredpalmer/kev-4b"
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_every_known_env_key_is_applied_without_a_warning(tmp_path: Path) -> None:
+    pack = write_json(tmp_path / "pack.json", {})
+    project = _project(
+        tmp_path,
+        {
+            "KEV_MODEL_NAME": "a-model",
+            "KEV_MODE": "remote",
+            "KEV_BASE_URL": "http://judge:1",
+            "KEV_API_KEY": "a-key",
+            "KEV_DEFAULT_RULES_PATH": str(pack),
+            "KEV_DEFAULT_PROJECT_RULES_PATH": str(pack),
+        },
+    )
+
+    # An unexpected warning fails the test.
     settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
 
-    assert settings.model_name == "jaredpalmer/kev-4b"
-    assert settings.discovered_config_path == project / "klint.json"
+    assert settings.model_name == "a-model"
+    assert settings.kev_mode == "remote"
+    assert settings.kev_base_url == "http://judge:1"
+    assert settings.kev_api_key == "a-key"
+    assert settings.default_rules_paths == (pack,)
+    assert settings.default_project_rules_paths == (pack,)
 
 
 def test_rules_path_variable_replaces_every_built_in_pack(

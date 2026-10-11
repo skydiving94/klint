@@ -19,6 +19,7 @@ from src.infra.rule_loader.json_loader import JsonRuleLoader
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
+    KNOWN_LANGUAGES,
     UNIT_REGISTRY,
     make_settings,
     write_json,
@@ -287,7 +288,9 @@ def test_whole_tree_that_cannot_be_extracted_examines_nothing(
     auditor = Auditor(
         extractor=BrokenExtractor(),
         judge=judge,
-        rule_loader=JsonRuleLoader([DEFAULT_PROJECT_RULES], UNIT_REGISTRY),
+        rule_loader=JsonRuleLoader(
+            [DEFAULT_PROJECT_RULES], UNIT_REGISTRY, KNOWN_LANGUAGES
+        ),
         scale=PASS_FAIL_SCALE,
     )
     audit_path = AuditPath(auditor, collect_target_directories, whole_tree=True)

@@ -14,26 +14,30 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
 
     def build(
         self,
-        directory: Path,
+        directory_path: Path,
         files: list[AuditableFileMetadataUnit],
         subdirectories: list[AuditableDirectoryUnit],
+        language: str | None,
     ) -> AuditableDirectoryUnit:
         return AuditablePythonPackageUnit(
-            unit_id=str(directory),
-            directory_path=str(directory),
+            unit_id=str(directory_path),
+            language=language,
+            directory_path=str(directory_path),
             files=files,
             subdirectories=subdirectories,
         )
 
-    def finish(self, root: AuditableDirectoryUnit) -> AuditableDirectoryUnit:
+    def update_units_after_full_walk(
+        self, root_unit: AuditableDirectoryUnit
+    ) -> AuditableDirectoryUnit:
         """Give every package in the tree the module names found anywhere in it.
 
         Each package can then tell the project's own imports from external ones.
         """
-        if not isinstance(root, AuditablePythonPackageUnit):
-            return root
-        shared_modules = tuple(sorted(root.internal_module_names()))
-        return self._attach_project_modules(root, shared_modules)
+        if not isinstance(root_unit, AuditablePythonPackageUnit):
+            return root_unit
+        shared_modules = tuple(sorted(root_unit.internal_module_names()))
+        return self._attach_project_modules(root_unit, shared_modules)
 
     def _attach_project_modules(
         self, unit: AuditableDirectoryUnit, shared_modules: tuple[str, ...]
