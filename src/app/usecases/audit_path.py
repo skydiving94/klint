@@ -9,6 +9,7 @@ from typing import Protocol
 from src.app.audit_mode import AuditMode
 from src.app.audit_pipeline import AuditPipeline
 from src.core.auditor import Auditor
+from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from src.core.models.report import AuditFinding, AuditReport
 from src.core.models.rule import AuditRule
 from src.core.models.unit import AuditableUnit
@@ -62,11 +63,17 @@ class AuditPath:
         self._max_concurrent = max_concurrent
 
     async def prepare(
-        self, target: Path, rules_source: Path | None = None
+        self,
+        target: Path,
+        rules_source: Path | None = None,
+        scan_progress_listener: BaseScanProgressListener | None = None,
     ) -> AuditPlan:
-        """Check the target and the rules; raise if either cannot be used."""
+        """Check the target and the rules; raise if either cannot be used.
+
+        The listener, when given, is told about each directory as it is scanned.
+        """
         pending_audit_portfolio = await self._audit_pipeline.prepare_audit(
-            target, self._audit_mode
+            target, self._audit_mode, scan_progress_listener
         )
         rules = await self._auditor.load_rules(rules_source)
         return AuditPlan(

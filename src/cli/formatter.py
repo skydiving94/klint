@@ -1,7 +1,9 @@
 import sys
 from collections import defaultdict
 from collections.abc import Sequence
+from pathlib import Path
 
+from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from src.core.models.report import AuditFinding
 
 
@@ -13,6 +15,22 @@ class _ANSI:
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
     CYAN = "\033[96m"
+
+
+class TerminalScanProgressListener(BaseScanProgressListener):
+    """Prints each scanned directory on a line of its own on stderr.
+
+    The lines stay on screen. A scan is over too quickly for a line that is
+    updated in place to be seen.
+    """
+
+    def __init__(self, enabled: bool = True) -> None:
+        self._enabled = enabled and sys.stderr.isatty()
+
+    def report_directory_scanned(self, directory: Path) -> None:
+        if not self._enabled:
+            return
+        print(f"{_ANSI.DIM}Scanning {directory}{_ANSI.RESET}", file=sys.stderr)
 
 
 class AuditProgressReporter:

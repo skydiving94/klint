@@ -6,6 +6,7 @@ from src.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
 from src.catalog.common.scanners.target_scanner import IgnoredNames, TargetScanner
+from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from src.core.models.scanned_tree import ScannedDirectory
 from tests.support.builders import write_text
 
@@ -17,6 +18,16 @@ SCANNER = TargetScanner(
         file_suffixes=frozenset({".lock"}),
     ),
 )
+
+
+class RecordingScanProgressListener(BaseScanProgressListener):
+    """Keeps the directories the scanner reports, in the order it reports them."""
+
+    def __init__(self) -> None:
+        self.reported_directories: list[Path] = []
+
+    def report_directory_scanned(self, directory: Path) -> None:
+        self.reported_directories.append(directory)
 
 
 def _list_file_paths(root: ScannedDirectory) -> list[str]:
@@ -95,6 +106,23 @@ def test_scan_directory_does_not_follow_a_link_to_a_directory(tmp_path: Path) ->
 
     assert _list_file_paths(root) == ["a.py"]
     assert _list_directory_paths(root) == ["."]
+
+
+def test_scan_directory_reports_each_scanned_directory_once_in_path_order(
+    tmp_path: Path,
+) -> None:
+    for relative_path in ("top.py", "b/c/y.py", "a/x.py", "build/z.py"):
+        write_text(tmp_path / relative_path, "")
+    listener = RecordingScanProgressListener()
+
+    SCANNER.scan_directory(tmp_path, listener)
+
+    reported = [
+        directory.relative_to(tmp_path).as_posix()
+        for directory in listener.reported_directories
+    ]
+    # The target comes first. A directory with an ignored name is not scanned.
+    assert reported == [".", "a", "b", "b/c"]
 
 
 def test_scan_file_returns_the_file_with_its_traits_and_no_parent(

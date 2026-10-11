@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
+from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from src.core.models.scanned_tree import ScannedDirectory, ScannedFile
 
 
@@ -44,20 +45,36 @@ class TargetScanner:
             path=file_path, traits=self._file_traits_identifier.identify(file_path)
         )
 
-    def scan_directory(self, directory: Path) -> ScannedDirectory:
-        """Return ``directory`` and everything kept beneath it, as a tree."""
-        return self._scan_directory(directory, parent=None)
+    def scan_directory(
+        self,
+        directory: Path,
+        scan_progress_listener: BaseScanProgressListener | None = None,
+    ) -> ScannedDirectory:
+        """Return ``directory`` and everything kept beneath it, as a tree.
+
+        The listener, when given, is told about each directory right after it
+        is listed: the target first, then the others in path order.
+        """
+        return self._scan_directory(directory, None, scan_progress_listener)
 
     def _scan_directory(
-        self, directory: Path, parent: ScannedDirectory | None
+        self,
+        directory: Path,
+        parent: ScannedDirectory | None,
+        scan_progress_listener: BaseScanProgressListener | None,
     ) -> ScannedDirectory:
         scanned_directory = ScannedDirectory(path=directory, parent=parent)
-        for entry in self._list_entries(directory):
+        entries = self._list_entries(directory)
+        if scan_progress_listener is not None:
+            scan_progress_listener.report_directory_scanned(directory)
+        for entry in entries:
             if entry.is_dir():
                 if self._is_ignored_directory(entry):
                     continue
                 scanned_directory.subdirectories.append(
-                    self._scan_directory(entry, parent=scanned_directory)
+                    self._scan_directory(
+                        entry, scanned_directory, scan_progress_listener
+                    )
                 )
             elif entry.is_file() and not self._is_ignored_file(entry):
                 scanned_directory.files.append(

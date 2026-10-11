@@ -12,7 +12,11 @@ from pathlib import Path
 
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
-from src.cli.formatter import AuditProgressReporter, format_audit_report
+from src.cli.formatter import (
+    AuditProgressReporter,
+    TerminalScanProgressListener,
+    format_audit_report,
+)
 from src.core.klint_warning import KlintWarning
 
 
@@ -129,9 +133,12 @@ async def run_audit_command(
     min_confidence: float,
     as_json: bool,
 ) -> int:
+    scan_progress_listener = TerminalScanProgressListener(enabled=not as_json)
     try:
         with _print_klint_warnings_raised_inside(command):
-            plan = await audit_path.prepare(target, rules_source)
+            plan = await audit_path.prepare(
+                target, rules_source, scan_progress_listener
+            )
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
         print_error_line(command, exc)
         return 1
