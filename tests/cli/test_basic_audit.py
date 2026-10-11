@@ -17,7 +17,7 @@ from src.core.interfaces.judge import BaseJudge
 from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import FILE_RULE, make_settings, write_json, write_text
 from tests.support.fakes import FakeJudge, JudgeOverride
-from tests.support.paths import SnapshotAsserter
+from tests.support.paths import REACT_RULE_PACK, SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -60,7 +60,10 @@ def test_all_flag_reports_every_judgment(
     _run(_file_app(judge), EXAMPLE_FILE, "--json", "--all")
 
     judgments = [issue["judgment"] for issue in _json_output(capsys)["issues"]]
-    assert judgments == ["Fail"] + ["Pass"] * 15
+    # Every rule that was asked is reported, and only the one failed.
+    assert len(judgments) == len(judge.asked_rule_ids()[0])
+    assert sorted(set(judgments)) == ["Fail", "Pass"]
+    assert judgments.count("Fail") == 1
 
 
 @pytest.mark.usefixtures("in_repo_root")
@@ -72,6 +75,32 @@ def test_min_confidence_hides_low_confidence_findings(
     _run(_file_app(judge), EXAMPLE_FILE, "--json", "--min-confidence", "0.5")
 
     assert _json_output(capsys) == {"examined_files": [EXAMPLE_FILE], "issues": []}
+
+
+@pytest.mark.usefixtures("in_repo_root")
+def test_react_rules_are_asked_only_about_typescript_and_javascript_files(
+    fake_judge: type[FakeJudge],
+) -> None:
+    judge = fake_judge()
+
+    _run(_file_app(judge), "examples", "--json")
+
+    react_rule_ids = set(json.loads(REACT_RULE_PACK.read_text(encoding="utf-8")))
+    content_to_asked_rule_ids = {
+        content: set(questions) for content, questions in judge.calls
+    }
+
+    def asked_about(path: str) -> set[str]:
+        return content_to_asked_rule_ids[Path(path).read_text(encoding="utf-8")]
+
+    python_file = asked_about("examples/backend_data_and_security.py")
+    typescript_file = asked_about("examples/frontend_hooks_and_dom.tsx")
+    other_file = asked_about("examples/custom_rules_demo.json")
+    assert react_rule_ids <= typescript_file
+    assert react_rule_ids.isdisjoint(python_file)
+    assert react_rule_ids.isdisjoint(other_file)
+    # A rule that names no language is asked about every file.
+    assert "hardcoded_secrets" in python_file & typescript_file & other_file
 
 
 def test_directory_audit_skips_ignored_and_binary_files(
@@ -100,7 +129,9 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
     _run(_file_app(judge), EXAMPLE_FILE, "--json", "--rules", custom)
 
     assert [i["rule_id"] for i in _json_output(capsys)["issues"]] == ["house_rule"]
-    assert len(judge.asked_rule_ids()[0]) == 17
+    asked = judge.asked_rule_ids()[0]
+    assert "house_rule" in asked
+    assert "hardcoded_secrets" in asked  # the built-in rules are still asked
 
 
 def test_missing_target_or_rules_file_exits_with_an_error(

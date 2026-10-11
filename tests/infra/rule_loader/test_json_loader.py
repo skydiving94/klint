@@ -19,7 +19,11 @@ from tests.support.builders import (
     write_json,
     write_text,
 )
-from tests.support.paths import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS
+from tests.support.paths import (
+    DEFAULT_PROJECT_RULES,
+    DEFAULT_RULE_PACKS,
+    REACT_RULE_PACK,
+)
 
 
 def _load(loader: JsonRuleLoader, custom: Path | None = None) -> dict[str, AuditRule]:
@@ -274,6 +278,15 @@ def test_built_in_python_project_rules_are_limited_to_python() -> None:
 
     assert rules
     assert all(rule.languages == ["python"] for rule in rules.values())
+
+
+def test_built_in_react_rules_are_limited_to_typescript_and_javascript() -> None:
+    rules = _load(JsonRuleLoader([REACT_RULE_PACK], UNIT_REGISTRY, KNOWN_LANGUAGES))
+
+    assert rules
+    assert all(
+        rule.languages == ["typescript", "javascript"] for rule in rules.values()
+    )
 
 
 def test_built_in_rules_set_no_tags() -> None:
