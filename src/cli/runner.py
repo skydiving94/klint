@@ -192,11 +192,15 @@ async def run_command_from_shell(command: AuditCommand) -> int:
     """Run ``command`` with the arguments the shell passed; return the exit code."""
     argv = sys.argv[1:]
     args = parse_command_arguments(command, argv)
-    settings = await asyncio.to_thread(AppSettings.from_env, args.target, args.rules)
     try:
-        audit_path = command.create_audit_path(settings)
+        with _print_klint_warnings_raised_inside(command):
+            settings = await asyncio.to_thread(
+                AppSettings.from_env, args.target, args.rules
+            )
+            audit_path = command.create_audit_path(settings)
     except (OSError, ValueError) as error:
-        # The command cannot be set up, for example a data file is not valid.
+        # The command cannot be set up, for example a config or data file is
+        # not valid.
         print_error_line(command, error)
         return 1
     app = AuditCommandApp(

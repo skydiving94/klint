@@ -1,10 +1,12 @@
 import json
 import os
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
-from typing import Any
+
+from src.core.klint_warning import KlintWarning
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
@@ -20,6 +22,17 @@ _BUILT_IN_PROJECT_RULE_PACKS = ("code/python/project_structure.json",)
 # src/resources/catalog/.
 _BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = "code/common/language_to_file_extensions.json"
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
+# The settings that the "env" block of a config file may set.
+_KNOWN_ENV_KEYS = frozenset(
+    {
+        "KEV_MODEL_NAME",
+        "KEV_DEFAULT_RULES_PATH",
+        "KEV_DEFAULT_PROJECT_RULES_PATH",
+        "KEV_MODE",
+        "KEV_BASE_URL",
+        "KEV_API_KEY",
+    }
+)
 
 
 def find_project_config(start_path: Path | None = None) -> Path | None:
@@ -35,17 +48,43 @@ def find_project_config(start_path: Path | None = None) -> Path | None:
     return None
 
 
-def _load_json_env_overrides(config_path: Path | None) -> dict[str, str]:
+def _load_env_block(config_path: Path | None) -> dict[str, str]:
+    """Return the settings in the "env" block of the config file.
+
+    Raises ValueError naming the file when it cannot be read as a JSON
+    object. A block or key that cannot be used is left out and reported as
+    a KlintWarning.
+    """
     if config_path is None or not config_path.is_file():
         return {}
     try:
-        raw: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+        raw: object = json.loads(config_path.read_text(encoding="utf-8"))
+    except ValueError as error:
+        raise ValueError(f"'{config_path}' is not valid JSON: {error}") from error
+    if not isinstance(raw, dict):
+        raise ValueError(f"'{config_path}' must be a JSON object")
+
     env_block = raw.get("env", {})
     if not isinstance(env_block, dict):
+        warnings.warn(
+            f"The 'env' block in '{config_path}' is ignored: it must be a JSON object",
+            KlintWarning,
+            stacklevel=2,
+        )
         return {}
-    return {str(k): str(v) for k, v in env_block.items() if v is not None}
+    unknown = sorted(str(key) for key in env_block if key not in _KNOWN_ENV_KEYS)
+    if unknown:
+        warnings.warn(
+            f"The 'env' block in '{config_path}' has unknown keys {unknown}, "
+            f"which are ignored; known keys: {sorted(_KNOWN_ENV_KEYS)}",
+            KlintWarning,
+            stacklevel=2,
+        )
+    return {
+        key: str(value)
+        for key, value in env_block.items()
+        if key in _KNOWN_ENV_KEYS and value is not None
+    }
 
 
 def _load_klint_dotenv(dotenv_path: Path | None = None) -> None:
@@ -118,7 +157,7 @@ class AppSettings:
 
         # 3. Check explicit --rules config file or auto-discovered klint.json
         active_config = config_path or find_project_config(target_path)
-        json_env = _load_json_env_overrides(active_config)
+        json_env = _load_env_block(active_config)
 
         def _get_setting(key: str, default: str | None = None) -> str | None:
             # Priority: Shell Export > Project klint.json "env" > klint .env > Default
