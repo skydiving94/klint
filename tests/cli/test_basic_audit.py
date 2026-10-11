@@ -11,7 +11,8 @@ import pytest
 
 from src.app.settings import AppSettings
 from src.app.wiring import create_file_audit_path
-from src.cli.basic_audit import CLIApp, main
+from src.cli.basic_audit import FILE_AUDIT_COMMAND
+from src.cli.runner import AuditCommandApp, run_command_from_shell
 from src.core.interfaces.judge import BaseJudge
 from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import FILE_RULE, make_settings, write_json, write_text
@@ -24,12 +25,12 @@ EXAMPLE_FILE = "examples/backend_data_and_security.py"
 Capture = pytest.CaptureFixture[str]
 
 
-def _file_app(judge: BaseJudge) -> CLIApp:
+def _file_app(judge: BaseJudge) -> AuditCommandApp:
     audit_path = create_file_audit_path(make_settings(), JudgeOverride(judge))
-    return CLIApp(audit_path=audit_path)
+    return AuditCommandApp(FILE_AUDIT_COMMAND, audit_path)
 
 
-def _run(app: CLIApp, *argv: str | Path) -> int:
+def _run(app: AuditCommandApp, *argv: str | Path) -> int:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
@@ -134,7 +135,7 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     monkeypatch.setattr(AppSettings, "from_env", lambda *_args: settings)
     monkeypatch.setattr(sys, "argv", ["klint", str(target)])
 
-    exit_code = asyncio.run(main())
+    exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     captured = capsys.readouterr()
     assert exit_code == 1

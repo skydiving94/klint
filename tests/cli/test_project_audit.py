@@ -8,7 +8,8 @@ import pytest
 
 from src.app.settings import AppSettings
 from src.app.wiring import create_project_audit_path
-from src.cli.project_audit import ProjectAuditCLIApp, main
+from src.cli.project_audit import PROJECT_AUDIT_COMMAND
+from src.cli.runner import AuditCommandApp, run_command_from_shell
 from src.core.interfaces.judge import BaseJudge
 from tests.support.builders import make_settings, write_text
 from tests.support.fakes import FakeJudge, JudgeOverride
@@ -20,12 +21,12 @@ EXAMPLE_FILE = "examples/backend_data_and_security.py"
 Capture = pytest.CaptureFixture[str]
 
 
-def _project_app(judge: BaseJudge) -> ProjectAuditCLIApp:
+def _project_app(judge: BaseJudge) -> AuditCommandApp:
     audit_path = create_project_audit_path(make_settings(), JudgeOverride(judge))
-    return ProjectAuditCLIApp(audit_path=audit_path)
+    return AuditCommandApp(PROJECT_AUDIT_COMMAND, audit_path)
 
 
-def _run(app: ProjectAuditCLIApp, *argv: str | Path) -> int:
+def _run(app: AuditCommandApp, *argv: str | Path) -> int:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
@@ -59,7 +60,7 @@ def _run_main(
     """Run the command as the shell would, but with the given settings."""
     monkeypatch.setattr(AppSettings, "from_env", lambda *_args: settings)
     monkeypatch.setattr(sys, "argv", ["klint-project", str(target)])
-    return asyncio.run(main())
+    return asyncio.run(run_command_from_shell(PROJECT_AUDIT_COMMAND))
 
 
 def test_unusable_language_to_file_extensions_file_stops_the_command(
