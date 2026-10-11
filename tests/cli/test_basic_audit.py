@@ -11,12 +11,19 @@ import pytest
 
 from src.app.settings import AppSettings
 from src.app.wiring import create_file_audit_path
+from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.cli.basic_audit import FILE_AUDIT_COMMAND
 from src.cli.runner import AuditCommandApp, run_command_from_shell
 from src.core.interfaces.judge import BaseJudge
 from src.infra.system_one.remote import RemoteSystemOneJudge
-from tests.support.builders import FILE_RULE, make_settings, write_json, write_text
-from tests.support.fakes import FakeJudge, JudgeOverride
+from tests.support.builders import (
+    DIR_RULE,
+    FILE_RULE,
+    make_settings,
+    write_json,
+    write_text,
+)
+from tests.support.fakes import CountingJudge, FakeJudge, JudgeOverride, PickyJudge
 from tests.support.paths import REACT_RULE_PACK, SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
@@ -103,6 +110,38 @@ def test_react_rules_are_asked_only_about_typescript_and_javascript_files(
     assert "hardcoded_secrets" in python_file & typescript_file & other_file
 
 
+def test_custom_rule_is_asked_only_about_the_unit_type_and_language_it_names(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json",
+        {
+            "any_language": FILE_RULE,
+            "python_only": {**FILE_RULE, "languages": ["python"]},
+            "for_directory": DIR_RULE,
+        },
+    )
+    sources = tmp_path / "sources"
+    # Each file holds its own name, which tells the judge calls apart.
+    for name in ("a.py", "a.go", "notes.txt"):
+        write_text(sources / name, name)
+    judge = fake_judge()
+
+    _run(_file_app(judge), sources, "--json", "--rules", custom)
+
+    custom_rule_ids = {"any_language", "python_only", "for_directory"}
+    file_name_to_asked_rule_ids = {
+        content: custom_rule_ids & set(questions) for content, questions in judge.calls
+    }
+    # A file in another language, or in none that is known, is not asked the
+    # Python rule. No file is asked the rule for directories.
+    assert file_name_to_asked_rule_ids == {
+        "a.py": {"any_language", "python_only"},
+        "a.go": {"any_language"},
+        "notes.txt": {"any_language"},
+    }
+
+
 def test_directory_audit_skips_ignored_and_binary_files(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
@@ -134,10 +173,45 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
     assert "hardcoded_secrets" in asked  # the built-in rules are still asked
 
 
+def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    custom = write_json(tmp_path / "custom.json", {"house_rule": FILE_RULE})
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge()
+
+    _run(_file_app(judge), target, "--json", "--rules", custom)
+
+    ((content, questions),) = judge.calls
+    assert content == "x = 1\n"
+    assert questions["house_rule"] == {
+        "type": "choice",
+        "instructions": FILE_RULE["instructions"],
+        "criteria": PASS_FAIL_SCALE.criteria_payload(),
+    }
+
+
+def test_rule_the_judge_does_not_answer_is_left_out_of_the_report(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json", {"answered": FILE_RULE, "unanswered": FILE_RULE}
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge(choices={"unanswered": None})
+
+    _run(_file_app(judge), target, "--json", "--all", "--rules", custom)
+
+    reported_rule_ids = {issue["rule_id"] for issue in _json_output(capsys)["issues"]}
+    assert "answered" in reported_rule_ids
+    assert "unanswered" not in reported_rule_ids
+
+
 def test_missing_target_or_rules_file_exits_with_an_error(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    app = _file_app(fake_judge())
+    judge = fake_judge()
+    app = _file_app(judge)
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
 
@@ -145,6 +219,8 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert "Audit target does not exist" in capsys.readouterr().err
     assert _run(app, target, "--rules", tmp_path / "absent.json") == 1
     assert "Custom rules file does not exist" in capsys.readouterr().err
+    # The command stops before anything is audited.
+    assert judge.calls == []
 
 
 @pytest.mark.parametrize(
@@ -207,6 +283,36 @@ def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> 
     assert exit_code == 0
     assert json.loads(captured.out) == {"examined_files": [], "issues": []}
     assert f"Skipping {target}: judge is down" in captured.err
+
+
+def test_file_the_judge_fails_on_is_left_out_while_the_others_are_audited(
+    tmp_path: Path, capsys: Capture
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    write_text(tmp_path / "b.py", "poison\n")
+    write_text(tmp_path / "c.py", "y = 2\n")
+
+    exit_code = _run(_file_app(PickyJudge(refuses="poison")), tmp_path, "--json")
+
+    captured = capsys.readouterr()
+    output = json.loads(captured.out)
+    audited = [str(tmp_path / "a.py"), str(tmp_path / "c.py")]
+    assert exit_code == 0
+    assert output["examined_files"] == audited
+    # Findings come out one file at a time, in the order of the files.
+    reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]
+    assert list(dict.fromkeys(reported_unit_ids)) == audited
+    assert f"Skipping {tmp_path / 'b.py'}: judge is down" in captured.err
+
+
+def test_no_more_than_the_limit_is_audited_at_once(tmp_path: Path) -> None:
+    for index in range(20):
+        write_text(tmp_path / f"m{index:02}.py", "x = 1\n")
+    judge = CountingJudge()
+
+    _run(_file_app(judge), tmp_path, "--json")
+
+    assert 1 < judge.most_at_once <= 8
 
 
 @pytest.mark.usefixtures("in_repo_root")

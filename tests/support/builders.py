@@ -8,7 +8,7 @@ from typing import Any
 
 from src import catalog
 from src.app.settings import AppSettings
-from src.app.wiring import FileAuditor, ProjectAuditor, create_injector
+from src.app.wiring import FileAuditor, create_injector
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.python.units.package import AuditablePythonPackageUnit
@@ -90,12 +90,6 @@ def file_auditor(rules_path: Path, judge: BaseJudge) -> Auditor:
     """Return klint's file auditor with one rule pack and the given judge."""
     settings = make_settings(rules_paths=(rules_path,))
     return create_injector(settings, JudgeOverride(judge)).get(FileAuditor)
-
-
-def project_auditor(rules_path: Path, judge: BaseJudge) -> Auditor:
-    """Return klint's project auditor with one rule pack and the given judge."""
-    settings = make_settings(project_rules_paths=(rules_path,))
-    return create_injector(settings, JudgeOverride(judge)).get(ProjectAuditor)
 
 
 def build_file_traits_identifier() -> BaseFileTraitsIdentifier:
