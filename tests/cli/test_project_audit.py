@@ -71,6 +71,25 @@ def test_project_audit_rejects_a_file_target(
     assert judge.calls == []
 
 
+def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    project = tmp_path / "build" / "project"
+    write_text(project / "main.py", "x = 1\n")
+    write_text(project / "pkg" / "a.py", "y = 2\n")
+    judge = fake_judge(default="fail")
+
+    _run(_project_app(judge), project, "--json")
+
+    output = _json_output(capsys)
+    directories = [str(project), str(project / "pkg")]
+    assert output["examined_directories"] == directories
+    # The judge is asked about the directories listed as examined, and no others.
+    reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]
+    assert list(dict.fromkeys(reported_unit_ids)) == directories
+    assert len(judge.calls) == 2
+
+
 def test_python_project_rules_are_asked_only_about_directories_holding_python(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:

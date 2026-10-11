@@ -158,6 +158,21 @@ def test_directory_audit_skips_ignored_and_binary_files(
     assert len(judge.calls) == 2
 
 
+def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    target = tmp_path / "build" / "project"
+    write_text(target / "a.py", "x = 1\n")
+    write_text(target / "pkg" / "b.py", "y = 2\n")
+    judge = fake_judge()
+
+    _run(_file_app(judge), target, "--json")
+
+    examined = _json_output(capsys)["examined_files"]
+    assert examined == [str(target / "a.py"), str(target / "pkg" / "b.py")]
+    assert len(judge.calls) == 2
+
+
 @pytest.mark.usefixtures("in_repo_root")
 def test_rules_flag_adds_custom_rules_to_the_defaults(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture

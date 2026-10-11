@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from src.app.audit_mode import AuditMode
+from src.app.audit_pipeline import AuditPipeline
 from src.core.auditor import Auditor
 from src.core.models.report import AuditFinding, AuditReport
 from src.core.models.rule import AuditRule
@@ -42,30 +44,34 @@ class AuditPathResult:
 class AuditPath:
     """Audits every target found under a path.
 
-    collect_targets lists what will be audited (files, or directories). With
-    whole_tree, the path is extracted once and every unit in the resulting
-    tree is audited; without it, each target is extracted on its own.
+    The pipeline lists what will be audited. For a project structure audit,
+    the path is extracted once and every unit in the resulting tree is
+    audited; for a file contents audit, each target is extracted on its own.
     """
 
     def __init__(
         self,
         auditor: Auditor,
-        collect_targets: Callable[[Path], list[Path]],
-        whole_tree: bool = False,
+        audit_pipeline: AuditPipeline,
+        audit_mode: AuditMode,
         max_concurrent: int = DEFAULT_MAX_CONCURRENT_AUDITS,
     ) -> None:
         self._auditor = auditor
-        self._collect_targets = collect_targets
-        self._whole_tree = whole_tree
+        self._audit_pipeline = audit_pipeline
+        self._audit_mode = audit_mode
         self._max_concurrent = max_concurrent
 
     async def prepare(
         self, target: Path, rules_source: Path | None = None
     ) -> AuditPlan:
         """Check the target and the rules; raise if either cannot be used."""
-        targets = await asyncio.to_thread(self._collect_targets, target)
+        pending_audit_portfolio = await self._audit_pipeline.prepare_audit(
+            target, self._audit_mode
+        )
         rules = await self._auditor.load_rules(rules_source)
-        return AuditPlan(root=target, targets=targets, rules=rules)
+        return AuditPlan(
+            root=target, targets=pending_audit_portfolio.targets, rules=rules
+        )
 
     async def run(
         self,
@@ -100,7 +106,7 @@ class AuditPath:
                     if listener is not None and is_target:
                         listener.target_done(name)
 
-        if self._whole_tree:
+        if self._audit_mode is AuditMode.PROJECT_STRUCTURE:
             jobs = await self._tree_jobs(
                 plan, set(target_names), failed, listener, audit
             )

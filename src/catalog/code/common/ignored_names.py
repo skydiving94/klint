@@ -1,0 +1,70 @@
+"""The directories and files of a code project that are never audited."""
+
+from src.catalog.common.scanners.target_scanner import IgnoredNames
+
+CODE_IGNORED_NAMES = IgnoredNames(
+    directory_names=frozenset(
+        {
+            ".git",
+            "__pycache__",
+            ".venv",
+            "venv",
+            "node_modules",
+            ".vscode",
+            ".idea",
+            "dist",
+            "build",
+        }
+    ),
+    file_names=frozenset(
+        {
+            ".DS_Store",
+            ".env",
+            ".env.example",
+            ".gitignore",
+            "klint.json",
+            ".klintrc.json",
+            ".klintrc",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "poetry.lock",
+            "uv.lock",
+        }
+    ),
+    file_suffixes=frozenset(
+        {
+            ".pyc",
+            ".pyo",
+            ".so",
+            ".dylib",
+            ".dll",
+            ".exe",
+            ".bin",
+            ".zip",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".svg",
+            ".ico",
+            ".webp",
+            ".pdf",
+            ".db",
+            ".sqlite",
+            ".sqlite3",
+            ".woff",
+            ".woff2",
+            ".ttf",
+            ".eot",
+            ".mp3",
+            ".mp4",
+            ".mov",
+            ".tar",
+            ".gz",
+            ".whl",
+            ".pt",
+            ".safetensors",
+        }
+    ),
+)

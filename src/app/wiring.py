@@ -6,6 +6,8 @@ from typing import NewType
 from injector import Binder, Injector, Module, provider, singleton
 
 from src import catalog
+from src.app.audit_mode import AuditMode
+from src.app.audit_pipeline import AuditPipeline
 from src.app.settings import AppSettings
 from src.app.usecases.audit_path import AuditPath
 from src.catalog.code import python as python_suite
@@ -13,21 +15,19 @@ from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
+from src.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
 from src.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
-from src.catalog.common.extractors.file_collector import (
-    collect_target_directories,
-    collect_target_files,
-)
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
 from src.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from src.catalog.common.scanners.target_scanner import TargetScanner
 from src.core.auditor import Auditor
 from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.judge import BaseJudge
@@ -104,6 +104,18 @@ class KlintModule(Module):
 
     @singleton
     @provider
+    def provide_target_scanner(
+        self, file_traits_identifier: BaseFileTraitsIdentifier
+    ) -> TargetScanner:
+        return TargetScanner(file_traits_identifier, CODE_IGNORED_NAMES)
+
+    @singleton
+    @provider
+    def provide_audit_pipeline(self, target_scanner: TargetScanner) -> AuditPipeline:
+        return AuditPipeline(target_scanner)
+
+    @singleton
+    @provider
     def provide_project_extractor(
         self, file_traits_identifier: BaseFileTraitsIdentifier
     ) -> RecursiveProjectExtractor:
@@ -175,14 +187,20 @@ class KlintModule(Module):
 
     @singleton
     @provider
-    def provide_file_audit_path(self, auditor: FileAuditor) -> FileAuditPath:
-        return FileAuditPath(AuditPath(auditor, collect_target_files))
+    def provide_file_audit_path(
+        self, auditor: FileAuditor, audit_pipeline: AuditPipeline
+    ) -> FileAuditPath:
+        return FileAuditPath(
+            AuditPath(auditor, audit_pipeline, AuditMode.FILE_CONTENTS)
+        )
 
     @singleton
     @provider
-    def provide_project_audit_path(self, auditor: ProjectAuditor) -> ProjectAuditPath:
+    def provide_project_audit_path(
+        self, auditor: ProjectAuditor, audit_pipeline: AuditPipeline
+    ) -> ProjectAuditPath:
         return ProjectAuditPath(
-            AuditPath(auditor, collect_target_directories, whole_tree=True)
+            AuditPath(auditor, audit_pipeline, AuditMode.PROJECT_STRUCTURE)
         )
 
 

@@ -4,13 +4,9 @@ from pathlib import Path
 from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
+from src.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.catalog.common.extractors.file_collector import (
-    IGNORED_DIRS,
-    IGNORED_FILES,
-    IGNORED_SUFFIXES,
-)
 from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.models.unit import AuditableUnit
 
@@ -39,13 +35,16 @@ class RecursiveProjectExtractor(BaseUnitExtractor):
 
         for entry in sorted(directory.iterdir()):
             if entry.is_dir():
-                if entry.name in IGNORED_DIRS:
+                if (
+                    entry.is_symlink()
+                    or entry.name in CODE_IGNORED_NAMES.directory_names
+                ):
                     continue
                 subdirs.append(self._walk(entry))
             elif entry.is_file():
                 if (
-                    entry.name in IGNORED_FILES
-                    or entry.suffix.lower() in IGNORED_SUFFIXES
+                    entry.name in CODE_IGNORED_NAMES.file_names
+                    or entry.suffix.lower() in CODE_IGNORED_NAMES.file_suffixes
                 ):
                     continue
                 files.append(self._delegator.delegate_file_extraction(entry))
