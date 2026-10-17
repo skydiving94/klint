@@ -2,13 +2,16 @@
 
 from pathlib import Path
 
+import pytest
+
 from src.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
 from src.catalog.common.scanners.target_scanner import IgnoredNames, TargetScanner
 from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
+from src.core.klint_warning import KlintWarning
 from src.core.models.scanned_tree import ScannedDirectory
-from tests.support.builders import write_text
+from tests.support.builders import MakeUnreadable, write_text
 
 SCANNER = TargetScanner(
     ExtensionFileTraitsIdentifier({".py": "python", ".ts": "typescript"}),
@@ -123,6 +126,37 @@ def test_scan_directory_reports_each_scanned_directory_once_in_path_order(
     ]
     # The target comes first. A directory with an ignored name is not scanned.
     assert reported == [".", "a", "b", "b/c"]
+
+
+def test_scan_directory_leaves_out_a_directory_that_cannot_be_read_with_a_warning(
+    tmp_path: Path,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    write_text(tmp_path / "a.py", "")
+    locked = make_unreadable(write_text(tmp_path / "locked" / "b.py", "").parent)
+    listener = RecordingScanProgressListener()
+
+    with pytest.warns(KlintWarning) as caught:
+        root = SCANNER.scan_directory(tmp_path, listener)
+
+    assert [str(warning.message) for warning in caught] == [
+        f"Directory '{locked}' is left out: it cannot be read (Permission denied)"
+    ]
+    assert _list_file_paths(root) == ["a.py"]
+    assert _list_directory_paths(root) == ["."]
+    assert listener.reported_directories == [tmp_path]
+
+
+def test_scan_directory_gives_an_empty_tree_for_a_target_that_cannot_be_read(
+    tmp_path: Path,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    target = make_unreadable(write_text(tmp_path / "project" / "a.py", "").parent)
+
+    with pytest.warns(KlintWarning, match="is left out: it cannot be read"):
+        root = SCANNER.scan_directory(target)
+
+    assert (root.path, root.files, root.subdirectories) == (target, [], [])
 
 
 def test_scan_file_returns_the_file_with_its_traits_and_no_parent(

@@ -2,12 +2,9 @@
 
 import asyncio
 import json
-import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
-
-import pytest
 
 from src import catalog
 from src.app.settings import AppSettings
@@ -28,6 +25,9 @@ from tests.support.paths import (
 )
 
 RuleSpec = dict[str, Any]
+# Takes every permission away from a path and returns the path; see the
+# make_unreadable fixture.
+MakeUnreadable = Callable[[Path], Path]
 
 # The languages a file can be identified as, from the built-in data file.
 KNOWN_LANGUAGES = frozenset(
@@ -64,17 +64,6 @@ def write_text(path: Path, text: str) -> Path:
     """Write ``text`` to ``path``, creating its folders, and return the path."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-    return path
-
-
-def make_unreadable(path: Path) -> Path:
-    """Take every permission away from ``path`` and return the path.
-
-    The test is skipped where that does not stop reading, as for root.
-    """
-    path.chmod(0)
-    if os.access(path, os.R_OK):
-        pytest.skip("permissions do not stop this user from reading")
     return path
 
 

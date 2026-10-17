@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
+from src.core.klint_warning import warn_about_unreadable_directory
 from src.core.models.scanned_tree import ScannedDirectory, ScannedFile
 
 
@@ -28,7 +29,8 @@ class TargetScanner:
     Each directory is listed once and no file is opened: the traits of a file
     are identified from the outside. An entry with an ignored name is left
     out wherever it sits beneath the target. The folders above the target are
-    not looked at. A link to a directory is not followed.
+    not looked at. A link to a directory is not followed. A directory that
+    cannot be read is left out, with a warning.
     """
 
     def __init__(
@@ -53,29 +55,36 @@ class TargetScanner:
         """Return ``directory`` and everything kept beneath it, as a tree.
 
         The listener, when given, is told about each directory right after it
-        is listed: the target first, then the others in path order.
+        is listed: the target first, then the others in path order. When the
+        target itself cannot be read, it is returned with nothing in it.
         """
-        return self._scan_directory(directory, None, scan_progress_listener)
+        scanned_target = self._scan_directory(directory, None, scan_progress_listener)
+        if scanned_target is None:
+            return ScannedDirectory(path=directory)
+        return scanned_target
 
     def _scan_directory(
         self,
         directory: Path,
         parent: ScannedDirectory | None,
         scan_progress_listener: BaseScanProgressListener | None,
-    ) -> ScannedDirectory:
-        scanned_directory = ScannedDirectory(path=directory, parent=parent)
+    ) -> ScannedDirectory | None:
+        """Return ``directory`` as a tree; None when it cannot be read."""
         entries = self._list_entries(directory)
+        if entries is None:
+            return None
+        scanned_directory = ScannedDirectory(path=directory, parent=parent)
         if scan_progress_listener is not None:
             scan_progress_listener.report_directory_scanned(directory)
         for entry in entries:
             if entry.is_dir():
                 if self._is_ignored_directory(entry):
                     continue
-                scanned_directory.subdirectories.append(
-                    self._scan_directory(
-                        entry, scanned_directory, scan_progress_listener
-                    )
+                scanned_subdirectory = self._scan_directory(
+                    entry, scanned_directory, scan_progress_listener
                 )
+                if scanned_subdirectory is not None:
+                    scanned_directory.subdirectories.append(scanned_subdirectory)
             elif entry.is_file() and not self._is_ignored_file(entry):
                 scanned_directory.files.append(
                     ScannedFile(
@@ -86,12 +95,16 @@ class TargetScanner:
                 )
         return scanned_directory
 
-    def _list_entries(self, directory: Path) -> list[Path]:
-        """Return the entries of ``directory`` in path order; none if unreadable."""
+    def _list_entries(self, directory: Path) -> list[Path] | None:
+        """Return the entries of ``directory`` in path order.
+
+        None, with a warning, when the directory cannot be read.
+        """
         try:
             return sorted(directory.iterdir())
-        except PermissionError:
-            return []
+        except OSError as error:
+            warn_about_unreadable_directory(directory, error)
+            return None
 
     def _is_ignored_directory(self, directory: Path) -> bool:
         return (

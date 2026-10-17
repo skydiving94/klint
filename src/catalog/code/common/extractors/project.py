@@ -5,7 +5,7 @@ from src.catalog.code.common.extractors.traits_based_extraction_delegator import
 )
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.core.klint_warning import warn_about_unreadable_file
+from src.core.klint_warning import leave_out_file_on_failure
 from src.core.models.scanned_tree import ScannedDirectory
 
 
@@ -15,8 +15,8 @@ class RecursiveProjectExtractor:
     The unit holds the metadata of the files directly in the scanned
     directory and, recursively, of every subdirectory. This class only goes
     through the tree; the delegator decides what reads each file and what
-    describes each directory. A file that cannot be read is left out, with a
-    warning.
+    describes each directory. A file that cannot be read or processed is left
+    out, with a warning.
     """
 
     def __init__(self, delegator: TraitsBasedExtractionDelegator) -> None:
@@ -40,10 +40,8 @@ class RecursiveProjectExtractor:
     ) -> AuditableDirectoryUnit:
         files: list[AuditableFileMetadataUnit] = []
         for scanned_file in scanned_directory.files:
-            try:
+            with leave_out_file_on_failure(scanned_file.path):
                 files.append(self._delegator.delegate_file_extraction(scanned_file))
-            except OSError as error:
-                warn_about_unreadable_file(scanned_file.path, error)
         subdirectories = [
             self._build_directory_unit(scanned_subdirectory)
             for scanned_subdirectory in scanned_directory.subdirectories

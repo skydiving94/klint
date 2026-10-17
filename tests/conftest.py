@@ -2,11 +2,13 @@
 
 import os
 import socket
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
+from tests.support.builders import MakeUnreadable
 from tests.support.fakes import FakeJudge
 from tests.support.paths import REPO_ROOT, SNAPSHOT_DIR, SnapshotAsserter
 
@@ -38,6 +40,28 @@ def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]
     workdir.mkdir()
     monkeypatch.chdir(workdir)
     return env
+
+
+@pytest.fixture
+def make_unreadable() -> Iterator[MakeUnreadable]:
+    """Return a function that takes every permission away from a path.
+
+    The permissions are given back after the test, so that its folder can be
+    removed. The test is skipped where taking them away does not stop
+    reading, as for root.
+    """
+    path_to_mode: dict[Path, int] = {}
+
+    def _make_unreadable(path: Path) -> Path:
+        path_to_mode[path] = path.stat().st_mode
+        path.chmod(0)
+        if os.access(path, os.R_OK):
+            pytest.skip("permissions do not stop this user from reading")
+        return path
+
+    yield _make_unreadable
+    for path, mode in path_to_mode.items():
+        path.chmod(mode)
 
 
 @pytest.fixture

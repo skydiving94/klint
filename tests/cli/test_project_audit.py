@@ -16,8 +16,8 @@ from src.core.interfaces.judge import BaseJudge
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
+    MakeUnreadable,
     make_settings,
-    make_unreadable,
     write_json,
     write_text,
 )
@@ -92,7 +92,10 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
 
 
 def test_file_that_cannot_be_read_is_left_out_with_a_warning(
-    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
 ) -> None:
     package = tmp_path / "pkg"
     write_text(package / "a.py", "x = 1\n")
@@ -112,6 +115,54 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     ((content, _questions),) = judge.calls
     assert "a.py" in content
     assert "locked.py" not in content
+
+
+def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    package = tmp_path / "pkg"
+    write_text(package / "a.py", "x = 1\n")
+    # Nested too deeply for the Python parser, which gives up on the file.
+    too_deep = write_text(package / "too_deep.py", "-" * 200_000 + "1\n")
+    judge = fake_judge()
+
+    exit_code = _run(_project_app(judge), package, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_directories"] == [str(package)]
+    (warning_line,) = captured.err.splitlines()
+    assert warning_line.startswith(
+        f"[klint-project] Warning: File '{too_deep}' is left out: "
+        "it cannot be processed ("
+    )
+    ((content, _questions),) = judge.calls
+    assert "a.py" in content
+    assert "too_deep.py" not in content
+
+
+def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    repo = tmp_path / "repo"
+    write_text(repo / "main.py", "x = 1\n")
+    locked = make_unreadable(write_text(repo / "locked" / "a.py", "y = 2\n").parent)
+    judge = fake_judge()
+
+    exit_code = _run(_project_app(judge), repo, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_directories"] == [str(repo)]
+    assert captured.err.splitlines() == [
+        f"[klint-project] Warning: Directory '{locked}' is left out: "
+        "it cannot be read (Permission denied)"
+    ]
+    ((content, _questions),) = judge.calls
+    assert "locked" not in content
 
 
 def test_binary_file_is_listed_by_name_only(

@@ -20,8 +20,8 @@ from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
+    MakeUnreadable,
     make_settings,
-    make_unreadable,
     write_json,
     write_text,
 )
@@ -161,7 +161,10 @@ def test_directory_audit_skips_ignored_and_binary_files(
 
 
 def test_file_that_cannot_be_read_is_left_out_with_a_warning(
-    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
 ) -> None:
     write_text(tmp_path / "a.py", "x = 1\n")
     locked = make_unreadable(write_text(tmp_path / "locked.py", "y = 2\n"))
@@ -174,6 +177,28 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
     assert captured.err.splitlines() == [
         f"[klint] Warning: File '{locked}' is left out: "
+        "it cannot be read (Permission denied)"
+    ]
+    assert len(judge.calls) == 1
+
+
+def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    locked = make_unreadable(write_text(tmp_path / "locked" / "b.py", "y = 2\n").parent)
+    judge = fake_judge()
+
+    exit_code = _run(_file_app(judge), tmp_path, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
+    assert captured.err.splitlines() == [
+        f"[klint] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
     assert len(judge.calls) == 1

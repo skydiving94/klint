@@ -11,7 +11,7 @@ from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.common.scanners.target_scanner import TargetScanner
 from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from src.core.klint_warning import warn_about_unreadable_file
+from src.core.klint_warning import leave_out_file_on_failure
 from src.core.models.scanned_tree import ScannedDirectory, ScannedFile
 from src.core.models.unit import AuditableUnit
 
@@ -110,7 +110,7 @@ class AuditPipeline:
     ) -> list[AuditableUnit]:
         """Return the units of one file, from the extractor that matches its traits.
 
-        A file that cannot be read gives no unit, and a warning.
+        A file the extractor fails on gives no unit, and a warning.
         """
         extractor = self._language_neutral_unit_extractor
         language = scanned_file.traits.language
@@ -118,11 +118,9 @@ class AuditPipeline:
             extractor = self._language_to_unit_extractor.get(
                 language.lower(), extractor
             )
-        try:
+        with leave_out_file_on_failure(scanned_file.path):
             return await extractor.extract(scanned_file)
-        except OSError as error:
-            warn_about_unreadable_file(scanned_file.path, error)
-            return []
+        return []
 
     async def _prepare_project_structure_audit(
         self, target: Path, scan_progress_listener: BaseScanProgressListener | None
