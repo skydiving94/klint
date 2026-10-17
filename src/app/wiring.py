@@ -10,7 +10,6 @@ from src import catalog
 from src.app.audit_mode import AuditMode
 from src.app.audit_pipeline import AuditPipeline
 from src.app.settings import AppSettings
-from src.app.usecases.audit_path import AuditPath
 from src.catalog.code import python as python_suite
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
@@ -41,9 +40,6 @@ from src.infra.language_to_file_extensions_loader.json_loader import (
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import RemoteSystemOneJudge
 
-# One use case per kind of audit, told apart by these keys.
-FileAuditPath = NewType("FileAuditPath", AuditPath)
-ProjectAuditPath = NewType("ProjectAuditPath", AuditPath)
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
 
@@ -184,33 +180,7 @@ class KlintModule(Module):
     def provide_auditor(self, judge: BaseJudge, scale: AnswerScale) -> Auditor:
         return Auditor(judge=judge, scale=scale)
 
-    @singleton
-    @provider
-    def provide_file_audit_path(
-        self, auditor: Auditor, audit_pipeline: AuditPipeline
-    ) -> FileAuditPath:
-        return FileAuditPath(
-            AuditPath(auditor, audit_pipeline, AuditMode.FILE_CONTENTS)
-        )
-
-    @singleton
-    @provider
-    def provide_project_audit_path(
-        self, auditor: Auditor, audit_pipeline: AuditPipeline
-    ) -> ProjectAuditPath:
-        return ProjectAuditPath(
-            AuditPath(auditor, audit_pipeline, AuditMode.PROJECT_STRUCTURE)
-        )
-
 
 def create_injector(settings: AppSettings, *overrides: Override) -> Injector:
     """Return an injector for ``settings``; overrides replace individual bindings."""
     return Injector([KlintModule(settings), *overrides])
-
-
-def create_file_audit_path(settings: AppSettings, *overrides: Override) -> AuditPath:
-    return create_injector(settings, *overrides).get(FileAuditPath)
-
-
-def create_project_audit_path(settings: AppSettings, *overrides: Override) -> AuditPath:
-    return create_injector(settings, *overrides).get(ProjectAuditPath)

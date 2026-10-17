@@ -9,7 +9,6 @@ from typing import Any
 import pytest
 
 from src.app.settings import AppSettings
-from src.app.wiring import create_project_audit_path
 from src.cli.project_audit import PROJECT_AUDIT_COMMAND
 from src.cli.runner import AuditCommandApp, run_command_from_shell
 from src.core.interfaces.judge import BaseJudge
@@ -17,11 +16,12 @@ from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
     MakeUnreadable,
+    build_audit_command_app,
     make_settings,
     write_json,
     write_text,
 )
-from tests.support.fakes import FakeJudge, JudgeOverride, PickyJudge
+from tests.support.fakes import FakeJudge, PickyJudge
 from tests.support.paths import MOCK_PROJECT, SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
@@ -33,10 +33,7 @@ Capture = pytest.CaptureFixture[str]
 def _project_app(
     judge: BaseJudge, settings: AppSettings | None = None
 ) -> AuditCommandApp:
-    audit_path = create_project_audit_path(
-        settings or make_settings(), JudgeOverride(judge)
-    )
-    return AuditCommandApp(PROJECT_AUDIT_COMMAND, audit_path)
+    return build_audit_command_app(PROJECT_AUDIT_COMMAND, judge, settings)
 
 
 def _run(app: AuditCommandApp, *argv: str | Path) -> int:
@@ -196,10 +193,13 @@ def test_python_project_rules_are_asked_only_about_directories_holding_python(
 
     _run(_project_app(judge), repo, "--json", "--all")
 
-    judged_unit_ids = {issue["unit_id"] for issue in _json_output(capsys)["issues"]}
+    output = _json_output(capsys)
+    judged_unit_ids = {issue["unit_id"] for issue in output["issues"]}
     assert judged_unit_ids == {str(repo), str(repo / "app")}
-    # The directory without Python is not sent to the judge at all.
+    # The directory without Python is not sent to the judge at all, so it is
+    # not listed as examined either.
     assert len(judge.calls) == 2
+    assert output["examined_directories"] == [str(repo), str(repo / "app")]
 
 
 def test_project_rules_path_variable_replaces_every_built_in_pack(
@@ -250,7 +250,12 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
     assert "a.py" in file_content
     assert len(calls_with_the_directory_rule) == 1
     assert len(judge.calls) == 2
-    assert _json_output(capsys)["examined_directories"] == [str(package)]
+    # Examined are the units the judge was asked about: here the directory
+    # and the one file inside it that a rule targets.
+    assert _json_output(capsys)["examined_directories"] == [
+        str(package),
+        str(package / "a.py"),
+    ]
 
 
 def test_directory_the_judge_fails_on_is_left_out_while_the_others_are_audited(

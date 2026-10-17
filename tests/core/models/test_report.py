@@ -8,10 +8,12 @@ from src.core.models.scale import Choice
 from tests.support.builders import FAIL, IRRELEVANT, LACK_OF_EVIDENCE, PASS
 
 
-def _finding(rule_id: str, choice: Choice, confidence: float | None) -> AuditFinding:
+def _finding(
+    rule_id: str, choice: Choice, confidence: float | None, unit_id: str = "a.py"
+) -> AuditFinding:
     return AuditFinding(
         rule_id=rule_id,
-        unit_id="a.py",
+        unit_id=unit_id,
         choice=choice,
         instructions="?",
         confidence=confidence,
@@ -56,6 +58,30 @@ def test_report_orders_by_judgment_then_confidence_then_rule_id() -> None:
     )
     order = _rule_ids(report.get_issues(fails_only=False))
     assert order == ["f_a", "f_b", "f_low", "l", "p", "i"]
+
+
+def test_report_keeps_the_findings_of_each_unit_together_in_unit_order() -> None:
+    report = _report(
+        _finding("p", PASS, 0.9, unit_id="b.py"),
+        _finding("f", FAIL, 0.9, unit_id="b.py"),
+        _finding("f", FAIL, 0.5, unit_id="a.py"),
+    )
+
+    findings = report.get_findings(fails_only=False)
+
+    assert [(f.unit_id, f.rule_id) for f in findings] == [
+        ("b.py", "f"),
+        ("b.py", "p"),
+        ("a.py", "f"),
+    ]
+
+
+def test_report_lists_the_audited_units_in_recorded_order() -> None:
+    report = AuditReport()
+    report.record_audited_unit("b.py")
+    report.record_audited_unit("a.py")
+
+    assert report.audited_unit_ids() == ["b.py", "a.py"]
 
 
 def test_finding_dict_carries_judgment_text_and_unit_metadata() -> None:

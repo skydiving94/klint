@@ -34,24 +34,29 @@ class TerminalScanProgressListener(BaseScanProgressListener):
 
 
 class AuditProgressReporter:
-    """Renders a live one-line progress bar on stderr and clears it on completion."""
+    """Renders a live one-line progress bar on stderr and clears it on completion.
 
-    def __init__(self, total: int, label: str = "files", enabled: bool = True) -> None:
+    The bar counts the units whose audit has ended, and shows the directory
+    of the last one. Several units are audited at once, so there is no single
+    current directory.
+    """
+
+    def __init__(self, total: int, enabled: bool = True) -> None:
         self._total = max(total, 1)
         self._completed = 0
-        self._label = label
         self._enabled = enabled and sys.stderr.isatty()
 
     def start(self) -> None:
         if not self._enabled:
             return
-        self._render(f"Initializing model & extracting {self._total} {self._label}...")
+        self._render(f"Initializing model & auditing {self._total} units...")
 
-    def advance(self, target_name: str) -> None:
+    def advance(self, unit_id: str) -> None:
+        """Count the unit ``unit_id`` as done."""
         if not self._enabled:
             return
         self._completed += 1
-        self._render(f"Audited {target_name}")
+        self._render(f"Audited {_directory_of(unit_id)}")
 
     def finish(self) -> None:
         if not self._enabled:
@@ -74,6 +79,12 @@ class AuditProgressReporter:
         )
         sys.stderr.write(line)
         sys.stderr.flush()
+
+
+def _directory_of(unit_id: str) -> str:
+    """Return the directory a unit is, or sits in; the ID of a unit is its path."""
+    path = Path(unit_id)
+    return str(path if path.is_dir() else path.parent)
 
 
 def _badge(judgment: str) -> str:
@@ -108,15 +119,16 @@ def _sort_key(finding: AuditFinding) -> tuple:
 
 
 def format_audit_report(
-    examined_targets: Sequence[str],
     findings: Sequence[AuditFinding],
-    target_label: str = "files",
+    scanned_file_count: int,
+    audited_unit_count: int,
 ) -> str:
     divider = "\u2500" * 72
     lines: list[str] = []
     lines.append(
         f"\n{_ANSI.BOLD}klint Audit Report{_ANSI.RESET} "
-        f"{_ANSI.DIM}({len(examined_targets)} {target_label} scanned){_ANSI.RESET}"
+        f"{_ANSI.DIM}({scanned_file_count} files scanned, "
+        f"{audited_unit_count} units audited){_ANSI.RESET}"
     )
     lines.append(divider)
 
@@ -160,7 +172,8 @@ def format_audit_report(
     summary_color = _ANSI.RED if fail_count > 0 else _ANSI.GREEN
     lines.append(
         f"{_ANSI.BOLD}Summary:{_ANSI.RESET} "
-        f"{len(examined_targets)} {target_label} examined | "
+        f"{scanned_file_count} files scanned | "
+        f"{audited_unit_count} units audited | "
         f"{summary_color}{_ANSI.BOLD}{fail_count} failure(s){_ANSI.RESET} | "
         f"{len(findings)} total finding(s) displayed\n"
     )

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from src import catalog
+from src.app.audit_pipeline import AuditPipeline
 from src.app.settings import AppSettings
 from src.app.wiring import create_injector
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
@@ -14,10 +15,14 @@ from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.python.units.package import AuditablePythonPackageUnit
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.catalog.common.scanners.target_scanner import TargetScanner
+from src.cli.runner import AuditCommand, AuditCommandApp
+from src.core.auditor import Auditor
+from src.core.interfaces.judge import BaseJudge
 from src.core.registry import UnitRegistry
 from src.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
+from tests.support.fakes import JudgeOverride
 from tests.support.paths import (
     BUILT_IN_RULE_PACKS,
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
@@ -85,6 +90,18 @@ def make_settings(
         project_structure_rule_pack_override=project_structure_rule_pack_override,
         language_to_file_extensions_path=language_to_file_extensions_path,
     )
+
+
+def build_audit_command_app(
+    command: AuditCommand, judge: BaseJudge, settings: AppSettings | None = None
+) -> AuditCommandApp:
+    """Return the app of ``command``, built as the command builds it.
+
+    ``judge`` stands in for the model, and ``settings`` default to those of
+    make_settings.
+    """
+    injector = create_injector(settings or make_settings(), JudgeOverride(judge))
+    return AuditCommandApp(command, injector.get(AuditPipeline), injector.get(Auditor))
 
 
 def build_target_scanner() -> TargetScanner:

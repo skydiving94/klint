@@ -1,25 +1,72 @@
-from collections.abc import Sequence
+import asyncio
+from collections.abc import Mapping, Sequence
 from typing import Any
 
+from src.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from src.core.interfaces.judge import BaseJudge
-from src.core.models.report import AuditFinding
+from src.core.models.report import AuditFinding, AuditReport
 from src.core.models.rule import AuditRule
 from src.core.models.scale import AnswerScale
 from src.core.models.unit import AuditableUnit
+
+# The most units audited at the same time.
+_MAX_CONCURRENT_AUDITS = 8
 
 
 class Auditor:
     """Audits units and reports what the judge finds.
 
-    Asks the judge the rules that apply to each unit, and turns the answers
-    into findings.
+    Asks the judge the rules that apply to each unit, a limited number of
+    units at a time, and turns the answers into findings. A unit whose audit
+    fails is left out and the others go on.
     """
 
     def __init__(self, judge: BaseJudge, scale: AnswerScale) -> None:
         self._judge = judge
         self._scale = scale
 
-    async def audit_unit(
+    async def audit(
+        self,
+        units: Sequence[AuditableUnit],
+        language_to_rules: Mapping[str | None, Sequence[AuditRule]],
+        audit_progress_listener: BaseAuditProgressListener | None = None,
+    ) -> AuditReport:
+        """Audit each unit with the rules for its language; return the report.
+
+        The report holds the units audited without error, and their findings,
+        in the order of ``units``. The listener, when given, is told about
+        each unit as its audit ends.
+        """
+        semaphore = asyncio.Semaphore(_MAX_CONCURRENT_AUDITS)
+
+        async def audit_one(unit: AuditableUnit) -> list[AuditFinding] | None:
+            """Return the findings on ``unit``; None when its audit fails."""
+            async with semaphore:
+                try:
+                    findings = await self._audit_unit(
+                        unit, language_to_rules.get(unit.language, ())
+                    )
+                except Exception as error:
+                    # Whatever went wrong, such as the judge not answering,
+                    # only this unit is left out.
+                    if audit_progress_listener is not None:
+                        audit_progress_listener.report_unit_failed(unit.unit_id, error)
+                    return None
+            if audit_progress_listener is not None:
+                audit_progress_listener.report_unit_audited(unit.unit_id)
+            return findings
+
+        unit_findings = await asyncio.gather(*(audit_one(unit) for unit in units))
+        report = AuditReport()
+        for unit, findings in zip(units, unit_findings, strict=True):
+            if findings is None:
+                continue
+            report.record_audited_unit(unit.unit_id)
+            for finding in findings:
+                report.record(finding)
+        return report
+
+    async def _audit_unit(
         self, unit: AuditableUnit, rules: Sequence[AuditRule]
     ) -> list[AuditFinding]:
         """Ask the judge the rules that apply to one unit; none means no call."""

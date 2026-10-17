@@ -23,16 +23,16 @@ from src.core.models.unit import AuditableUnit
 class PendingAuditPortfolio:
     """Everything one audit run will go through, prepared and not yet audited.
 
-    targets are the paths the run reports on. units are what the rules will
-    be applied to: the units extracted for each target, with the units nested
-    inside them. language_to_rules holds, for each language a unit is written
-    in, the rules to ask about it; the key None is for units whose language
-    is not identified.
+    units are what the rules will be applied to: the units extracted from
+    the target, nested ones included, that at least one rule applies to.
+    language_to_rules holds, for each language a unit is written in, the
+    rules to ask about it; the key None is for units whose language is not
+    identified. scanned_file_count is the number of files the scan recorded.
     """
 
-    targets: list[Path]
     units: list[AuditableUnit]
     language_to_rules: dict[str | None, list[AuditRule]]
+    scanned_file_count: int
 
 
 class AuditPipeline:
@@ -40,8 +40,8 @@ class AuditPipeline:
 
     The target is scanned once. The units are then extracted from what the
     scan found, each file by the extractor that matches its traits. Last, the
-    rules are loaded by the same traits. No rule is applied here and no judge
-    is asked.
+    rules are loaded by the same traits, and the units that no rule applies
+    to are left out. No rule is applied here and no judge is asked.
     """
 
     def __init__(
@@ -77,11 +77,11 @@ class AuditPipeline:
         """
         match audit_mode:
             case AuditMode.FILE_CONTENTS:
-                targets, units = await self._extract_file_contents(
+                scanned_files, units = await self._extract_file_contents(
                     target, scan_progress_listener
                 )
             case AuditMode.PROJECT_STRUCTURE:
-                targets, units = await self._extract_project_structure(
+                scanned_files, units = await self._extract_project_structure(
                     target, scan_progress_listener
                 )
             case _:
@@ -90,23 +90,24 @@ class AuditPipeline:
             units, self._audit_mode_to_rule_loader[audit_mode], custom_rules_source
         )
         return PendingAuditPortfolio(
-            targets=targets, units=units, language_to_rules=language_to_rules
+            units=[
+                unit for unit in units if _is_asked_any_rule(unit, language_to_rules)
+            ],
+            language_to_rules=language_to_rules,
+            scanned_file_count=len(scanned_files),
         )
 
     async def _extract_file_contents(
         self, target: Path, scan_progress_listener: BaseScanProgressListener | None
-    ) -> tuple[list[Path], list[AuditableUnit]]:
+    ) -> tuple[list[ScannedFile], list[AuditableUnit]]:
+        """Return the files the scan recorded, and the units of each."""
         scanned_files = await asyncio.to_thread(
             self._scan_files, target, scan_progress_listener
         )
-        targets: list[Path] = []
         units: list[AuditableUnit] = []
         for scanned_file in scanned_files:
-            file_units = await self._extract_file_units(scanned_file)
-            if file_units:
-                targets.append(scanned_file.path)
-                units.extend(file_units)
-        return targets, units
+            units.extend(await self._extract_file_units(scanned_file))
+        return scanned_files, units
 
     def _scan_files(
         self, target: Path, scan_progress_listener: BaseScanProgressListener | None
@@ -143,16 +144,16 @@ class AuditPipeline:
 
     async def _extract_project_structure(
         self, target: Path, scan_progress_listener: BaseScanProgressListener | None
-    ) -> tuple[list[Path], list[AuditableUnit]]:
+    ) -> tuple[list[ScannedFile], list[AuditableUnit]]:
+        """Return the files the scan recorded, and the units of the tree."""
         scanned_target = await asyncio.to_thread(
             self._scan_project, target, scan_progress_listener
         )
         root_unit = await self._project_extractor.extract(scanned_target)
-        targets = [
-            scanned_directory.path
-            for scanned_directory in scanned_target.yield_directories()
-        ]
-        return targets, list(_yield_unit_and_nested_units(root_unit))
+        return (
+            list(scanned_target.yield_files()),
+            list(_yield_unit_and_nested_units(root_unit)),
+        )
 
     def _scan_project(
         self, target: Path, scan_progress_listener: BaseScanProgressListener | None
@@ -185,6 +186,15 @@ class AuditPipeline:
             )
             for language in languages
         }
+
+
+def _is_asked_any_rule(
+    unit: AuditableUnit, language_to_rules: Mapping[str | None, list[AuditRule]]
+) -> bool:
+    """Return True when a rule loaded for the unit's language applies to it."""
+    return any(
+        rule.is_applicable_to(unit) for rule in language_to_rules.get(unit.language, [])
+    )
 
 
 def _yield_unit_and_nested_units(unit: AuditableUnit) -> Iterator[AuditableUnit]:

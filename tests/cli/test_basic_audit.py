@@ -11,7 +11,6 @@ from unittest.mock import Mock
 import pytest
 
 from src.app.settings import AppSettings
-from src.app.wiring import create_file_audit_path
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.cli.basic_audit import FILE_AUDIT_COMMAND
 from src.cli.runner import AuditCommandApp, run_command_from_shell
@@ -21,11 +20,12 @@ from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
     MakeUnreadable,
+    build_audit_command_app,
     make_settings,
     write_json,
     write_text,
 )
-from tests.support.fakes import CountingJudge, FakeJudge, JudgeOverride, PickyJudge
+from tests.support.fakes import CountingJudge, FakeJudge, PickyJudge
 from tests.support.paths import BUILT_IN_RULE_PACKS, REACT_RULE_PACK, SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
@@ -35,10 +35,7 @@ Capture = pytest.CaptureFixture[str]
 
 
 def _file_app(judge: BaseJudge, settings: AppSettings | None = None) -> AuditCommandApp:
-    audit_path = create_file_audit_path(
-        settings or make_settings(), JudgeOverride(judge)
-    )
-    return AuditCommandApp(FILE_AUDIT_COMMAND, audit_path)
+    return build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
 
 
 def _run(app: AuditCommandApp, *argv: str | Path) -> int:
@@ -478,5 +475,19 @@ def test_terminal_report_shows_findings_and_summary(
     assert "[FAIL]" in report
     assert "hardcoded_secrets" in report
     assert "(lines 1-43)" in report
-    assert "1 files examined" in report
+    assert "1 files scanned | 1 units audited" in report
     assert "1 failure(s)" in report
+
+
+def test_terminal_report_counts_the_files_scanned_and_the_units_audited(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    write_text(tmp_path / "pkg" / "b.py", "y = 2\n")
+    # Scanned, but a binary file gives no unit to audit.
+    (tmp_path / "blob.dat").write_bytes(b"\x00\x01")
+
+    _run(_file_app(fake_judge()), tmp_path)
+
+    report = capsys.readouterr().out
+    assert "(3 files scanned, 2 units audited)" in report
