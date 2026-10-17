@@ -30,8 +30,12 @@ EXAMPLE_FILE = "examples/backend_data_and_security.py"
 Capture = pytest.CaptureFixture[str]
 
 
-def _project_app(judge: BaseJudge) -> AuditCommandApp:
-    audit_path = create_project_audit_path(make_settings(), JudgeOverride(judge))
+def _project_app(
+    judge: BaseJudge, settings: AppSettings | None = None
+) -> AuditCommandApp:
+    audit_path = create_project_audit_path(
+        settings or make_settings(), JudgeOverride(judge)
+    )
     return AuditCommandApp(PROJECT_AUDIT_COMMAND, audit_path)
 
 
@@ -198,6 +202,22 @@ def test_python_project_rules_are_asked_only_about_directories_holding_python(
     assert len(judge.calls) == 2
 
 
+def test_project_rules_path_variable_replaces_every_built_in_pack(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    override = write_json(tmp_path / "rules.json", {"only_rule": DIR_RULE})
+    repo = tmp_path / "repo"
+    write_text(repo / "app" / "main.py", "x = 1\n")
+    write_text(repo / "docs" / "intro.md", "# Intro\n")
+    judge = fake_judge()
+    settings = make_settings(project_structure_rule_pack_override=override)
+
+    _run(_project_app(judge, settings), repo, "--json")
+
+    # Every directory is asked, whatever language it is described in.
+    assert judge.asked_rule_ids() == [["only_rule"]] * 3
+
+
 def test_custom_rule_can_target_the_files_inside_a_directory(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
@@ -275,18 +295,4 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
         "[klint-project] Error: Language-to-file-extensions file"
     )
     assert str(broken) in captured.err
-    assert captured.err.count("\n") == 1
-
-
-def test_missing_project_rule_packs_stop_the_command_with_one_line(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Capture
-) -> None:
-    settings = make_settings(project_rules_paths=())
-
-    exit_code = _run_main(monkeypatch, settings, tmp_path)
-
-    captured = capsys.readouterr()
-    assert exit_code == 1
-    assert captured.err.startswith("[klint-project] Error: ")
-    assert "KEV_DEFAULT_PROJECT_RULES_PATH" in captured.err
     assert captured.err.count("\n") == 1

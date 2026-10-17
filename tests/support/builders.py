@@ -19,9 +19,9 @@ from src.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
 from tests.support.paths import (
+    BUILT_IN_RULE_PACKS,
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
-    DEFAULT_PROJECT_RULES,
-    DEFAULT_RULE_PACKS,
+    FALLBACK_RULE_PACKS,
 )
 
 RuleSpec = dict[str, Any]
@@ -68,17 +68,21 @@ def write_text(path: Path, text: str) -> Path:
 
 
 def make_settings(
-    rules_paths: Sequence[Path] = DEFAULT_RULE_PACKS,
-    project_rules_paths: Sequence[Path] = (DEFAULT_PROJECT_RULES,),
+    built_in_rule_packs: Sequence[Path] = BUILT_IN_RULE_PACKS,
+    fallback_rule_packs: Sequence[Path] = FALLBACK_RULE_PACKS,
+    file_contents_rule_pack_override: Path | None = None,
+    project_structure_rule_pack_override: Path | None = None,
     kev_mode: str = "remote",
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
     """Return settings that point at the given rule packs and data files."""
     return AppSettings(
         model_name="fake",
-        default_rules_paths=tuple(rules_paths),
         kev_mode=kev_mode,
-        default_project_rules_paths=tuple(project_rules_paths),
+        built_in_rule_packs=tuple(built_in_rule_packs),
+        fallback_rule_packs=tuple(fallback_rule_packs),
+        file_contents_rule_pack_override=file_contents_rule_pack_override,
+        project_structure_rule_pack_override=project_structure_rule_pack_override,
         language_to_file_extensions_path=language_to_file_extensions_path,
     )
 

@@ -7,13 +7,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_DIR = REPO_ROOT / "tests" / "snapshots"
 RULE_PACKS = REPO_ROOT / "src" / "resources" / "catalog" / "code"
 REACT_RULE_PACK = RULE_PACKS / "typescript" / "react.json"
-# The built-in file-audit packs, in the order klint loads them.
-DEFAULT_RULE_PACKS = (
+PYTHON_PROJECT_RULE_PACK = RULE_PACKS / "python" / "project_structure.json"
+# The built-in packs, in the order klint merges them.
+BUILT_IN_RULE_PACKS = (
     RULE_PACKS / "common" / "backend.json",
     REACT_RULE_PACK,
     RULE_PACKS / "common" / "structure.json",
+    PYTHON_PROJECT_RULE_PACK,
 )
-DEFAULT_PROJECT_RULES = RULE_PACKS / "python" / "project_structure.json"
+# The built-in packs for a file whose language is not identified.
+FALLBACK_RULE_PACKS = (
+    RULE_PACKS / "common" / "backend.json",
+    RULE_PACKS / "common" / "structure.json",
+)
 # The built-in list of programming languages and their file extensions.
 DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS = (
     RULE_PACKS / "common" / "language_to_file_extensions.json"

@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from tests.support.fakes import FakeJudge
-from tests.support.paths import DEFAULT_PROJECT_RULES, DEFAULT_RULE_PACKS
+from tests.support.paths import BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS
 
 
 def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
@@ -29,6 +29,6 @@ def test_no_model_runtime_is_loaded() -> None:
     assert "kev" not in sys.modules
 
 
-def test_default_rule_packs_exist() -> None:
-    assert all(pack.is_file() for pack in DEFAULT_RULE_PACKS)
-    assert DEFAULT_PROJECT_RULES.is_file()
+def test_built_in_rule_packs_exist() -> None:
+    assert all(pack.is_file() for pack in BUILT_IN_RULE_PACKS)
+    assert set(FALLBACK_RULE_PACKS) <= set(BUILT_IN_RULE_PACKS)

@@ -26,11 +26,14 @@ class AuditListener(Protocol):
 
 @dataclass(frozen=True)
 class AuditPlan:
-    """A validated request: what is reported on, what is audited, and the rules."""
+    """A validated request: what is reported on, what is audited, and the rules.
+
+    language_to_rules holds the rules to ask about the units of each language.
+    """
 
     targets: list[Path]
     units: list[AuditableUnit]
-    rules: list[AuditRule]
+    language_to_rules: dict[str | None, list[AuditRule]]
 
 
 @dataclass(frozen=True)
@@ -71,13 +74,15 @@ class AuditPath:
         The listener, when given, is told about each directory as it is scanned.
         """
         pending_audit_portfolio = await self._audit_pipeline.prepare_audit(
-            target, self._audit_mode, scan_progress_listener
+            target,
+            self._audit_mode,
+            custom_rules_source=rules_source,
+            scan_progress_listener=scan_progress_listener,
         )
-        rules = await self._auditor.load_rules(rules_source)
         return AuditPlan(
             targets=pending_audit_portfolio.targets,
             units=pending_audit_portfolio.units,
-            rules=rules,
+            language_to_rules=pending_audit_portfolio.language_to_rules,
         )
 
     async def run(
@@ -97,7 +102,8 @@ class AuditPath:
             async with semaphore:
                 try:
                     report = AuditReport()
-                    for finding in await self._auditor.audit_unit(unit, plan.rules):
+                    rules = plan.language_to_rules.get(unit.language, [])
+                    for finding in await self._auditor.audit_unit(unit, rules):
                         report.record(finding)
                     return report.get_findings(fails_only, min_confidence)
                 except Exception as error:

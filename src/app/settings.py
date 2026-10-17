@@ -11,17 +11,26 @@ from src.core.klint_warning import KlintWarning
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
 _DEFAULT_KEV_MODE = "local"
-# Built-in rule packs, relative to src/resources/catalog/ and loaded in this order.
+# Built-in rule packs, relative to src/resources/catalog/ and merged in this
+# order. Each pack states in its header the files it loads for.
 _BUILT_IN_RULE_PACKS = (
     "code/common/backend.json",
     "code/typescript/react.json",
     "code/common/structure.json",
+    "code/python/project_structure.json",
 )
-_BUILT_IN_PROJECT_RULE_PACKS = ("code/python/project_structure.json",)
+# The packs a file whose language is not identified is asked, unless the
+# config file names its own.
+_BUILT_IN_FALLBACK_RULE_PACKS = (
+    "code/common/backend.json",
+    "code/common/structure.json",
+)
 # The built-in list of languages and their file extensions, relative to
 # src/resources/catalog/.
 _BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = "code/common/language_to_file_extensions.json"
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
+# The key of a config file that replaces the built-in fallback packs.
+_FALLBACK_RULE_PACKS_KEY = "fallback_rule_packs"
 # The settings that the "env" block of a config file may set.
 _KNOWN_ENV_KEYS = frozenset(
     {
@@ -48,12 +57,11 @@ def find_project_config(start_path: Path | None = None) -> Path | None:
     return None
 
 
-def _load_env_block(config_path: Path | None) -> dict[str, str]:
-    """Return the settings in the "env" block of the config file.
+def _read_config(config_path: Path | None) -> dict[str, object]:
+    """Return the content of the config file; empty when there is none.
 
     Raises ValueError naming the file when it cannot be read as a JSON
-    object. A block or key that cannot be used is left out and reported as
-    a KlintWarning.
+    object.
     """
     if config_path is None or not config_path.is_file():
         return {}
@@ -63,8 +71,16 @@ def _load_env_block(config_path: Path | None) -> dict[str, str]:
         raise ValueError(f"'{config_path}' is not valid JSON: {error}") from error
     if not isinstance(raw, dict):
         raise ValueError(f"'{config_path}' must be a JSON object")
+    return raw
 
-    env_block = raw.get("env", {})
+
+def _load_env_block(config: dict[str, object], config_path: Path) -> dict[str, str]:
+    """Return the settings in the "env" block of the config file.
+
+    A block or key that cannot be used is left out and reported as a
+    KlintWarning.
+    """
+    env_block = config.get("env", {})
     if not isinstance(env_block, dict):
         warnings.warn(
             f"The 'env' block in '{config_path}' is ignored: it must be a JSON object",
@@ -85,6 +101,43 @@ def _load_env_block(config_path: Path | None) -> dict[str, str]:
         for key, value in env_block.items()
         if key in _KNOWN_ENV_KEYS and value is not None
     }
+
+
+def _load_fallback_rule_packs(
+    config: dict[str, object], config_path: Path
+) -> tuple[Path, ...] | None:
+    """Return the fallback packs the config file names; None when it names none.
+
+    A relative path is taken from the folder of the config file. A value
+    that is not a list of paths is ignored, and a path to no file is left
+    out; each is reported as a KlintWarning.
+    """
+    if _FALLBACK_RULE_PACKS_KEY not in config:
+        return None
+    raw_paths = config[_FALLBACK_RULE_PACKS_KEY]
+    if not isinstance(raw_paths, list) or not all(
+        isinstance(raw_path, str) for raw_path in raw_paths
+    ):
+        warnings.warn(
+            f"The '{_FALLBACK_RULE_PACKS_KEY}' key in '{config_path}' is ignored: "
+            "it must be a list of paths",
+            KlintWarning,
+            stacklevel=2,
+        )
+        return None
+    fallback_rule_packs: list[Path] = []
+    for raw_path in raw_paths:
+        path = (config_path.parent / raw_path).resolve()
+        if path.is_file():
+            fallback_rule_packs.append(path)
+        else:
+            warnings.warn(
+                f"The '{_FALLBACK_RULE_PACKS_KEY}' key in '{config_path}' names "
+                f"'{raw_path}', which is not a file; it is left out",
+                KlintWarning,
+                stacklevel=2,
+            )
+    return tuple(fallback_rule_packs)
 
 
 def _load_klint_dotenv(dotenv_path: Path | None = None) -> None:
@@ -116,6 +169,14 @@ def _built_in_packs(relative_paths: Sequence[str]) -> tuple[Path, ...]:
     return tuple(_locate_built_in_resource(relative) for relative in relative_paths)
 
 
+def _locate_built_in_rule_packs() -> tuple[Path, ...]:
+    return _built_in_packs(_BUILT_IN_RULE_PACKS)
+
+
+def _locate_built_in_fallback_rule_packs() -> tuple[Path, ...]:
+    return _built_in_packs(_BUILT_IN_FALLBACK_RULE_PACKS)
+
+
 def _locate_built_in_language_to_file_extensions() -> Path:
     """Locate the built-in list of languages and their file extensions."""
     return _locate_built_in_resource(_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS)
@@ -131,11 +192,21 @@ def _resolve_resource_path(raw_path: str | Path) -> Path:
 @dataclass(frozen=True)
 class AppSettings:
     model_name: str
-    default_rules_paths: tuple[Path, ...]
     kev_mode: str = _DEFAULT_KEV_MODE
     kev_base_url: str = "http://127.0.0.1:8009"
     kev_api_key: str | None = None
-    default_project_rules_paths: tuple[Path, ...] = ()
+    # The packs chosen by the traits of each file, and the packs a file whose
+    # language is not identified is asked instead.
+    built_in_rule_packs: tuple[Path, ...] = field(
+        default_factory=_locate_built_in_rule_packs
+    )
+    fallback_rule_packs: tuple[Path, ...] = field(
+        default_factory=_locate_built_in_fallback_rule_packs
+    )
+    # A file that replaces every built-in pack for one command, klint or
+    # klint-project; its rules are then asked about every file.
+    file_contents_rule_pack_override: Path | None = None
+    project_structure_rule_pack_override: Path | None = None
     discovered_config_path: Path | None = None
     # The file that lists each language's file extensions.
     language_to_file_extensions_path: Path = field(
@@ -157,7 +228,12 @@ class AppSettings:
 
         # 3. Check explicit --rules config file or auto-discovered klint.json
         active_config = config_path or find_project_config(target_path)
-        json_env = _load_env_block(active_config)
+        config = _read_config(active_config)
+        json_env: dict[str, str] = {}
+        fallback_rule_packs: tuple[Path, ...] | None = None
+        if active_config is not None:
+            json_env = _load_env_block(config, active_config)
+            fallback_rule_packs = _load_fallback_rule_packs(config, active_config)
 
         def _get_setting(key: str, default: str | None = None) -> str | None:
             # Priority: Shell Export > Project klint.json "env" > klint .env > Default
@@ -168,7 +244,8 @@ class AppSettings:
             return os.environ.get(key) or default
 
         model_name = _get_setting("KEV_MODEL_NAME", _DEFAULT_MODEL_NAME)
-        # When set, each variable names one file that replaces the built-in packs.
+        # When set, each variable names one file that replaces the built-in
+        # packs for its command.
         rules_override = _get_setting("KEV_DEFAULT_RULES_PATH")
         project_rules_override = _get_setting("KEV_DEFAULT_PROJECT_RULES_PATH")
         kev_mode = (
@@ -183,18 +260,21 @@ class AppSettings:
         assert model_name is not None
         return cls(
             model_name=model_name,
-            default_rules_paths=(
-                (_resolve_resource_path(rules_override),)
-                if rules_override
-                else _built_in_packs(_BUILT_IN_RULE_PACKS)
-            ),
             kev_mode=kev_mode,
             kev_base_url=kev_base_url,
             kev_api_key=kev_api_key,
-            default_project_rules_paths=(
-                (_resolve_resource_path(project_rules_override),)
+            fallback_rule_packs=(
+                _locate_built_in_fallback_rule_packs()
+                if fallback_rule_packs is None
+                else fallback_rule_packs
+            ),
+            file_contents_rule_pack_override=(
+                _resolve_resource_path(rules_override) if rules_override else None
+            ),
+            project_structure_rule_pack_override=(
+                _resolve_resource_path(project_rules_override)
                 if project_rules_override
-                else _built_in_packs(_BUILT_IN_PROJECT_RULE_PACKS)
+                else None
             ),
             discovered_config_path=active_config,
         )

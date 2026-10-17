@@ -1,9 +1,10 @@
 """Builds klint's object graph from the settings."""
 
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import NewType
 
-from injector import Binder, Injector, Module, provider, singleton
+from injector import Binder, Injector, Module, multiprovider, provider, singleton
 
 from src import catalog
 from src.app.audit_mode import AuditMode
@@ -31,6 +32,7 @@ from src.catalog.common.scanners.target_scanner import TargetScanner
 from src.core.auditor import Auditor
 from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.judge import BaseJudge
+from src.core.interfaces.rule_loader import BaseRuleLoader
 from src.core.models.scale import AnswerScale
 from src.core.registry import UnitRegistry
 from src.infra.language_to_file_extensions_loader.json_loader import (
@@ -39,9 +41,7 @@ from src.infra.language_to_file_extensions_loader.json_loader import (
 from src.infra.rule_loader.json_loader import JsonRuleLoader
 from src.infra.system_one.remote import RemoteSystemOneJudge
 
-# One auditor and one use case per kind of audit, told apart by these keys.
-FileAuditor = NewType("FileAuditor", Auditor)
-ProjectAuditor = NewType("ProjectAuditor", Auditor)
+# One use case per kind of audit, told apart by these keys.
 FileAuditPath = NewType("FileAuditPath", AuditPath)
 ProjectAuditPath = NewType("ProjectAuditPath", AuditPath)
 # The language each file extension stands for, loaded once per injector.
@@ -125,11 +125,49 @@ class KlintModule(Module):
         return RecursiveProjectExtractor(delegator)
 
     @singleton
+    @multiprovider
+    def provide_audit_mode_to_rule_loader(
+        self,
+        settings: AppSettings,
+        registry: UnitRegistry,
+        file_extension_to_language: FileExtensionToLanguage,
+    ) -> dict[AuditMode, BaseRuleLoader]:
+        known_languages = set(file_extension_to_language.values())
+        built_in_rule_loader = JsonRuleLoader(
+            settings.built_in_rule_packs,
+            settings.fallback_rule_packs,
+            registry,
+            known_languages,
+        )
+
+        def choose_rule_loader(rule_pack_override: Path | None) -> BaseRuleLoader:
+            if rule_pack_override is None:
+                return built_in_rule_loader
+            # The file replaces every built-in pack, the fallback ones too, so
+            # its rules are asked about every file.
+            return JsonRuleLoader(
+                (rule_pack_override,),
+                (rule_pack_override,),
+                registry,
+                known_languages,
+            )
+
+        return {
+            AuditMode.FILE_CONTENTS: choose_rule_loader(
+                settings.file_contents_rule_pack_override
+            ),
+            AuditMode.PROJECT_STRUCTURE: choose_rule_loader(
+                settings.project_structure_rule_pack_override
+            ),
+        }
+
+    @singleton
     @provider
     def provide_audit_pipeline(
         self,
         target_scanner: TargetScanner,
         project_extractor: RecursiveProjectExtractor,
+        audit_mode_to_rule_loader: dict[AuditMode, BaseRuleLoader],
     ) -> AuditPipeline:
         return AuditPipeline(
             target_scanner=target_scanner,
@@ -138,61 +176,18 @@ class KlintModule(Module):
             language_to_unit_extractor={},
             language_neutral_unit_extractor=WholeFileExtractor(),
             project_extractor=project_extractor,
+            audit_mode_to_rule_loader=audit_mode_to_rule_loader,
         )
 
     @singleton
     @provider
-    def provide_file_auditor(
-        self,
-        settings: AppSettings,
-        judge: BaseJudge,
-        registry: UnitRegistry,
-        scale: AnswerScale,
-        file_extension_to_language: FileExtensionToLanguage,
-    ) -> FileAuditor:
-        return FileAuditor(
-            Auditor(
-                judge=judge,
-                rule_loader=JsonRuleLoader(
-                    settings.default_rules_paths,
-                    registry,
-                    known_languages=set(file_extension_to_language.values()),
-                ),
-                scale=scale,
-            )
-        )
-
-    @singleton
-    @provider
-    def provide_project_auditor(
-        self,
-        settings: AppSettings,
-        judge: BaseJudge,
-        registry: UnitRegistry,
-        scale: AnswerScale,
-        file_extension_to_language: FileExtensionToLanguage,
-    ) -> ProjectAuditor:
-        if not settings.default_project_rules_paths:
-            raise OSError(
-                "KEV_DEFAULT_PROJECT_RULES_PATH must be set to use the project "
-                "structure audit CLI (src/cli/project_audit.py)."
-            )
-        return ProjectAuditor(
-            Auditor(
-                judge=judge,
-                rule_loader=JsonRuleLoader(
-                    settings.default_project_rules_paths,
-                    registry,
-                    known_languages=set(file_extension_to_language.values()),
-                ),
-                scale=scale,
-            )
-        )
+    def provide_auditor(self, judge: BaseJudge, scale: AnswerScale) -> Auditor:
+        return Auditor(judge=judge, scale=scale)
 
     @singleton
     @provider
     def provide_file_audit_path(
-        self, auditor: FileAuditor, audit_pipeline: AuditPipeline
+        self, auditor: Auditor, audit_pipeline: AuditPipeline
     ) -> FileAuditPath:
         return FileAuditPath(
             AuditPath(auditor, audit_pipeline, AuditMode.FILE_CONTENTS)
@@ -201,7 +196,7 @@ class KlintModule(Module):
     @singleton
     @provider
     def provide_project_audit_path(
-        self, auditor: ProjectAuditor, audit_pipeline: AuditPipeline
+        self, auditor: Auditor, audit_pipeline: AuditPipeline
     ) -> ProjectAuditPath:
         return ProjectAuditPath(
             AuditPath(auditor, audit_pipeline, AuditMode.PROJECT_STRUCTURE)

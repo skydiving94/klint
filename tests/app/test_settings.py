@@ -6,11 +6,12 @@ import pytest
 
 from src.app.settings import AppSettings
 from src.core.klint_warning import KlintWarning
-from tests.support.builders import write_json
+from tests.support.builders import write_json, write_text
 from tests.support.paths import (
+    BUILT_IN_RULE_PACKS,
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
-    DEFAULT_PROJECT_RULES,
-    DEFAULT_RULE_PACKS,
+    FALLBACK_RULE_PACKS,
+    PYTHON_PROJECT_RULE_PACK,
 )
 
 
@@ -35,11 +36,13 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
 
     assert settings == AppSettings(
         model_name="jaredpalmer/kev-4b",
-        default_rules_paths=DEFAULT_RULE_PACKS,
         kev_mode="local",
         kev_base_url="http://127.0.0.1:8009",
         kev_api_key=None,
-        default_project_rules_paths=(DEFAULT_PROJECT_RULES,),
+        built_in_rule_packs=BUILT_IN_RULE_PACKS,
+        fallback_rule_packs=FALLBACK_RULE_PACKS,
+        file_contents_rule_pack_override=None,
+        project_structure_rule_pack_override=None,
         discovered_config_path=None,
         language_to_file_extensions_path=DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     )
@@ -176,11 +179,11 @@ def test_every_known_env_key_is_applied_without_a_warning(tmp_path: Path) -> Non
     assert settings.kev_mode == "remote"
     assert settings.kev_base_url == "http://judge:1"
     assert settings.kev_api_key == "a-key"
-    assert settings.default_rules_paths == (pack,)
-    assert settings.default_project_rules_paths == (pack,)
+    assert settings.file_contents_rule_pack_override == pack
+    assert settings.project_structure_rule_pack_override == pack
 
 
-def test_rules_path_variable_replaces_every_built_in_pack(
+def test_rules_path_variables_name_the_pack_that_replaces_the_built_in_ones(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
     file_pack = write_json(tmp_path / "file_rules.json", {})
@@ -190,8 +193,11 @@ def test_rules_path_variable_replaces_every_built_in_pack(
 
     settings = AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))
 
-    assert settings.default_rules_paths == (file_pack,)
-    assert settings.default_project_rules_paths == (project_pack,)
+    # Each command replaces the built-in packs with its own; see the command
+    # tests. The built-in packs stay as they are for the other command.
+    assert settings.file_contents_rule_pack_override == file_pack
+    assert settings.project_structure_rule_pack_override == project_pack
+    assert settings.built_in_rule_packs == BUILT_IN_RULE_PACKS
 
 
 def test_relative_rules_path_resolves_against_the_klint_repo(
@@ -202,4 +208,52 @@ def test_relative_rules_path_resolves_against_the_klint_repo(
 
     settings = AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))
 
-    assert settings.default_rules_paths == (DEFAULT_PROJECT_RULES,)
+    assert settings.file_contents_rule_pack_override == PYTHON_PROJECT_RULE_PACK
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_fallback_rule_packs_in_klint_json_replace_the_built_in_ones(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path)
+    in_project = write_text(project / "rules" / "docs.json", "{}")
+    elsewhere = write_text(tmp_path / "prose.json", "{}")
+    write_json(
+        project / "klint.json",
+        {"fallback_rule_packs": ["rules/docs.json", str(elsewhere)]},
+    )
+
+    settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
+
+    # A relative path is taken from the folder of klint.json.
+    assert settings.fallback_rule_packs == (in_project, elsewhere)
+    assert settings.built_in_rule_packs == BUILT_IN_RULE_PACKS
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_fallback_rule_packs_that_are_not_a_list_of_paths_are_ignored_with_a_warning(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path)
+    write_json(project / "klint.json", {"fallback_rule_packs": "docs.json"})
+
+    with pytest.warns(KlintWarning, match="'fallback_rule_packs' key .* is ignored"):
+        settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
+
+    assert settings.fallback_rule_packs == FALLBACK_RULE_PACKS
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_fallback_rule_pack_that_is_not_a_file_is_left_out_with_a_warning(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path)
+    kept = write_json(project / "docs.json", {})
+    write_json(
+        project / "klint.json", {"fallback_rule_packs": ["absent.json", "docs.json"]}
+    )
+
+    with pytest.warns(KlintWarning, match="names 'absent.json', which is not a file"):
+        settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
+
+    assert settings.fallback_rule_packs == (kept,)

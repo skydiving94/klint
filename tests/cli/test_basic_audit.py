@@ -26,7 +26,7 @@ from tests.support.builders import (
     write_text,
 )
 from tests.support.fakes import CountingJudge, FakeJudge, JudgeOverride, PickyJudge
-from tests.support.paths import REACT_RULE_PACK, SnapshotAsserter
+from tests.support.paths import BUILT_IN_RULE_PACKS, REACT_RULE_PACK, SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -34,8 +34,10 @@ EXAMPLE_FILE = "examples/backend_data_and_security.py"
 Capture = pytest.CaptureFixture[str]
 
 
-def _file_app(judge: BaseJudge) -> AuditCommandApp:
-    audit_path = create_file_audit_path(make_settings(), JudgeOverride(judge))
+def _file_app(judge: BaseJudge, settings: AppSettings | None = None) -> AuditCommandApp:
+    audit_path = create_file_audit_path(
+        settings or make_settings(), JudgeOverride(judge)
+    )
     return AuditCommandApp(FILE_AUDIT_COMMAND, audit_path)
 
 
@@ -94,7 +96,8 @@ def test_react_rules_are_asked_only_about_typescript_and_javascript_files(
 
     _run(_file_app(judge), "examples", "--json")
 
-    react_rule_ids = set(json.loads(REACT_RULE_PACK.read_text(encoding="utf-8")))
+    react_pack = json.loads(REACT_RULE_PACK.read_text(encoding="utf-8"))
+    react_rule_ids = set(react_pack["rules"])
     content_to_asked_rule_ids = {
         content: set(questions) for content, questions in judge.calls
     }
@@ -142,6 +145,76 @@ def test_custom_rule_is_asked_only_about_the_unit_type_and_language_it_names(
         "a.go": {"any_language"},
         "notes.txt": {"any_language"},
     }
+
+
+def test_file_of_unidentified_language_is_asked_only_the_fallback_packs(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    fallback = write_json(tmp_path / "prose.json", {"for_prose": FILE_RULE})
+    sources = tmp_path / "sources"
+    # Each file holds its own name, which tells the judge calls apart.
+    for name in ("a.py", "notes.txt"):
+        write_text(sources / name, name)
+    judge = fake_judge()
+
+    _run(_file_app(judge, make_settings(fallback_rule_packs=[fallback])), sources)
+
+    file_name_to_asked_rule_ids = {
+        content: set(questions) for content, questions in judge.calls
+    }
+    assert file_name_to_asked_rule_ids["notes.txt"] == {"for_prose"}
+    assert "for_prose" not in file_name_to_asked_rule_ids["a.py"]
+    assert "hardcoded_secrets" in file_name_to_asked_rule_ids["a.py"]
+
+
+def test_tree_of_python_files_loads_no_pack_made_for_another_language(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    # A pack for TypeScript whose rule is warned about as soon as it is read.
+    typescript_pack = write_json(
+        tmp_path / "typescript.json",
+        {
+            "applies_to": {"languages": ["typescript"]},
+            "rules": {"typo": {**FILE_RULE, "langauges": ["typescript"]}},
+        },
+    )
+    settings = make_settings(
+        built_in_rule_packs=[*BUILT_IN_RULE_PACKS, typescript_pack]
+    )
+    sources = tmp_path / "sources"
+    write_text(sources / "a.py", "x = 1\n")
+    write_text(sources / "pkg" / "b.py", "y = 2\n")
+    judge = fake_judge()
+
+    _run(_file_app(judge, settings), sources, "--json")
+
+    react_pack = json.loads(REACT_RULE_PACK.read_text(encoding="utf-8"))
+    asked_rule_ids = {
+        rule_id for rule_ids in judge.asked_rule_ids() for rule_id in rule_ids
+    }
+    assert capsys.readouterr().err == ""
+    assert asked_rule_ids.isdisjoint({"typo", *react_pack["rules"]})
+
+    write_text(sources / "c.ts", "let z = 3;\n")
+    _run(_file_app(fake_judge(), settings), sources, "--json")
+
+    assert "Rule 'typo'" in capsys.readouterr().err
+
+
+def test_rules_path_variable_replaces_every_built_in_pack(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    override = write_json(tmp_path / "rules.json", {"only_rule": FILE_RULE})
+    sources = tmp_path / "sources"
+    for name in ("a.py", "b.tsx", "notes.txt"):
+        write_text(sources / name, name)
+    judge = fake_judge()
+    settings = make_settings(file_contents_rule_pack_override=override)
+
+    _run(_file_app(judge, settings), sources, "--json")
+
+    # Whatever the language of the file, or none.
+    assert judge.asked_rule_ids() == [["only_rule"]] * 3
 
 
 def test_directory_audit_skips_ignored_and_binary_files(

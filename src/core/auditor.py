@@ -1,9 +1,7 @@
 from collections.abc import Sequence
-from pathlib import Path
 from typing import Any
 
 from src.core.interfaces.judge import BaseJudge
-from src.core.interfaces.rule_loader import BaseRuleLoader
 from src.core.models.report import AuditFinding
 from src.core.models.rule import AuditRule
 from src.core.models.scale import AnswerScale
@@ -17,20 +15,9 @@ class Auditor:
     into findings.
     """
 
-    def __init__(
-        self,
-        judge: BaseJudge,
-        rule_loader: BaseRuleLoader,
-        scale: AnswerScale,
-    ) -> None:
+    def __init__(self, judge: BaseJudge, scale: AnswerScale) -> None:
         self._judge = judge
-        self._rule_loader = rule_loader
         self._scale = scale
-
-    async def load_rules(
-        self, custom_rules_source: str | Path | None = None
-    ) -> list[AuditRule]:
-        return await self._rule_loader.load_rules(custom_rules_source)
 
     async def audit_unit(
         self, unit: AuditableUnit, rules: Sequence[AuditRule]
