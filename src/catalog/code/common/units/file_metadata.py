@@ -9,7 +9,7 @@ from src.core.models.unit import AuditableUnit
 class FileMetadataPayload:
     file_name: str = ""
     file_path: str = ""
-    line_count: int = 0
+    line_count: int | None = 0
     imports: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
     classes: list[str] = field(default_factory=list)
@@ -18,19 +18,25 @@ class FileMetadataPayload:
 
 @dataclass(frozen=True)
 class AuditableFileMetadataUnit(AuditableUnit):
-    """Auditable unit representing extracted structural metadata of a single file."""
+    """Auditable unit representing extracted structural metadata of a single file.
+
+    line_count is None for a binary file, whose content is not read: such a
+    file is described by its name only.
+    """
 
     unit_type: ClassVar[str] = "file_metadata"
 
     file_name: str = ""
     file_path: str = ""
-    line_count: int = 0
+    line_count: int | None = 0
     imports: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
     classes: list[str] = field(default_factory=list)
     functions: list[str] = field(default_factory=list)
 
     def get_content(self) -> str:
+        if self.line_count is None:
+            return f"{self.file_name} (binary)"
         details: list[str] = [f"lines={self.line_count}"]
         if self.exports:
             details.append(f"exports=[{', '.join(self.exports)}]")

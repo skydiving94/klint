@@ -66,6 +66,20 @@ def test_each_file_is_read_by_the_extractor_for_its_language(tmp_path: Path) -> 
     ]
 
 
+def test_binary_file_is_listed_by_name_only_whatever_its_language(
+    tmp_path: Path,
+) -> None:
+    # Named like Python, but its content is not text.
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "blob.py").write_bytes(b"import os\n\x00\x01\n")
+
+    (blob,) = extract_project(tmp_path / "pkg").files
+
+    assert (blob.file_name, blob.line_count, blob.language) == ("blob.py", None, None)
+    assert blob.imports == []
+    assert blob.get_content() == "blob.py (binary)"
+
+
 def test_extractor_registered_for_a_language_reads_that_languages_files(
     tmp_path: Path,
 ) -> None:

@@ -18,6 +18,7 @@ from src.catalog.code.common.extractors.language_neutral_file_metadata import (
 )
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from src.catalog.common.extractors.binary_check import is_likely_binary
 from src.core.models.scanned_tree import ScannedFile
 
 
@@ -28,7 +29,8 @@ class TraitsBasedExtractionDelegator:
     traits. A directory is described by the factory registered for the
     language that most of the files beneath it are written in. A file or
     directory with nothing registered for its language is handled in a
-    language-neutral way.
+    language-neutral way. A binary file is read by no extractor: it is
+    listed by name only.
     """
 
     def __init__(
@@ -50,7 +52,12 @@ class TraitsBasedExtractionDelegator:
     def delegate_file_extraction(
         self, scanned_file: ScannedFile
     ) -> AuditableFileMetadataUnit:
-        """Have the extractor that matches the file's traits read the file."""
+        """Have the extractor that matches the file's traits read the file.
+
+        A binary file is read only as far as the check that finds it binary.
+        """
+        if is_likely_binary(scanned_file.path):
+            return _list_binary_file(scanned_file)
         traits = scanned_file.traits
         extractor: BaseFileMetadataExtractor = self._language_neutral_extractor
         if traits.language is not None:
@@ -102,6 +109,17 @@ class TraitsBasedExtractionDelegator:
             language_to_file_count,
             key=lambda language: (-language_to_file_count[language], language),
         )
+
+
+def _list_binary_file(scanned_file: ScannedFile) -> AuditableFileMetadataUnit:
+    """Return the unit of a binary file: its name and path, with no line count.
+
+    Its content is not text, so it is given no language.
+    """
+    path = scanned_file.path
+    return AuditableFileMetadataUnit(
+        unit_id=str(path), file_name=path.name, file_path=str(path), line_count=None
+    )
 
 
 def _collect_languages_beneath(

@@ -114,6 +114,23 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     assert "locked.py" not in content
 
 
+def test_binary_file_is_listed_by_name_only(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    package = tmp_path / "pkg"
+    write_text(package / "a.py", "x = 1\n")
+    (package / "logo.dat").write_bytes(b"\x00\x01\n\x02\n")
+    judge = fake_judge()
+
+    exit_code = _run(_project_app(judge), package, "--json")
+
+    assert exit_code == 0
+    ((content, _questions),) = judge.calls
+    content_lines = content.splitlines()
+    assert "    - logo.dat (binary)" in content_lines
+    assert "    - a.py (lines=1)" in content_lines
+
+
 def test_python_project_rules_are_asked_only_about_directories_holding_python(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
