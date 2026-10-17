@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import assert_never
 
+from injector import inject
+
 from src.app.audit_mode import AuditMode
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.common.scanners.target_scanner import TargetScanner
@@ -44,13 +46,14 @@ class AuditPipeline:
     to are left out. No rule is applied here and no judge is asked.
     """
 
+    @inject
     def __init__(
         self,
         target_scanner: TargetScanner,
-        language_to_unit_extractor: Mapping[str, BaseUnitExtractor],
+        language_to_unit_extractor: dict[str, BaseUnitExtractor],
         language_neutral_unit_extractor: BaseUnitExtractor,
         project_extractor: RecursiveProjectExtractor,
-        audit_mode_to_rule_loader: Mapping[AuditMode, BaseRuleLoader],
+        audit_mode_to_rule_loader: dict[AuditMode, BaseRuleLoader],
     ) -> None:
         self._target_scanner = target_scanner
         self._language_to_unit_extractor = {

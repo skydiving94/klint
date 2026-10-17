@@ -1,4 +1,9 @@
-"""Builds klint's object graph from the settings."""
+"""Binds what klint's constructors cannot state themselves.
+
+Each class asks for what it needs with @inject. What is left here is what
+its signature cannot express: the settings, what is chosen from them, and
+which implementation stands for each language.
+"""
 
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -8,12 +13,13 @@ from injector import Binder, Injector, Module, multiprovider, provider, singleto
 
 from src import catalog
 from src.app.audit_mode import AuditMode
-from src.app.audit_pipeline import AuditPipeline
 from src.app.settings import AppSettings
 from src.catalog.code import python as python_suite
-from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
-    TraitsBasedExtractionDelegator,
+from src.catalog.code.common.extractors.directory_factory import (
+    BaseDirectoryUnitFactory,
+)
+from src.catalog.code.common.extractors.file_metadata_base import (
+    BaseFileMetadataExtractor,
 )
 from src.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from src.catalog.code.python.extractors.file_metadata import (
@@ -27,8 +33,8 @@ from src.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.catalog.common.scanners.target_scanner import TargetScanner
-from src.core.auditor import Auditor
+from src.catalog.common.scanners.target_scanner import IgnoredNames
+from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.judge import BaseJudge
 from src.core.interfaces.rule_loader import BaseRuleLoader
@@ -47,15 +53,34 @@ Override = Module | Callable[[Binder], None]
 
 
 class KlintModule(Module):
-    """Provides everything an audit needs, built from one AppSettings."""
+    """Binds everything an audit needs that one AppSettings decides."""
 
     def __init__(self, settings: AppSettings) -> None:
         self._settings = settings
 
+    def configure(self, binder: Binder) -> None:
+        binder.bind(AppSettings, to=self._settings)
+        # One answer scale for now; it is meant to vary by suite.
+        binder.bind(AnswerScale, to=PASS_FAIL_SCALE)
+        binder.bind(IgnoredNames, to=CODE_IGNORED_NAMES)
+        # What handles each language, looked up by the traits of each file. A
+        # language not listed is handled in a language-neutral way.
+        binder.multibind(dict[str, BaseUnitExtractor], to={})
+        binder.multibind(
+            dict[str, BaseFileMetadataExtractor],
+            to={python_suite.SUITE_LANGUAGE: PythonFileMetadataExtractor},
+        )
+        binder.multibind(
+            dict[str, BaseDirectoryUnitFactory],
+            to={python_suite.SUITE_LANGUAGE: PythonPackageUnitFactory},
+        )
+
     @singleton
     @provider
-    def provide_settings(self) -> AppSettings:
-        return self._settings
+    def provide_language_neutral_unit_extractor(self) -> BaseUnitExtractor:
+        # Reads a file in the file contents audit when its language has no
+        # extractor of its own: as one whole file.
+        return WholeFileExtractor()
 
     @singleton
     @provider
@@ -66,12 +91,8 @@ class KlintModule(Module):
 
     @singleton
     @provider
-    def provide_scale(self) -> AnswerScale:
-        return PASS_FAIL_SCALE
-
-    @singleton
-    @provider
     def provide_judge(self, settings: AppSettings) -> BaseJudge:
+        # A single binding, so that the remote mode never loads the model.
         if settings.kev_mode == "local":
             from src.infra.system_one.local import LocalKevJudge
 
@@ -97,28 +118,6 @@ class KlintModule(Module):
         self, file_extension_to_language: FileExtensionToLanguage
     ) -> BaseFileTraitsIdentifier:
         return ExtensionFileTraitsIdentifier(file_extension_to_language)
-
-    @singleton
-    @provider
-    def provide_target_scanner(
-        self, file_traits_identifier: BaseFileTraitsIdentifier
-    ) -> TargetScanner:
-        return TargetScanner(file_traits_identifier, CODE_IGNORED_NAMES)
-
-    @singleton
-    @provider
-    def provide_project_extractor(self) -> RecursiveProjectExtractor:
-        # What handles each language in the project audit. A language not
-        # listed here is handled in a language-neutral way.
-        delegator = TraitsBasedExtractionDelegator(
-            language_to_file_metadata_extractor={
-                python_suite.SUITE_LANGUAGE: PythonFileMetadataExtractor(),
-            },
-            language_to_directory_unit_factory={
-                python_suite.SUITE_LANGUAGE: PythonPackageUnitFactory(),
-            },
-        )
-        return RecursiveProjectExtractor(delegator)
 
     @singleton
     @multiprovider
@@ -156,29 +155,6 @@ class KlintModule(Module):
                 settings.project_structure_rule_pack_override
             ),
         }
-
-    @singleton
-    @provider
-    def provide_audit_pipeline(
-        self,
-        target_scanner: TargetScanner,
-        project_extractor: RecursiveProjectExtractor,
-        audit_mode_to_rule_loader: dict[AuditMode, BaseRuleLoader],
-    ) -> AuditPipeline:
-        return AuditPipeline(
-            target_scanner=target_scanner,
-            # What extracts the units of each language in the file contents
-            # audit. A language not listed here is read as one whole file.
-            language_to_unit_extractor={},
-            language_neutral_unit_extractor=WholeFileExtractor(),
-            project_extractor=project_extractor,
-            audit_mode_to_rule_loader=audit_mode_to_rule_loader,
-        )
-
-    @singleton
-    @provider
-    def provide_auditor(self, judge: BaseJudge, scale: AnswerScale) -> Auditor:
-        return Auditor(judge=judge, scale=scale)
 
 
 def create_injector(settings: AppSettings, *overrides: Override) -> Injector:

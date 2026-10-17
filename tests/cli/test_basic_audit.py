@@ -9,12 +9,16 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from injector import Binder
 
 from src.app.settings import AppSettings
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from src.cli.basic_audit import FILE_AUDIT_COMMAND
 from src.cli.runner import AuditCommandApp, run_command_from_shell
+from src.core.interfaces.extractor import BaseUnitExtractor
 from src.core.interfaces.judge import BaseJudge
+from src.core.models.scanned_tree import ScannedFile
+from src.core.models.unit import AuditableUnit
 from src.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import (
     DIR_RULE,
@@ -270,6 +274,40 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     assert captured.err.splitlines() == [
         f"[klint] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
+    ]
+    assert len(judge.calls) == 1
+
+
+class BrokenExtractor(BaseUnitExtractor):
+    """Fails on every file, for a reason other than reading it."""
+
+    async def extract(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
+        raise RuntimeError(f"the extractor is broken on {scanned_file.path.name}")
+
+
+def use_the_broken_extractor_for_python(binder: Binder) -> None:
+    binder.multibind(dict[str, BaseUnitExtractor], to={"python": BrokenExtractor})
+
+
+def test_file_an_extractor_fails_on_is_left_out_with_a_warning(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    write_text(tmp_path / "a.go", "package a\n")
+    broken = write_text(tmp_path / "b.py", "x = 1\n")
+    judge = fake_judge()
+    app = build_audit_command_app(
+        FILE_AUDIT_COMMAND, judge, overrides=[use_the_broken_extractor_for_python]
+    )
+
+    exit_code = _run(app, tmp_path, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    # The Go file is read by the language-neutral extractor, as before.
+    assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.go")]
+    assert captured.err.splitlines() == [
+        f"[klint] Warning: File '{broken}' is left out: "
+        "it cannot be processed (the extractor is broken on b.py)"
     ]
     assert len(judge.calls) == 1
 

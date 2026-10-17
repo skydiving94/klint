@@ -1,8 +1,10 @@
 """The one place that decides what extracts each file and directory of a project."""
 
 from collections import Counter
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterator, Sequence
 from pathlib import Path
+
+from injector import inject
 
 from src.catalog.code.common.extractors.directory_factory import (
     BaseDirectoryUnitFactory,
@@ -33,10 +35,11 @@ class TraitsBasedExtractionDelegator:
     listed by name only.
     """
 
+    @inject
     def __init__(
         self,
-        language_to_file_metadata_extractor: Mapping[str, BaseFileMetadataExtractor],
-        language_to_directory_unit_factory: Mapping[str, BaseDirectoryUnitFactory],
+        language_to_file_metadata_extractor: dict[str, BaseFileMetadataExtractor],
+        language_to_directory_unit_factory: dict[str, BaseDirectoryUnitFactory],
     ) -> None:
         self._language_to_file_metadata_extractor = {
             language.lower(): extractor

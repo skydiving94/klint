@@ -2,6 +2,8 @@ import asyncio
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from injector import inject
+
 from src.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from src.core.interfaces.judge import BaseJudge
 from src.core.models.report import AuditFinding, AuditReport
@@ -21,6 +23,7 @@ class Auditor:
     fails is left out and the others go on.
     """
 
+    @inject
     def __init__(self, judge: BaseJudge, scale: AnswerScale) -> None:
         self._judge = judge
         self._scale = scale

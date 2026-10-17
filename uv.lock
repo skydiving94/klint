@@ -1102,7 +1102,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "injector", specifier = ">=0.22" },
+    { name = "injector", specifier = ">=0.23" },
     { name = "kev", extras = ["serve"], marker = "python_full_version >= '3.12' and python_full_version < '3.14' and extra == 'local'", git = "https://github.com/jaredpalmer/kev.git" },
     { name = "torch", specifier = ">=2.2.0" },
 ]

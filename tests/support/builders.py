@@ -9,7 +9,7 @@ from typing import Any
 from src import catalog
 from src.app.audit_pipeline import AuditPipeline
 from src.app.settings import AppSettings
-from src.app.wiring import create_injector
+from src.app.wiring import Override, create_injector
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.python.units.package import AuditablePythonPackageUnit
@@ -93,14 +93,20 @@ def make_settings(
 
 
 def build_audit_command_app(
-    command: AuditCommand, judge: BaseJudge, settings: AppSettings | None = None
+    command: AuditCommand,
+    judge: BaseJudge,
+    settings: AppSettings | None = None,
+    *,
+    overrides: Sequence[Override] = (),
 ) -> AuditCommandApp:
     """Return the app of ``command``, built as the command builds it.
 
     ``judge`` stands in for the model, and ``settings`` default to those of
-    make_settings.
+    make_settings. ``overrides`` replace or add further bindings.
     """
-    injector = create_injector(settings or make_settings(), JudgeOverride(judge))
+    injector = create_injector(
+        settings or make_settings(), JudgeOverride(judge), *overrides
+    )
     return AuditCommandApp(command, injector.get(AuditPipeline), injector.get(Auditor))
 
 

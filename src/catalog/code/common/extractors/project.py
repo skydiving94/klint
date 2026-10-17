@@ -1,5 +1,7 @@
 import asyncio
 
+from injector import inject
+
 from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
@@ -19,6 +21,7 @@ class RecursiveProjectExtractor:
     out, with a warning.
     """
 
+    @inject
     def __init__(self, delegator: TraitsBasedExtractionDelegator) -> None:
         self._delegator = delegator
 

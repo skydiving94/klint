@@ -11,7 +11,8 @@ requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 dependencies = [
     "torch>=2.2.0",
-    "injector>=0.22",
+    # 0.23 is the first version whose multibinding accepts classes.
+    "injector>=0.23",
 ]
 
 # The in-process model runtime, needed only when KEV_MODE=local. Optional for
@@ -127,14 +128,6 @@ layers = [
     "src.infra",
     "src.core",
 ]
-
-[[tool.importlinter.contracts]]
-name = "Wiring: only app uses injector"
-type = "forbidden"
-source_modules = ["src.cli", "src.catalog", "src.infra", "src.core"]
-forbidden_modules = ["injector"]
-# Using what app builds is fine; importing injector directly is not.
-allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "Catalog: shared suites do not import specific ones"

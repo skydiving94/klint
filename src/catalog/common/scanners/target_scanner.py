@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from injector import inject
+
 from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from src.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from src.core.klint_warning import warn_about_unreadable_directory
@@ -33,6 +35,7 @@ class TargetScanner:
     cannot be read is left out, with a warning.
     """
 
+    @inject
     def __init__(
         self,
         file_traits_identifier: BaseFileTraitsIdentifier,
