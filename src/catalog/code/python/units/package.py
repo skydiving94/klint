@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -11,7 +12,8 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
     """A directory described as a Python package.
 
     The description covers its public API, the imports in its tree split into
-    internal and external, and cycles between its subpackages.
+    internal and external, and cycles between its subpackages. A file in its
+    tree that cannot be parsed is named, since what it holds is unknown.
     """
 
     project_module_names: tuple[str, ...] = field(default_factory=tuple)
@@ -49,6 +51,8 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
                 "MISSING (__init__.py is absent; internal modules are exposed "
                 "without a package public API)"
             )
+        if init_file.is_unparseable:
+            return "unknown (__init__.py cannot be parsed)"
         if init_file.exports:
             return f"present (__init__.py exports: [{', '.join(init_file.exports)}])"
         return (
@@ -79,6 +83,13 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
             "External / Third-Party / Stdlib Imports in Tree: "
             f"[{', '.join(external_imps) if external_imps else 'none'}]",
         ]
+        unparseable_files = list(_list_unparseable_files_beneath(self))
+        if unparseable_files:
+            lines.append(
+                "Files That Cannot Be Parsed in Tree: "
+                f"[{', '.join(unparseable_files)}] (their imports are unknown; "
+                "the import lists and cycle check here leave them out)"
+            )
         rollup = self._render_dependency_rollup(known_modules)
         if rollup:
             lines.append(rollup)
@@ -117,3 +128,19 @@ class AuditablePythonPackageUnit(AuditableDirectoryUnit):
             f"  Mutual Subpackage Cycles: {', '.join(cycles) if cycles else 'none'}"
         )
         return "\n".join(lines)
+
+
+def _list_unparseable_files_beneath(
+    directory: AuditableDirectoryUnit,
+) -> Iterator[str]:
+    """Yield each file in the tree of ``directory`` that cannot be parsed.
+
+    Each is given by its path from ``directory``, in the order the tree is
+    described.
+    """
+    for file_unit in directory.files:
+        if file_unit.is_unparseable:
+            yield file_unit.file_name
+    for subdirectory in directory.subdirectories:
+        for path in _list_unparseable_files_beneath(subdirectory):
+            yield f"{subdirectory.directory_name}/{path}"

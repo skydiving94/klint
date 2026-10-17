@@ -2,9 +2,12 @@
 
 from pathlib import Path
 
+import pytest
+
 from src.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
+from src.core.klint_warning import KlintWarning
 from src.core.models.file_traits import FileTraits
 from tests.support.builders import write_text
 
@@ -61,6 +64,7 @@ def test_python_metadata_lists_imports_exports_classes_and_functions(
     assert unit.exports == ["Public", "run"]
     assert unit.classes == ["Public"]
     assert unit.functions == ["run", "arun"]
+    assert not unit.is_unparseable
 
 
 def test_init_file_exports_the_names_it_imports(tmp_path: Path) -> None:
@@ -75,12 +79,29 @@ def test_init_file_exports_the_names_it_imports(tmp_path: Path) -> None:
     assert plain_unit.exports == []
 
 
-def test_python_metadata_survives_a_syntax_error(tmp_path: Path) -> None:
-    target = write_text(tmp_path / "broken.py", "def (:\n    pass\n")
+# Each is a way the parser gives up on a file.
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param("import json\ndef (:\n    pass\n", id="syntax_error"),
+        pytest.param("-" * 200_000 + "1\n", id="parser_stack_overflow"),
+        pytest.param("x = " + "1+" * 100_000 + "1\n", id="ast_too_deep"),
+    ],
+)
+def test_python_file_that_cannot_be_parsed_is_marked_with_a_warning(
+    tmp_path: Path, source: str
+) -> None:
+    # Such a file was described as empty, with no warning, so the judge took
+    # its empty lists for facts (issue #20). Its lists stay empty, but it is
+    # marked, so that they read as unknown.
+    target = write_text(tmp_path / "broken.py", source)
 
-    unit = PythonFileMetadataExtractor().extract_file(target, PYTHON)
+    with pytest.warns(KlintWarning, match="it cannot be parsed") as caught:
+        unit = PythonFileMetadataExtractor().extract_file(target, PYTHON)
 
-    assert unit.line_count == 2
+    assert len(caught) == 1
+    assert unit.is_unparseable
+    assert unit.line_count == len(source.splitlines())
     assert (unit.imports, unit.exports, unit.classes, unit.functions) == (
         [],
         [],

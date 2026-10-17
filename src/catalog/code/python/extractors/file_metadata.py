@@ -5,11 +5,16 @@ from src.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from src.core.klint_warning import warn_about_unparseable_file
 from src.core.models.file_traits import FileTraits
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
-    """Extracts a Python file's line count, exports, imports, classes and functions."""
+    """Extracts a Python file's line count, exports, imports, classes and functions.
+
+    A file the parser gives up on is marked unparseable, with a warning, and
+    keeps only its line count.
+    """
 
     def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
         source = path.read_text(encoding="utf-8", errors="replace")
@@ -18,9 +23,16 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
         exports: list[str] = []
         classes: list[str] = []
         functions: list[str] = []
+        is_unparseable = False
 
         try:
             tree = ast.parse(source, filename=str(path))
+        except (SyntaxError, MemoryError, RecursionError) as error:
+            # The parser reports source nested too deeply for it as a
+            # MemoryError or a RecursionError rather than a SyntaxError.
+            warn_about_unparseable_file(path, error)
+            is_unparseable = True
+        else:
             # Top-level declarations (exports, classes, functions)
             for stmt in tree.body:
                 if isinstance(stmt, ast.ImportFrom) and path.name == "__init__.py":
@@ -54,8 +66,6 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
                             sub_target = f"{module}.{alias.name}"
                             if sub_target not in imports:
                                 imports.append(sub_target)
-        except SyntaxError:
-            pass
 
         return AuditableFileMetadataUnit(
             unit_id=str(path),
@@ -67,6 +77,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
             exports=sorted(set(exports)),
             classes=classes,
             functions=functions,
+            is_unparseable=is_unparseable,
         )
 
     def _extract_dunder_all(self, node: ast.Assign) -> list[str]:

@@ -14,6 +14,7 @@ class FileMetadataPayload:
     exports: list[str] = field(default_factory=list)
     classes: list[str] = field(default_factory=list)
     functions: list[str] = field(default_factory=list)
+    is_unparseable: bool = False
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,9 @@ class AuditableFileMetadataUnit(AuditableUnit):
     """Auditable unit representing extracted structural metadata of a single file.
 
     line_count is None for a binary file, whose content is not read: such a
-    file is described by its name only.
+    file is described by its name only. is_unparseable is True for a file the
+    parser gave up on: its imports, exports, classes and functions are
+    unknown, not empty, and it is described by its name and line count.
     """
 
     unit_type: ClassVar[str] = "file_metadata"
@@ -33,11 +36,14 @@ class AuditableFileMetadataUnit(AuditableUnit):
     exports: list[str] = field(default_factory=list)
     classes: list[str] = field(default_factory=list)
     functions: list[str] = field(default_factory=list)
+    is_unparseable: bool = False
 
     def get_content(self) -> str:
         if self.line_count is None:
             return f"{self.file_name} (binary)"
         details: list[str] = [f"lines={self.line_count}"]
+        if self.is_unparseable:
+            details.append("cannot be parsed")
         if self.exports:
             details.append(f"exports=[{', '.join(self.exports)}]")
         if self.imports:
@@ -60,5 +66,6 @@ class AuditableFileMetadataUnit(AuditableUnit):
             exports=list(self.exports),
             classes=list(self.classes),
             functions=list(self.functions),
+            is_unparseable=self.is_unparseable,
         )
         return asdict(payload)

@@ -7,11 +7,20 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from injector import Binder
 
 from src.app.settings import AppSettings
+from src.catalog.code.common.extractors.file_metadata_base import (
+    BaseFileMetadataExtractor,
+)
+from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from src.catalog.code.python.extractors.file_metadata import (
+    PythonFileMetadataExtractor,
+)
 from src.cli.project_audit import PROJECT_AUDIT_COMMAND
 from src.cli.runner import AuditCommandApp, run_command_from_shell
 from src.core.interfaces.judge import BaseJudge
+from src.core.models.file_traits import FileTraits
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -118,28 +127,46 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     assert "locked.py" not in content
 
 
+class PythonExtractorBrokenOnB(PythonFileMetadataExtractor):
+    """Fails on b.py, for a reason other than reading it; reads the rest as usual."""
+
+    def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
+        if path.name == "b.py":
+            raise RuntimeError("the extractor is broken on b.py")
+        return super().extract_file(path, traits)
+
+
+def use_the_extractor_broken_on_b_for_python(binder: Binder) -> None:
+    binder.multibind(
+        dict[str, BaseFileMetadataExtractor], to={"python": PythonExtractorBrokenOnB}
+    )
+
+
 def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
     package = tmp_path / "pkg"
     write_text(package / "a.py", "x = 1\n")
-    # Nested too deeply for the Python parser, which gives up on the file.
-    too_deep = write_text(package / "too_deep.py", "-" * 200_000 + "1\n")
+    broken = write_text(package / "b.py", "y = 2\n")
     judge = fake_judge()
+    app = build_audit_command_app(
+        PROJECT_AUDIT_COMMAND,
+        judge,
+        overrides=[use_the_extractor_broken_on_b_for_python],
+    )
 
-    exit_code = _run(_project_app(judge), package, "--json")
+    exit_code = _run(app, package, "--json")
 
     captured = capsys.readouterr()
     assert exit_code == 0
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
-    (warning_line,) = captured.err.splitlines()
-    assert warning_line.startswith(
-        f"[klint-project] Warning: File '{too_deep}' is left out: "
-        "it cannot be processed ("
-    )
+    assert captured.err.splitlines() == [
+        f"[klint-project] Warning: File '{broken}' is left out: "
+        "it cannot be processed (the extractor is broken on b.py)"
+    ]
     ((content, _questions),) = judge.calls
     assert "a.py" in content
-    assert "too_deep.py" not in content
+    assert "b.py" not in content
 
 
 def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
@@ -181,6 +208,62 @@ def test_binary_file_is_listed_by_name_only(
     content_lines = content.splitlines()
     assert "    - logo.dat (binary)" in content_lines
     assert "    - a.py (lines=1)" in content_lines
+
+
+def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    package = tmp_path / "pkg"
+    init_file = write_text(package / "__init__.py", '__all__ = ["Order"\n')
+    write_text(package / "orders.py", "import json\n\n\nclass Order:\n    pass\n")
+    judge = fake_judge()
+
+    exit_code = _run(_project_app(judge), package, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_directories"] == [str(package)]
+    assert captured.err.splitlines() == [
+        f"[klint-project] Warning: File '{init_file}' is listed by name and line "
+        "count only: it cannot be parsed ('[' was never closed, line 1)"
+    ]
+    # The judge is told the file could not be parsed, not that it is empty.
+    ((content, _questions),) = judge.calls
+    content_lines = content.splitlines()
+    assert "    - __init__.py (lines=1; cannot be parsed)" in content_lines
+    assert "    - orders.py (lines=5; imports=[json]; classes=[Order])" in content_lines
+
+
+def test_package_description_marks_what_unparseable_files_leave_unknown(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    package = tmp_path / "pkg"
+    write_text(package / "__init__.py", '__all__ = ["Order"\n')
+    write_text(package / "orders.py", "import json\n")
+    write_text(package / "sub" / "__init__.py", "")
+    write_text(package / "sub" / "b.py", "def (:\n")
+    judge = fake_judge()
+
+    exit_code = _run(_project_app(judge), package, "--json")
+
+    capsys.readouterr()
+    assert exit_code == 0
+    (root_content,) = [
+        content
+        for content, _questions in judge.calls
+        if content.startswith(f"Target Directory Under Audit: {package} ")
+    ]
+    content_lines = root_content.splitlines()
+    # The public API cannot be told from an __init__.py that cannot be parsed.
+    assert "Package Public API Status: unknown (__init__.py cannot be parsed)" in (
+        content_lines
+    )
+    # Every such file in the tree is named, so that the import lists and the
+    # cycle check are not taken as complete.
+    assert (
+        "Files That Cannot Be Parsed in Tree: [__init__.py, sub/b.py] (their "
+        "imports are unknown; the import lists and cycle check here leave them out)"
+    ) in content_lines
 
 
 def test_python_project_rules_are_asked_only_about_directories_holding_python(

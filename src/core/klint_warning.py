@@ -25,6 +25,17 @@ def warn_about_unprocessable_file(path: Path, error: Exception) -> None:
     _warn(f"File '{path}' is left out: it cannot be processed ({_reason(error)})")
 
 
+def warn_about_unparseable_file(path: Path, error: Exception) -> None:
+    """Warn that the file at ``path`` is described by its name and line count only.
+
+    The parser gave up on it, so what it declares and imports is unknown.
+    """
+    _warn(
+        f"File '{path}' is listed by name and line count only: "
+        f"it cannot be parsed ({_reason(error)})"
+    )
+
+
 @contextmanager
 def leave_out_file_on_failure(path: Path) -> Iterator[None]:
     """Turn a failure to extract the file at ``path`` into a warning.
@@ -50,4 +61,7 @@ def _reason(error: Exception) -> str:
     """Return why ``error`` happened, in the words a user reads."""
     if isinstance(error, OSError) and error.strerror:
         return error.strerror
+    if isinstance(error, SyntaxError) and error.msg:
+        # Leaves out the file name, which the warning gives in full.
+        return f"{error.msg}, line {error.lineno}" if error.lineno else error.msg
     return str(error) or type(error).__name__
