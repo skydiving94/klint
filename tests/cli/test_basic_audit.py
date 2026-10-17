@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
     make_settings,
+    make_unreadable,
     write_json,
     write_text,
 )
@@ -146,7 +148,7 @@ def test_directory_audit_skips_ignored_and_binary_files(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
     (tmp_path / "node_modules").mkdir()
-    for name in ("b.tsx", "a.py", "logo.png", ".env", "node_modules/dep.js"):
+    for name in ("b.tsx", "a.py", "logo.png", ".env", ".git", "node_modules/dep.js"):
         (tmp_path / name).write_text("x\n", encoding="utf-8")
     (tmp_path / "blob.dat").write_bytes(b"\x00\x01")
     judge = fake_judge()
@@ -156,6 +158,39 @@ def test_directory_audit_skips_ignored_and_binary_files(
     examined = _json_output(capsys)["examined_files"]
     assert examined == [str(tmp_path / "a.py"), str(tmp_path / "b.tsx")]
     assert len(judge.calls) == 2
+
+
+def test_file_that_cannot_be_read_is_left_out_with_a_warning(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    locked = make_unreadable(write_text(tmp_path / "locked.py", "y = 2\n"))
+    judge = fake_judge()
+
+    exit_code = _run(_file_app(judge), tmp_path, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
+    assert captured.err.splitlines() == [
+        f"[klint] Warning: File '{locked}' is left out: "
+        "it cannot be read (Permission denied)"
+    ]
+    assert len(judge.calls) == 1
+
+
+def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    named_pipe = tmp_path / "pipe"
+    os.mkfifo(named_pipe)
+    judge = fake_judge()
+
+    exit_code = _run(_file_app(judge), named_pipe, "--json")
+
+    assert exit_code == 0
+    assert _json_output(capsys) == {"examined_files": [], "issues": []}
+    assert judge.calls == []
 
 
 def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(

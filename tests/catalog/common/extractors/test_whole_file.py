@@ -6,13 +6,16 @@ from pathlib import Path
 import pytest
 
 from src.catalog.common.extractors.whole_file import WholeFileExtractor
-from src.catalog.common.file_traits_identifiers.extension_identifier import (
-    ExtensionFileTraitsIdentifier,
-)
 from src.catalog.common.units.file import AuditableFileUnit
+from src.core.models.file_traits import FileTraits
+from src.core.models.scanned_tree import ScannedFile
+from src.core.models.unit import AuditableUnit
 from tests.support.builders import write_text
 
-EXTRACTOR = WholeFileExtractor(ExtensionFileTraitsIdentifier({".py": "python"}))
+
+def _extract(path: Path, language: str | None = None) -> list[AuditableUnit]:
+    scanned_file = ScannedFile(path=path, traits=FileTraits(language=language))
+    return asyncio.run(WholeFileExtractor().extract(scanned_file))
 
 
 def test_whole_file_extractor_returns_one_unit_spanning_the_file(
@@ -20,7 +23,7 @@ def test_whole_file_extractor_returns_one_unit_spanning_the_file(
 ) -> None:
     target = write_text(tmp_path / "a.py", "x = 1\ny = 2\nz = 3\n")
 
-    (unit,) = asyncio.run(EXTRACTOR.extract(target))
+    (unit,) = _extract(target)
 
     assert isinstance(unit, AuditableFileUnit)
     assert unit.unit_type == "file"
@@ -29,16 +32,20 @@ def test_whole_file_extractor_returns_one_unit_spanning_the_file(
     assert unit.get_metadata() == {"file_path": str(target), "line_range": [1, 3]}
 
 
-@pytest.mark.parametrize(
-    ("file_name", "language"),
-    [("a.py", "python"), ("A.PY", "python"), ("a.go", None), ("Makefile", None)],
-)
-def test_whole_file_unit_carries_the_identified_language(
-    tmp_path: Path, file_name: str, language: str | None
+@pytest.mark.parametrize("language", ["python", None])
+def test_whole_file_unit_carries_the_language_in_the_traits_of_the_file(
+    tmp_path: Path, language: str | None
 ) -> None:
-    target = write_text(tmp_path / file_name, "x = 1\n")
+    # The name of the file says nothing about its language; only the traits do.
+    target = write_text(tmp_path / "notes.txt", "x = 1\n")
 
-    (unit,) = asyncio.run(EXTRACTOR.extract(target))
+    (unit,) = _extract(target, language)
 
     assert unit.language == language
-    assert unit.get_content() == "x = 1\n"
+
+
+def test_whole_file_extractor_gives_no_unit_for_a_binary_file(tmp_path: Path) -> None:
+    target = tmp_path / "blob.dat"
+    target.write_bytes(b"\x00\x01\x02")
+
+    assert _extract(target) == []

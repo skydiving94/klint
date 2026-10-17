@@ -1,52 +1,53 @@
 import asyncio
-from pathlib import Path
 
 from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
-from src.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.core.interfaces.extractor import BaseUnitExtractor
-from src.core.models.unit import AuditableUnit
+from src.core.klint_warning import warn_about_unreadable_file
+from src.core.models.scanned_tree import ScannedDirectory
 
 
-class RecursiveProjectExtractor(BaseUnitExtractor):
-    """Builds one composite directory unit for the whole target tree.
+class RecursiveProjectExtractor:
+    """Builds one composite directory unit for a scanned tree.
 
-    The unit holds the metadata of the target's files and, recursively, of
-    every subdirectory. This class only walks the tree; the delegator decides
-    what reads each file and what describes each directory.
+    The unit holds the metadata of the files directly in the scanned
+    directory and, recursively, of every subdirectory. This class only goes
+    through the tree; the delegator decides what reads each file and what
+    describes each directory. A file that cannot be read is left out, with a
+    warning.
     """
 
     def __init__(self, delegator: TraitsBasedExtractionDelegator) -> None:
         self._delegator = delegator
 
-    async def extract(self, target: str | Path) -> list[AuditableUnit]:
-        root_unit = await asyncio.to_thread(self._extract_tree, Path(target))
-        return [root_unit]
+    async def extract(
+        self, scanned_directory: ScannedDirectory
+    ) -> AuditableDirectoryUnit:
+        """Return the unit of ``scanned_directory``, holding everything beneath it."""
+        return await asyncio.to_thread(self._extract_tree, scanned_directory)
 
-    def _extract_tree(self, target_path: Path) -> AuditableDirectoryUnit:
-        return self._delegator.update_units_after_full_walk(self._walk(target_path))
+    def _extract_tree(
+        self, scanned_directory: ScannedDirectory
+    ) -> AuditableDirectoryUnit:
+        return self._delegator.update_units_after_full_walk(
+            self._build_directory_unit(scanned_directory)
+        )
 
-    def _walk(self, directory: Path) -> AuditableDirectoryUnit:
+    def _build_directory_unit(
+        self, scanned_directory: ScannedDirectory
+    ) -> AuditableDirectoryUnit:
         files: list[AuditableFileMetadataUnit] = []
-        subdirs: list[AuditableDirectoryUnit] = []
-
-        for entry in sorted(directory.iterdir()):
-            if entry.is_dir():
-                if (
-                    entry.is_symlink()
-                    or entry.name in CODE_IGNORED_NAMES.directory_names
-                ):
-                    continue
-                subdirs.append(self._walk(entry))
-            elif entry.is_file():
-                if (
-                    entry.name in CODE_IGNORED_NAMES.file_names
-                    or entry.suffix.lower() in CODE_IGNORED_NAMES.file_suffixes
-                ):
-                    continue
-                files.append(self._delegator.delegate_file_extraction(entry))
-
-        return self._delegator.delegate_directory_building(directory, files, subdirs)
+        for scanned_file in scanned_directory.files:
+            try:
+                files.append(self._delegator.delegate_file_extraction(scanned_file))
+            except OSError as error:
+                warn_about_unreadable_file(scanned_file.path, error)
+        subdirectories = [
+            self._build_directory_unit(scanned_subdirectory)
+            for scanned_subdirectory in scanned_directory.subdirectories
+        ]
+        return self._delegator.delegate_directory_building(
+            scanned_directory.path, files, subdirectories
+        )

@@ -17,6 +17,7 @@ from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
     make_settings,
+    make_unreadable,
     write_json,
     write_text,
 )
@@ -88,6 +89,29 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
     reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]
     assert list(dict.fromkeys(reported_unit_ids)) == directories
     assert len(judge.calls) == 2
+
+
+def test_file_that_cannot_be_read_is_left_out_with_a_warning(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    package = tmp_path / "pkg"
+    write_text(package / "a.py", "x = 1\n")
+    locked = make_unreadable(write_text(package / "locked.py", "y = 2\n"))
+    judge = fake_judge()
+
+    exit_code = _run(_project_app(judge), package, "--json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(captured.out)["examined_directories"] == [str(package)]
+    assert captured.err.splitlines() == [
+        f"[klint-project] Warning: File '{locked}' is left out: "
+        "it cannot be read (Permission denied)"
+    ]
+    # The directory is described to the judge without that file.
+    ((content, _questions),) = judge.calls
+    assert "a.py" in content
+    assert "locked.py" not in content
 
 
 def test_python_project_rules_are_asked_only_about_directories_holding_python(

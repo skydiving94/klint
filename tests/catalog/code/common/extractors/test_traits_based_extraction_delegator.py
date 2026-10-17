@@ -26,7 +26,7 @@ from src.catalog.code.python.extractors.package_factory import (
 from src.catalog.code.python.units.package import AuditablePythonPackageUnit
 from src.core.models.file_traits import FileTraits
 from tests.support.builders import (
-    build_file_traits_identifier,
+    build_target_scanner,
     extract_project,
     write_text,
 )
@@ -48,9 +48,8 @@ class JavaMarkingExtractor(BaseFileMetadataExtractor):
 def _extract(
     delegator: TraitsBasedExtractionDelegator, target: Path
 ) -> AuditableDirectoryUnit:
-    (unit,) = asyncio.run(RecursiveProjectExtractor(delegator).extract(target))
-    assert isinstance(unit, AuditableDirectoryUnit)
-    return unit
+    scanned_target = build_target_scanner().scan_directory(target)
+    return asyncio.run(RecursiveProjectExtractor(delegator).extract(scanned_target))
 
 
 def test_each_file_is_read_by_the_extractor_for_its_language(tmp_path: Path) -> None:
@@ -73,7 +72,6 @@ def test_extractor_registered_for_a_language_reads_that_languages_files(
     for name in ("a.py", "b.java"):
         write_text(tmp_path / "pkg" / name, "import os\n")
     delegator = TraitsBasedExtractionDelegator(
-        file_traits_identifier=build_file_traits_identifier(),
         language_to_file_metadata_extractor={
             "python": PythonFileMetadataExtractor(),
             "java": JavaMarkingExtractor(),
@@ -138,7 +136,6 @@ def test_directory_is_described_in_the_language_most_files_beneath_it_are_in(
     for name in file_names:
         write_text(tmp_path / "pkg" / "sub" / name, "x\n")
     delegator = TraitsBasedExtractionDelegator(
-        file_traits_identifier=build_file_traits_identifier(),
         language_to_file_metadata_extractor={},
         language_to_directory_unit_factory={
             "python": PythonPackageUnitFactory(),

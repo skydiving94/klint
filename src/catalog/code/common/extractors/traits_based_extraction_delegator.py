@@ -18,26 +18,24 @@ from src.catalog.code.common.extractors.language_neutral_file_metadata import (
 )
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
+from src.core.models.scanned_tree import ScannedFile
 
 
 class TraitsBasedExtractionDelegator:
     """Delegates the extraction of a project's files and directories by file traits.
 
-    A file's traits are identified first, and the file is read by the
-    extractor registered for its language. A directory is described by the
-    factory registered for the language that most of the files beneath it are
-    written in. A file or directory with nothing registered for its language
-    is handled in a language-neutral way.
+    A file is read by the extractor registered for the language in its
+    traits. A directory is described by the factory registered for the
+    language that most of the files beneath it are written in. A file or
+    directory with nothing registered for its language is handled in a
+    language-neutral way.
     """
 
     def __init__(
         self,
-        file_traits_identifier: BaseFileTraitsIdentifier,
         language_to_file_metadata_extractor: Mapping[str, BaseFileMetadataExtractor],
         language_to_directory_unit_factory: Mapping[str, BaseDirectoryUnitFactory],
     ) -> None:
-        self._file_traits_identifier = file_traits_identifier
         self._language_to_file_metadata_extractor = {
             language.lower(): extractor
             for language, extractor in language_to_file_metadata_extractor.items()
@@ -49,15 +47,17 @@ class TraitsBasedExtractionDelegator:
         self._language_neutral_extractor = LanguageNeutralFileMetadataExtractor()
         self._language_neutral_factory = LanguageNeutralDirectoryUnitFactory()
 
-    def delegate_file_extraction(self, path: Path) -> AuditableFileMetadataUnit:
-        """Identify the file's traits and have the matching extractor read it."""
-        traits = self._file_traits_identifier.identify(path)
+    def delegate_file_extraction(
+        self, scanned_file: ScannedFile
+    ) -> AuditableFileMetadataUnit:
+        """Have the extractor that matches the file's traits read the file."""
+        traits = scanned_file.traits
         extractor: BaseFileMetadataExtractor = self._language_neutral_extractor
         if traits.language is not None:
             extractor = self._language_to_file_metadata_extractor.get(
                 traits.language.lower(), extractor
             )
-        return extractor.extract_file(path, traits)
+        return extractor.extract_file(scanned_file.path, traits)
 
     def delegate_directory_building(
         self,

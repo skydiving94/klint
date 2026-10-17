@@ -2,28 +2,25 @@
 
 import asyncio
 import json
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from src import catalog
 from src.app.settings import AppSettings
-from src.app.wiring import FileAuditor, create_injector
+from src.app.wiring import create_injector
 from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from src.catalog.code.common.units.directory import AuditableDirectoryUnit
 from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.catalog.common.file_traits_identifiers.extension_identifier import (
-    ExtensionFileTraitsIdentifier,
-)
 from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.core.auditor import Auditor
-from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from src.core.interfaces.judge import BaseJudge
+from src.catalog.common.scanners.target_scanner import TargetScanner
 from src.core.registry import UnitRegistry
 from src.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
-from tests.support.fakes import JudgeOverride
 from tests.support.paths import (
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     DEFAULT_PROJECT_RULES,
@@ -70,6 +67,17 @@ def write_text(path: Path, text: str) -> Path:
     return path
 
 
+def make_unreadable(path: Path) -> Path:
+    """Take every permission away from ``path`` and return the path.
+
+    The test is skipped where that does not stop reading, as for root.
+    """
+    path.chmod(0)
+    if os.access(path, os.R_OK):
+        pytest.skip("permissions do not stop this user from reading")
+    return path
+
+
 def make_settings(
     rules_paths: Sequence[Path] = DEFAULT_RULE_PACKS,
     project_rules_paths: Sequence[Path] = (DEFAULT_PROJECT_RULES,),
@@ -86,17 +94,9 @@ def make_settings(
     )
 
 
-def file_auditor(rules_path: Path, judge: BaseJudge) -> Auditor:
-    """Return klint's file auditor with one rule pack and the given judge."""
-    settings = make_settings(rules_paths=(rules_path,))
-    return create_injector(settings, JudgeOverride(judge)).get(FileAuditor)
-
-
-def build_file_traits_identifier() -> BaseFileTraitsIdentifier:
-    """Return an identifier that knows the built-in languages."""
-    return ExtensionFileTraitsIdentifier(
-        load_file_extension_to_language(DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS)
-    )
+def build_target_scanner() -> TargetScanner:
+    """Return klint's target scanner, built the way the commands build it."""
+    return create_injector(make_settings()).get(TargetScanner)
 
 
 def build_project_extractor() -> RecursiveProjectExtractor:
@@ -105,10 +105,9 @@ def build_project_extractor() -> RecursiveProjectExtractor:
 
 
 def extract_project(target: Path) -> AuditableDirectoryUnit:
-    """Extract ``target`` and return the one directory unit for its root."""
-    (unit,) = asyncio.run(build_project_extractor().extract(target))
-    assert isinstance(unit, AuditableDirectoryUnit)
-    return unit
+    """Scan ``target``, extract it, and return the directory unit for its root."""
+    scanned_target = build_target_scanner().scan_directory(target)
+    return asyncio.run(build_project_extractor().extract(scanned_target))
 
 
 def extract_python_project(target: Path) -> AuditablePythonPackageUnit:

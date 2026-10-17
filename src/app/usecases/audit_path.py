@@ -1,7 +1,6 @@
 """Audit a file or directory path: the run loop shared by every front end."""
 
 import asyncio
-from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -27,27 +26,26 @@ class AuditListener(Protocol):
 
 @dataclass(frozen=True)
 class AuditPlan:
-    """A validated request: where to start, what will be audited, and the rules."""
+    """A validated request: what is reported on, what is audited, and the rules."""
 
-    root: Path
     targets: list[Path]
+    units: list[AuditableUnit]
     rules: list[AuditRule]
 
 
 @dataclass(frozen=True)
 class AuditPathResult:
-    """The targets audited without error, and the selected findings in target order."""
+    """The targets audited without error, and the selected findings in unit order."""
 
     examined: list[str]
     findings: list[AuditFinding]
 
 
 class AuditPath:
-    """Audits every target found under a path.
+    """Audits every unit found under a path.
 
-    The pipeline lists what will be audited. For a project structure audit,
-    the path is extracted once and every unit in the resulting tree is
-    audited; for a file contents audit, each target is extracted on its own.
+    The pipeline prepares what will be audited. Each unit is then audited on
+    its own, a limited number of them at a time.
     """
 
     def __init__(
@@ -77,7 +75,9 @@ class AuditPath:
         )
         rules = await self._auditor.load_rules(rules_source)
         return AuditPlan(
-            root=target, targets=pending_audit_portfolio.targets, rules=rules
+            targets=pending_audit_portfolio.targets,
+            units=pending_audit_portfolio.units,
+            rules=rules,
         )
 
     async def run(
@@ -88,21 +88,17 @@ class AuditPath:
         listener: AuditListener | None = None,
     ) -> AuditPathResult:
         target_names = [str(target) for target in plan.targets]
+        target_name_set = set(target_names)
         failed: set[str] = set()
         semaphore = asyncio.Semaphore(self._max_concurrent)
 
-        async def audit(
-            name: str,
-            get_units: Callable[[], Awaitable[Sequence[AuditableUnit]]],
-            is_target: bool,
-        ) -> list[AuditFinding]:
+        async def audit(unit: AuditableUnit) -> list[AuditFinding]:
+            name = unit.unit_id
             async with semaphore:
                 try:
                     report = AuditReport()
-                    for unit in await get_units():
-                        findings = await self._auditor.audit_unit(unit, plan.rules)
-                        for finding in findings:
-                            report.record(finding)
+                    for finding in await self._auditor.audit_unit(unit, plan.rules):
+                        report.record(finding)
                     return report.get_findings(fails_only, min_confidence)
                 except Exception as error:
                     failed.add(name)
@@ -110,66 +106,15 @@ class AuditPath:
                         listener.target_failed(name, error)
                     return []
                 finally:
-                    if listener is not None and is_target:
+                    if listener is not None and name in target_name_set:
                         listener.target_done(name)
-
-        if self._audit_mode is AuditMode.PROJECT_STRUCTURE:
-            jobs = await self._tree_jobs(
-                plan, set(target_names), failed, listener, audit
-            )
-        else:
-            jobs = [
-                audit(str(target), self._extract_one(target), True)
-                for target in plan.targets
-            ]
 
         findings = [
             finding
-            for job_findings in await asyncio.gather(*jobs)
-            for finding in job_findings
+            for unit_findings in await asyncio.gather(
+                *(audit(unit) for unit in plan.units)
+            )
+            for finding in unit_findings
         ]
         examined = [name for name in target_names if name not in failed]
         return AuditPathResult(examined=examined, findings=findings)
-
-    def _extract_one(
-        self, target: Path
-    ) -> Callable[[], Awaitable[Sequence[AuditableUnit]]]:
-        async def extract() -> Sequence[AuditableUnit]:
-            return await self._auditor.extract_units(target)
-
-        return extract
-
-    async def _tree_jobs(
-        self,
-        plan: AuditPlan,
-        target_names: set[str],
-        failed: set[str],
-        listener: AuditListener | None,
-        audit: Callable[
-            [str, Callable[[], Awaitable[Sequence[AuditableUnit]]], bool],
-            Awaitable[list[AuditFinding]],
-        ],
-    ) -> list[Awaitable[list[AuditFinding]]]:
-        """Extract the whole tree once and return one audit job per unit in it."""
-        try:
-            units = await self._auditor.extract_units(plan.root, walk_children=True)
-        except Exception as error:
-            failed.update(target_names)
-            if listener is not None:
-                listener.target_failed(str(plan.root), error)
-                for target in plan.targets:
-                    listener.target_done(str(target))
-            return []
-
-        def only(
-            unit: AuditableUnit,
-        ) -> Callable[[], Awaitable[Sequence[AuditableUnit]]]:
-            async def get() -> Sequence[AuditableUnit]:
-                return [unit]
-
-            return get
-
-        return [
-            audit(unit.unit_id, only(unit), unit.unit_id in target_names)
-            for unit in units
-        ]

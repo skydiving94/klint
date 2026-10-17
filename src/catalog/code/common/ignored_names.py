@@ -21,6 +21,9 @@ CODE_IGNORED_NAMES = IgnoredNames(
             ".DS_Store",
             ".env",
             ".env.example",
+            # Inside a git submodule or a git worktree, .git is a file that
+            # points to the repository.
+            ".git",
             ".gitignore",
             "klint.json",
             ".klintrc.json",

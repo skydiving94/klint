@@ -111,18 +111,10 @@ class KlintModule(Module):
 
     @singleton
     @provider
-    def provide_audit_pipeline(self, target_scanner: TargetScanner) -> AuditPipeline:
-        return AuditPipeline(target_scanner)
-
-    @singleton
-    @provider
-    def provide_project_extractor(
-        self, file_traits_identifier: BaseFileTraitsIdentifier
-    ) -> RecursiveProjectExtractor:
+    def provide_project_extractor(self) -> RecursiveProjectExtractor:
         # What handles each language in the project audit. A language not
         # listed here is handled in a language-neutral way.
         delegator = TraitsBasedExtractionDelegator(
-            file_traits_identifier=file_traits_identifier,
             language_to_file_metadata_extractor={
                 python_suite.SUITE_LANGUAGE: PythonFileMetadataExtractor(),
             },
@@ -134,18 +126,32 @@ class KlintModule(Module):
 
     @singleton
     @provider
+    def provide_audit_pipeline(
+        self,
+        target_scanner: TargetScanner,
+        project_extractor: RecursiveProjectExtractor,
+    ) -> AuditPipeline:
+        return AuditPipeline(
+            target_scanner=target_scanner,
+            # What extracts the units of each language in the file contents
+            # audit. A language not listed here is read as one whole file.
+            language_to_unit_extractor={},
+            language_neutral_unit_extractor=WholeFileExtractor(),
+            project_extractor=project_extractor,
+        )
+
+    @singleton
+    @provider
     def provide_file_auditor(
         self,
         settings: AppSettings,
         judge: BaseJudge,
         registry: UnitRegistry,
         scale: AnswerScale,
-        file_traits_identifier: BaseFileTraitsIdentifier,
         file_extension_to_language: FileExtensionToLanguage,
     ) -> FileAuditor:
         return FileAuditor(
             Auditor(
-                extractor=WholeFileExtractor(file_traits_identifier),
                 judge=judge,
                 rule_loader=JsonRuleLoader(
                     settings.default_rules_paths,
@@ -164,7 +170,6 @@ class KlintModule(Module):
         judge: BaseJudge,
         registry: UnitRegistry,
         scale: AnswerScale,
-        extractor: RecursiveProjectExtractor,
         file_extension_to_language: FileExtensionToLanguage,
     ) -> ProjectAuditor:
         if not settings.default_project_rules_paths:
@@ -174,7 +179,6 @@ class KlintModule(Module):
             )
         return ProjectAuditor(
             Auditor(
-                extractor=extractor,
                 judge=judge,
                 rule_loader=JsonRuleLoader(
                     settings.default_project_rules_paths,

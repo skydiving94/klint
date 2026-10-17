@@ -1,30 +1,34 @@
 import asyncio
-from pathlib import Path
 
+from src.catalog.common.extractors.binary_check import is_likely_binary
 from src.catalog.common.units.file import AuditableFileUnit
 from src.core.interfaces.extractor import BaseUnitExtractor
-from src.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
+from src.core.models.scanned_tree import ScannedFile
 from src.core.models.unit import AuditableUnit
 
 
 class WholeFileExtractor(BaseUnitExtractor):
-    """Reads a whole file as one unit, marked with the file's identified language."""
+    """Reads a whole file as one unit, in the language its traits give.
 
-    def __init__(self, file_traits_identifier: BaseFileTraitsIdentifier) -> None:
-        self._file_traits_identifier = file_traits_identifier
+    A binary file gives no unit.
+    """
 
-    async def extract(self, target: str | Path) -> list[AuditableUnit]:
-        unit = await asyncio.to_thread(self._read_file_sync, Path(target))
-        return [unit]
+    async def extract(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
+        return await asyncio.to_thread(self._read_file_sync, scanned_file)
 
-    def _read_file_sync(self, path: Path) -> AuditableFileUnit:
+    def _read_file_sync(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
+        path = scanned_file.path
+        if is_likely_binary(path):
+            return []
         content = path.read_text(encoding="utf-8", errors="replace")
         line_count = len(content.splitlines())
-        return AuditableFileUnit(
-            unit_id=str(path),
-            language=self._file_traits_identifier.identify(path).language,
-            content=content,
-            file_path=str(path),
-            start_line=1,
-            end_line=line_count,
-        )
+        return [
+            AuditableFileUnit(
+                unit_id=str(path),
+                language=scanned_file.traits.language,
+                content=content,
+                file_path=str(path),
+                start_line=1,
+                end_line=line_count,
+            )
+        ]

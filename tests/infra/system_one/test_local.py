@@ -5,14 +5,12 @@ import dataclasses
 import importlib
 import sys
 from collections.abc import Iterator
-from pathlib import Path
 from types import ModuleType
 from typing import Any
 
 import pytest
 
 from src.core.interfaces.judge import BaseJudge
-from tests.support.builders import FILE_RULE, file_auditor, write_json
 
 LOCAL_MODULE = "src.infra.system_one.local"
 
@@ -165,15 +163,3 @@ def test_load_options_depend_on_the_device(
 def test_response_without_answers_gives_no_answers(runtime: FakeRuntime) -> None:
     runtime.response_has_answers = False
     assert asyncio.run(_local_judge().answer("x", {"r": {}})) == {}
-
-
-@pytest.mark.usefixtures("runtime")
-def test_auditor_turns_local_judge_answers_into_findings(tmp_path: Path) -> None:
-    rules = write_json(tmp_path / "rules.json", {"tidy": FILE_RULE})
-    target = tmp_path / "a.py"
-    target.write_text("x = 1\n", encoding="utf-8")
-    auditor = file_auditor(rules, _local_judge())
-
-    (issue,) = asyncio.run(auditor.run_audit(target)).get_issues()
-
-    assert (issue["rule_id"], issue["judgment"]) == ("tidy", "Fail")
