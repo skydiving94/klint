@@ -12,6 +12,7 @@ from klint.core.models.file_traits import FileTraits
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.registry import UnitRegistry
+from klint.infra.rule_loader.pack_scope import PackScope
 
 _RULE_FIELD_NAMES = frozenset(
     {"type", "instructions", "target_unit_types", "languages", "tags"}
@@ -25,45 +26,11 @@ _NON_RULE_KEYS = frozenset({_HEADER_KEY, "env", "fallback_rule_packs"})
 
 
 @dataclass(frozen=True)
-class _PackScope:
-    """The files a pack is for, as its header states them.
-
-    languages is None when the pack is not limited to some languages, as for
-    a file without a header.
-    """
-
-    languages: tuple[str, ...] | None = None
-
-    def matches(self, language: str) -> bool:
-        """Return True when the pack is for files written in ``language``."""
-        return self.languages is None or language.lower() in self._lowered_languages()
-
-    def narrow(self, rule_languages: Sequence[str]) -> list[str]:
-        """Return the languages a rule of this pack is limited to.
-
-        A rule that names no language inherits the pack's; one that does
-        keeps those that are also the pack's.
-        """
-        if self.languages is None:
-            return list(rule_languages)
-        if not rule_languages:
-            return list(self.languages)
-        return [
-            language
-            for language in rule_languages
-            if language.lower() in self._lowered_languages()
-        ]
-
-    def _lowered_languages(self) -> set[str]:
-        return {language.lower() for language in self.languages or ()}
-
-
-@dataclass(frozen=True)
 class _RulePack:
     """A rules file as read: its scope, and its rules not yet checked."""
 
     path: Path
-    scope: _PackScope
+    scope: PackScope
     rule_specs: dict[str, Any]
 
 
@@ -157,7 +124,7 @@ class JsonRuleLoader(BaseRuleLoader):
         scope = (
             self._read_scope(raw_data[_HEADER_KEY], path)
             if _HEADER_KEY in raw_data
-            else _PackScope()
+            else PackScope()
         )
         # Support both flat rule JSON files and ESLint-style configs of the form
         # {"env": {...}, "rules": {...}}
@@ -173,7 +140,7 @@ class JsonRuleLoader(BaseRuleLoader):
         )
         return _RulePack(path=path, scope=scope, rule_specs=rule_specs)
 
-    def _read_scope(self, raw_header: object, path: Path) -> _PackScope:
+    def _read_scope(self, raw_header: object, path: Path) -> PackScope:
         """Return the scope an applies_to header states; raise if it is malformed."""
         if not isinstance(raw_header, dict):
             raise ValueError(
@@ -192,7 +159,7 @@ class JsonRuleLoader(BaseRuleLoader):
                 stacklevel=2,
             )
         if "languages" not in raw_header:
-            return _PackScope()
+            return PackScope()
         raw_languages = raw_header["languages"]
         if (
             not isinstance(raw_languages, list)
@@ -212,7 +179,7 @@ class JsonRuleLoader(BaseRuleLoader):
                 KlintWarning,
                 stacklevel=2,
             )
-        return _PackScope(languages=tuple(raw_languages))
+        return PackScope(languages=tuple(raw_languages))
 
     def _load_pack_rules(self, pack: _RulePack) -> dict[str, AuditRule]:
         if pack.path not in self._path_to_rules:
