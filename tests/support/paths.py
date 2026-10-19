@@ -5,6 +5,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_DIR = REPO_ROOT / "tests" / "snapshots"
+# The tests' own pack, for a test that needs a rule to be asked and does not
+# check which: one rule for files, one for directories.
+TIDY_RULE_PACK = REPO_ROOT / "tests" / "support" / "tidy_rules.json"
 RULE_PACKS = REPO_ROOT / "klint" / "resources" / "catalog" / "code"
 REACT_RULE_PACK = RULE_PACKS / "typescript" / "react.json"
 PYTHON_PROJECT_RULE_PACK = RULE_PACKS / "python" / "project_structure.json"
