@@ -51,7 +51,11 @@ class FakeJudge(BaseJudge):
         ]
 
     def subject_to_asked_rule_ids(self) -> dict[str, set[str]]:
-        """Return the rule ids asked about each subject."""
+        """Return the rule ids asked about each subject.
+
+        Meant for tests whose subjects all differ: a later request about the
+        same subject replaces an earlier one.
+        """
         return {
             request.subject: {question.question_id for question in request.questions}
             for request in self.requests
