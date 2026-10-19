@@ -42,6 +42,23 @@ class AuditCommand:
     json_key: str
 
 
+@dataclass(frozen=True)
+class CommandArguments:
+    """A command line, parsed.
+
+    target is the path to audit, and rules_source the file given with
+    --rules. should_show_all asks for every judgment instead of failures
+    only, and min_confidence is the least confidence a finding needs to be
+    reported. should_print_json asks for JSON instead of the terminal report.
+    """
+
+    target: Path
+    rules_source: Path | None
+    should_show_all: bool
+    min_confidence: float
+    should_print_json: bool
+
+
 class _ProgressListener(BaseAuditProgressListener):
     """Advances the progress bar and reports skipped units on stderr."""
 
@@ -100,8 +117,8 @@ def _print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]
 
 def parse_command_arguments(
     command: AuditCommand, argv: Sequence[str] | None = None
-) -> argparse.Namespace:
-    """Parse a command line for ``command``; the path to audit is read as ``target``."""
+) -> CommandArguments:
+    """Parse a command line for ``command``."""
     parser = argparse.ArgumentParser(description=command.description)
     parser.add_argument(
         "target",
@@ -134,55 +151,14 @@ def parse_command_arguments(
         action="store_true",
         help="Output raw JSON instead of formatted terminal report",
     )
-    return parser.parse_args(argv)
-
-
-async def run_audit_command(
-    audit_pipeline: AuditPipeline,
-    command: AuditCommand,
-    target: Path,
-    rules_source: Path | None,
-    show_all: bool,
-    min_confidence: float,
-    as_json: bool,
-) -> int:
-    progress = AuditProgressReporter(enabled=not as_json)
-    request = AuditRequest(
-        target=target,
-        audit_mode=command.audit_mode,
-        custom_rules_source=rules_source,
-        scan_progress_listener=TerminalScanProgressListener(enabled=not as_json),
-        audit_progress_listener=_ProgressListener(progress, command.name),
+    namespace = parser.parse_args(argv)
+    return CommandArguments(
+        target=namespace.target,
+        rules_source=namespace.rules,
+        should_show_all=namespace.all,
+        min_confidence=namespace.min_confidence,
+        should_print_json=namespace.json,
     )
-    try:
-        with _print_klint_warnings_raised_inside(command):
-            outcome = await audit_pipeline.run_audit(request)
-    except (FileNotFoundError, ValueError) as exc:
-        print_error_line(command, exc)
-        return 1
-    progress.finish()
-
-    report = outcome.report
-    findings = report.get_findings(
-        fails_only=not show_all, min_confidence=min_confidence
-    )
-    if as_json:
-        issues = [finding.to_dict() for finding in findings]
-        print(
-            json.dumps(
-                {command.json_key: report.audited_unit_ids(), "issues": issues},
-                indent=2,
-            )
-        )
-    else:
-        print(
-            format_audit_report(
-                findings,
-                scanned_file_count=outcome.scanned_file_count,
-                audited_unit_count=len(outcome.selected_unit_ids),
-            )
-        )
-    return 0
 
 
 class AuditCommandApp:
@@ -199,26 +175,64 @@ class AuditCommandApp:
         self._default_custom_rules = default_custom_rules
 
     async def run(self, argv: Sequence[str] | None = None) -> int:
-        args = parse_command_arguments(self._command, argv)
-        return await run_audit_command(
-            self._audit_pipeline,
-            self._command,
-            target=args.target,
-            rules_source=args.rules or self._default_custom_rules,
-            show_all=args.all,
-            min_confidence=args.min_confidence,
-            as_json=args.json,
+        """Parse ``argv`` and run the command; return the exit code."""
+        return await self.run_with_arguments(
+            parse_command_arguments(self._command, argv)
         )
+
+    async def run_with_arguments(self, arguments: CommandArguments) -> int:
+        """Run the command on a parsed command line; return the exit code."""
+        command = self._command
+        should_show_progress = not arguments.should_print_json
+        progress = AuditProgressReporter(enabled=should_show_progress)
+        request = AuditRequest(
+            target=arguments.target,
+            audit_mode=command.audit_mode,
+            custom_rules_source=arguments.rules_source or self._default_custom_rules,
+            scan_progress_listener=TerminalScanProgressListener(
+                enabled=should_show_progress
+            ),
+            audit_progress_listener=_ProgressListener(progress, command.name),
+        )
+        try:
+            with _print_klint_warnings_raised_inside(command):
+                outcome = await self._audit_pipeline.run_audit(request)
+        except (FileNotFoundError, ValueError) as exc:
+            print_error_line(command, exc)
+            return 1
+        progress.finish()
+
+        report = outcome.report
+        findings = report.get_findings(
+            fails_only=not arguments.should_show_all,
+            min_confidence=arguments.min_confidence,
+        )
+        if arguments.should_print_json:
+            issues = [finding.to_dict() for finding in findings]
+            print(
+                json.dumps(
+                    {command.json_key: report.audited_unit_ids(), "issues": issues},
+                    indent=2,
+                )
+            )
+        else:
+            print(
+                format_audit_report(
+                    findings,
+                    scanned_file_count=outcome.scanned_file_count,
+                    audited_unit_count=len(outcome.selected_unit_ids),
+                )
+            )
+        return 0
 
 
 async def run_command_from_shell(command: AuditCommand) -> int:
     """Run ``command`` with the arguments the shell passed; return the exit code."""
-    argv = sys.argv[1:]
-    args = parse_command_arguments(command, argv)
+    arguments = parse_command_arguments(command, sys.argv[1:])
     try:
         with _print_klint_warnings_raised_inside(command):
             settings = await asyncio.to_thread(
-                AppSettings.from_env, args.target, args.rules
+                AppSettings.from_env, arguments.target, arguments.rules_source
             )
             injector = create_injector(settings)
             audit_pipeline = injector.get(AuditPipeline)
@@ -232,4 +246,4 @@ async def run_command_from_shell(command: AuditCommand) -> int:
         audit_pipeline,
         default_custom_rules=settings.discovered_config_path,
     )
-    return await app.run(argv)
+    return await app.run_with_arguments(arguments)
