@@ -15,6 +15,7 @@ from klint.app.audit_mode import AuditMode
 from klint.app.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import create_injector
+from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
     TerminalScanProgressListener,
@@ -119,7 +120,14 @@ def parse_command_arguments(
     command: AuditCommand, argv: Sequence[str] | None = None
 ) -> CommandArguments:
     """Parse a command line for ``command``."""
-    parser = argparse.ArgumentParser(description=command.description)
+    parser = argparse.ArgumentParser(
+        description=command.description,
+        epilog=(
+            f"Exit status: {ExitCode.NO_PROBLEMS.value} when no failure is found, "
+            f"{ExitCode.PROBLEMS_FOUND.value} when one is, "
+            f"{ExitCode.RUN_ERROR.value} when the audit cannot run."
+        ),
+    )
     parser.add_argument(
         "target",
         metavar=command.target_argument_name,
@@ -174,13 +182,13 @@ class AuditCommandApp:
         self._audit_pipeline = audit_pipeline
         self._default_custom_rules = default_custom_rules
 
-    async def run(self, argv: Sequence[str] | None = None) -> int:
+    async def run(self, argv: Sequence[str] | None = None) -> ExitCode:
         """Parse ``argv`` and run the command; return the exit code."""
         return await self.run_with_arguments(
             parse_command_arguments(self._command, argv)
         )
 
-    async def run_with_arguments(self, arguments: CommandArguments) -> int:
+    async def run_with_arguments(self, arguments: CommandArguments) -> ExitCode:
         """Run the command on a parsed command line; return the exit code."""
         command = self._command
         should_show_progress = not arguments.should_print_json
@@ -199,7 +207,7 @@ class AuditCommandApp:
                 outcome = await self._audit_pipeline.run_audit(request)
         except (FileNotFoundError, ValueError) as exc:
             print_error_line(command, exc)
-            return 1
+            return ExitCode.RUN_ERROR
         progress.finish()
 
         report = outcome.report
@@ -223,10 +231,13 @@ class AuditCommandApp:
                     audited_unit_count=len(outcome.selected_unit_ids),
                 )
             )
-        return 0
+        failures = report.get_findings(
+            fails_only=True, min_confidence=arguments.min_confidence
+        )
+        return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS
 
 
-async def run_command_from_shell(command: AuditCommand) -> int:
+async def run_command_from_shell(command: AuditCommand) -> ExitCode:
     """Run ``command`` with the arguments the shell passed; return the exit code."""
     arguments = parse_command_arguments(command, sys.argv[1:])
     try:
@@ -240,7 +251,7 @@ async def run_command_from_shell(command: AuditCommand) -> int:
         # The command cannot be set up, for example a config or data file is
         # not valid.
         print_error_line(command, error)
-        return 1
+        return ExitCode.RUN_ERROR
     app = AuditCommandApp(
         command,
         audit_pipeline,
