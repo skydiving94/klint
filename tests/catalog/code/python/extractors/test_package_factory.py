@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from tests.support.builders import extract_python_project, write_text
 from tests.support.paths import MOCK_PROJECT, SnapshotAsserter
 

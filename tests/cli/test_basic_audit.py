@@ -11,15 +11,15 @@ from unittest.mock import Mock
 import pytest
 from injector import Binder
 
-from src.app.settings import AppSettings
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.cli.basic_audit import FILE_AUDIT_COMMAND
-from src.cli.runner import AuditCommandApp, run_command_from_shell
-from src.core.interfaces.extractor import BaseUnitExtractor
-from src.core.interfaces.judge import BaseJudge
-from src.core.models.scanned_tree import ScannedFile
-from src.core.models.unit import AuditableUnit
-from src.infra.system_one.remote import RemoteSystemOneJudge
+from klint.app.settings import AppSettings
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli.runner import AuditCommandApp, run_command_from_shell
+from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.scanned_tree import ScannedFile
+from klint.core.models.unit import AuditableUnit
+from klint.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,

@@ -9,18 +9,18 @@ from typing import Any
 import pytest
 from injector import Binder
 
-from src.app.settings import AppSettings
-from src.catalog.code.common.extractors.file_metadata_base import (
+from klint.app.settings import AppSettings
+from klint.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.catalog.code.python.extractors.file_metadata import (
+from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
-from src.cli.project_audit import PROJECT_AUDIT_COMMAND
-from src.cli.runner import AuditCommandApp, run_command_from_shell
-from src.core.interfaces.judge import BaseJudge
-from src.core.models.file_traits import FileTraits
+from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.runner import AuditCommandApp, run_command_from_shell
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.file_traits import FileTraits
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,

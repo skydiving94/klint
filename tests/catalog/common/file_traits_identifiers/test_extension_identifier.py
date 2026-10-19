@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.common.file_traits_identifiers.extension_identifier import (
+from klint.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from src.infra.language_to_file_extensions_loader.json_loader import (
+from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
 from tests.support.builders import write_json

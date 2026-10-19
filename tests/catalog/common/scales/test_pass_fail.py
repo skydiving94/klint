@@ -1,6 +1,6 @@
 """The default pass/fail scale sent to the judge."""
 
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 
 EXPECTED_CRITERIA = {
     "pass": "The provided code or project structure follows the described practice.",

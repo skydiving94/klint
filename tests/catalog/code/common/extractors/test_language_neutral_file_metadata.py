@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from src.catalog.code.common.extractors.language_neutral_file_metadata import (
+from klint.catalog.code.common.extractors.language_neutral_file_metadata import (
     LanguageNeutralFileMetadataExtractor,
 )
-from src.core.models.file_traits import FileTraits
+from klint.core.models.file_traits import FileTraits
 from tests.support.builders import write_text
 
 

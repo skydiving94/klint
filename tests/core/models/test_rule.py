@@ -2,10 +2,10 @@
 
 import pytest
 
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.catalog.common.units.file import AuditableFileUnit
-from src.core.models.question_type import QuestionType
-from src.core.models.rule import AuditRule
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.units.file import AuditableFileUnit
+from klint.core.models.question_type import QuestionType
+from klint.core.models.rule import AuditRule
 
 
 def _rule(

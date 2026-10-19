@@ -6,7 +6,7 @@ from typing import Any
 
 from injector import Module, provider, singleton
 
-from src.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.judge import BaseJudge
 
 Questions = dict[str, Any]
 Answers = dict[str, Any]

@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_DIR = REPO_ROOT / "tests" / "snapshots"
-RULE_PACKS = REPO_ROOT / "src" / "resources" / "catalog" / "code"
+RULE_PACKS = REPO_ROOT / "klint" / "resources" / "catalog" / "code"
 REACT_RULE_PACK = RULE_PACKS / "typescript" / "react.json"
 PYTHON_PROJECT_RULE_PACK = RULE_PACKS / "python" / "project_structure.json"
 # The built-in packs, in the order klint merges them.

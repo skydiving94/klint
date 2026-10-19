@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.code.python.extractors.file_metadata import (
+from klint.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
-from src.core.klint_warning import KlintWarning
-from src.core.models.file_traits import FileTraits
+from klint.core.klint_warning import KlintWarning
+from klint.core.models.file_traits import FileTraits
 from tests.support.builders import write_text
 
 PYTHON = FileTraits(language="python")
