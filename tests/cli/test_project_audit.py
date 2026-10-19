@@ -95,7 +95,7 @@ def test_project_audit_rejects_a_file_target(
     assert exit_code == ExitCode.RUN_ERROR
     assert "must be a directory" in capsys.readouterr().err
     # The command stops before anything is audited.
-    assert judge.calls == []
+    assert judge.requests == []
 
 
 def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
@@ -114,7 +114,7 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
     # The judge is asked about the directories listed as examined, and no others.
     reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]
     assert list(dict.fromkeys(reported_unit_ids)) == directories
-    assert len(judge.calls) == 2
+    assert len(judge.requests) == 2
 
 
 def test_file_that_cannot_be_read_is_left_out_with_a_warning(
@@ -138,7 +138,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
         "it cannot be read (Permission denied)"
     ]
     # The directory is described to the judge without that file.
-    ((content, _questions),) = judge.calls
+    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
     assert "a.py" in content
     assert "locked.py" not in content
 
@@ -180,7 +180,7 @@ def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
         f"[klint-project] Warning: File '{broken}' is left out: "
         "it cannot be processed (the extractor is broken on b.py)"
     ]
-    ((content, _questions),) = judge.calls
+    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
     assert "a.py" in content
     assert "b.py" not in content
 
@@ -205,7 +205,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
         f"[klint-project] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
-    ((content, _questions),) = judge.calls
+    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
     assert "locked" not in content
 
 
@@ -220,7 +220,7 @@ def test_binary_file_is_listed_by_name_only(
     exit_code = _run(_project_app(judge), package, "--json")
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    ((content, _questions),) = judge.calls
+    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
     content_lines = content.splitlines()
     assert "    - logo.dat (binary)" in content_lines
     assert "    - a.py (lines=1)" in content_lines
@@ -244,7 +244,7 @@ def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
         "count only: it cannot be parsed ('[' was never closed, line 1)"
     ]
     # The judge is told the file could not be parsed, not that it is empty.
-    ((content, _questions),) = judge.calls
+    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
     content_lines = content.splitlines()
     assert "    - __init__.py (lines=1; cannot be parsed)" in content_lines
     assert "    - orders.py (lines=5; imports=[json]; classes=[Order])" in content_lines
@@ -266,7 +266,7 @@ def test_package_description_marks_what_unparseable_files_leave_unknown(
     assert exit_code == ExitCode.NO_PROBLEMS
     (root_content,) = [
         content
-        for content, _questions in judge.calls
+        for content in judge.subject_to_asked_rule_ids()
         if content.startswith(f"Target Directory Under Audit: {package} ")
     ]
     content_lines = root_content.splitlines()
@@ -303,7 +303,7 @@ def test_rules_for_python_are_asked_only_about_directories_holding_python(
     assert judged_unit_ids == {str(repo), str(repo / "app")}
     # The directory without Python is not sent to the judge at all, so it is
     # not listed as examined either.
-    assert len(judge.calls) == 2
+    assert len(judge.requests) == 2
     assert output["examined_directories"] == [str(repo), str(repo / "app")]
 
 
@@ -346,17 +346,17 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
 
     contents_asked_the_file_rule = [
         content
-        for content, questions in judge.calls
-        if list(questions) == ["python_file"]
+        for content, rule_ids in judge.subject_to_asked_rule_ids().items()
+        if rule_ids == {"python_file"}
     ]
     calls_with_the_directory_rule = [
-        questions for _, questions in judge.calls if "for_directory" in questions
+        rule_ids for rule_ids in judge.asked_rule_ids() if "for_directory" in rule_ids
     ]
     # Only the Python file is asked the file rule, and the directory its own rule.
     (file_content,) = contents_asked_the_file_rule
     assert "a.py" in file_content
     assert len(calls_with_the_directory_rule) == 1
-    assert len(judge.calls) == 2
+    assert len(judge.requests) == 2
     # Examined are the units the judge was asked about: here the directory
     # and the one file inside it that a rule targets.
     assert _json_output(capsys)["examined_directories"] == [

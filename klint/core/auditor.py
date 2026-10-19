@@ -1,11 +1,11 @@
 import asyncio
 from collections.abc import Mapping, Sequence
-from typing import Any
 
 from injector import inject
 
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.report import AuditFinding, AuditReport
 from klint.core.models.rule import AuditRule
 from klint.core.models.scale import AnswerScale
@@ -78,36 +78,41 @@ class Auditor:
         applicable_rules = [r for r in rules if r.is_applicable_to(unit)]
         if not applicable_rules:
             return []
-        answers = await self._judge.answer(
-            unit.get_content(), self._build_questions(applicable_rules)
-        )
+        answers = await self._judge.answer(self._build_request(unit, applicable_rules))
+        question_id_to_answer = {answer.question_id: answer for answer in answers}
         findings: list[AuditFinding] = []
         for rule in applicable_rules:
-            answer = answers.get(rule.rule_id, {})
-            choice_key = answer.get("choice")
-            if choice_key is None:
+            answer = question_id_to_answer.get(rule.rule_id)
+            if answer is None:
                 continue
             findings.append(
                 AuditFinding(
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
-                    choice=self._scale.choice(choice_key),
+                    choice=self._scale.choice(answer.choice_key),
                     instructions=rule.instructions,
-                    confidence=answer.get("confidence"),
-                    probabilities=answer.get("probabilities"),
+                    confidence=answer.confidence,
+                    probabilities=answer.choice_key_to_probability,
                     location=unit.get_location(),
                     metadata=unit.get_metadata(),
                 )
             )
         return findings
 
-    def _build_questions(self, rules: Sequence[AuditRule]) -> dict[str, Any]:
-        criteria = self._scale.criteria_payload()
-        return {
-            rule.rule_id: {
-                "type": rule.question_type.value,
-                "instructions": rule.instructions,
-                "criteria": criteria,
-            }
-            for rule in rules
-        }
+    def _build_request(
+        self, unit: AuditableUnit, rules: Sequence[AuditRule]
+    ) -> JudgeRequest:
+        """Return the request that asks each rule about ``unit``, by rule id."""
+        choice_key_to_criterion = self._scale.criteria_payload()
+        return JudgeRequest(
+            subject=unit.get_content(),
+            questions=tuple(
+                JudgeQuestion(
+                    question_id=rule.rule_id,
+                    question_type=rule.question_type,
+                    question=rule.instructions,
+                    choice_key_to_criterion=choice_key_to_criterion,
+                )
+                for rule in rules
+            ),
+        )

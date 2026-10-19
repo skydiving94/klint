@@ -1,17 +1,12 @@
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from typing import Any
+
+from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
 
 
 class BaseJudge(ABC):
     @abstractmethod
-    async def answer(
-        self, state: str, questions: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
-        """Answer every question about ``state``.
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+        """Answer the questions in ``request`` about its subject.
 
-        ``questions`` maps a question id to its type, instructions and
-        criteria. The result maps each answered id to the chosen key, with
-        an optional confidence and probabilities.
+        A question the judge gives no answer to has no entry in the result.
         """
-        pass
