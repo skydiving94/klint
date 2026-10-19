@@ -20,14 +20,12 @@ def test_default_scale_sends_these_criteria_to_the_judge_in_this_order() -> None
     assert list(payload.items()) == list(EXPECTED_CRITERIA.items())
 
 
-def test_default_scale_labels_findings_and_report_order() -> None:
-    summary = [
-        (choice.label, choice.is_finding, choice.priority)
-        for choice in PASS_FAIL_SCALE.choices
-    ]
+def test_default_scale_labels_its_choices_and_counts_only_fail_as_a_finding() -> None:
+    # The order of these in a report is checked through AuditReport.
+    summary = [(choice.label, choice.is_finding) for choice in PASS_FAIL_SCALE.choices]
     assert summary == [
-        ("Pass", False, 2),
-        ("Fail", True, 0),
-        ("Irrelevant", False, 3),
-        ("Lack of Evidence", False, 1),
+        ("Pass", False),
+        ("Fail", True),
+        ("Irrelevant", False),
+        ("Lack of Evidence", False),
     ]

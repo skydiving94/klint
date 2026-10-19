@@ -3,6 +3,8 @@
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.core.models.question_type import QuestionType
+from klint.core.models.rule import AuditRule
 
 
 def test_directory_children_are_its_files_then_its_subdirectories() -> None:
@@ -31,8 +33,9 @@ def test_directory_unit_describes_itself_without_assuming_a_language() -> None:
     assert "Package Public API" not in content
 
 
-def test_python_package_is_a_directory_unit_of_the_same_type() -> None:
-    package = AuditablePythonPackageUnit(unit_id="d")
+def test_rule_for_directories_applies_to_a_python_package() -> None:
+    package = AuditablePythonPackageUnit(unit_id="d", language="python")
+    rule = AuditRule("r", QuestionType.CHOICE, "?", ["project_directory"])
 
-    assert isinstance(package, AuditableDirectoryUnit)
-    assert package.unit_type == AuditableDirectoryUnit.unit_type
+    assert package.unit_type == "project_directory"
+    assert rule.is_applicable_to(package)
