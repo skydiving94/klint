@@ -1,8 +1,8 @@
 """Directory units: their children and how a directory describes itself."""
 
-from src.catalog.code.common.units.directory import AuditableDirectoryUnit
-from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 
 
 def test_directory_children_are_its_files_then_its_subdirectories() -> None:

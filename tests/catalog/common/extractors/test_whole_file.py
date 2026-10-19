@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.common.extractors.whole_file import WholeFileExtractor
-from src.catalog.common.units.file import AuditableFileUnit
-from src.core.models.file_traits import FileTraits
-from src.core.models.scanned_tree import ScannedFile
-from src.core.models.unit import AuditableUnit
+from klint.catalog.common.extractors.whole_file import WholeFileExtractor
+from klint.catalog.common.units.file import AuditableFileUnit
+from klint.core.models.file_traits import FileTraits
+from klint.core.models.scanned_tree import ScannedFile
+from klint.core.models.unit import AuditableUnit
 from tests.support.builders import write_text
 
 

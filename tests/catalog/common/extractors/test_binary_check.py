@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.catalog.common.extractors.binary_check import is_likely_binary
+from klint.catalog.common.extractors.binary_check import is_likely_binary
 from tests.support.builders import write_text
 
 

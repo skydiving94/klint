@@ -7,7 +7,7 @@ import urllib.request
 
 import pytest
 
-from src.infra.system_one.remote import RemoteSystemOneJudge
+from klint.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.fakes import Answers
 
 STATE = "x = 1\n"

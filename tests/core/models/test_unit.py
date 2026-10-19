@@ -4,10 +4,10 @@ import dataclasses
 
 import pytest
 
-from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.catalog.common.units.file import AuditableFileUnit
-from src.core.models.unit import AuditableUnit
+from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.units.file import AuditableFileUnit
+from klint.core.models.unit import AuditableUnit
 
 UNIT_CLASSES: list[type[AuditableUnit]] = [
     AuditableFileUnit,

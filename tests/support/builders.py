@@ -6,20 +6,20 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from src import catalog
-from src.app.audit_pipeline import AuditPipeline
-from src.app.settings import AppSettings
-from src.app.wiring import Override, create_injector
-from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.code.common.units.directory import AuditableDirectoryUnit
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.catalog.common.scanners.target_scanner import TargetScanner
-from src.cli.runner import AuditCommand, AuditCommandApp
-from src.core.auditor import Auditor
-from src.core.interfaces.judge import BaseJudge
-from src.core.registry import UnitRegistry
-from src.infra.language_to_file_extensions_loader.json_loader import (
+from klint import catalog
+from klint.app.audit_pipeline import AuditPipeline
+from klint.app.settings import AppSettings
+from klint.app.wiring import Override, create_injector
+from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.cli.runner import AuditCommand, AuditCommandApp
+from klint.core.auditor import Auditor
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.registry import UnitRegistry
+from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
 from tests.support.fakes import JudgeOverride

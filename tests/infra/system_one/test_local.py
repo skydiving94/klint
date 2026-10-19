@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from src.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.judge import BaseJudge
 
-LOCAL_MODULE = "src.infra.system_one.local"
+LOCAL_MODULE = "klint.infra.system_one.local"
 
 
 @dataclasses.dataclass(frozen=True)

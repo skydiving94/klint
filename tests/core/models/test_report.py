@@ -2,9 +2,9 @@
 
 from typing import Any
 
-from src.core.models.location import Location
-from src.core.models.report import AuditFinding, AuditReport
-from src.core.models.scale import Choice
+from klint.core.models.location import Location
+from klint.core.models.report import AuditFinding, AuditReport
+from klint.core.models.scale import Choice
 from tests.support.builders import FAIL, IRRELEVANT, LACK_OF_EVIDENCE, PASS
 
 

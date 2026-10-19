@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pytest
 
-from src.app.settings import AppSettings
-from src.cli.basic_audit import FILE_AUDIT_COMMAND
-from src.cli.project_audit import PROJECT_AUDIT_COMMAND
-from src.cli.runner import (
+from klint.app.settings import AppSettings
+from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.runner import (
     AuditCommand,
     parse_command_arguments,
     run_command_from_shell,
 )
-from src.core.klint_warning import KlintWarning
+from klint.core.klint_warning import KlintWarning
 from tests.support.builders import make_settings, write_text
 
 COMMANDS = [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND]
