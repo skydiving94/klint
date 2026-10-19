@@ -14,6 +14,7 @@ from injector import Binder
 from klint.app.settings import AppSettings
 from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
@@ -42,7 +43,7 @@ def _file_app(judge: BaseJudge, settings: AppSettings | None = None) -> AuditCom
     return build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
 
 
-def _run(app: AuditCommandApp, *argv: str | Path) -> int:
+def _run(app: AuditCommandApp, *argv: str | Path) -> ExitCode:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
@@ -71,7 +72,7 @@ def test_file_audit_json_matches_snapshot(
 
     exit_code = _run(app, EXAMPLE_FILE, "--json")
 
-    assert exit_code == 0  # failures do not change the exit code today
+    assert exit_code == ExitCode.PROBLEMS_FOUND
     assert_snapshot("cli_file_audit.json", capsys.readouterr().out)
 
 
@@ -277,7 +278,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     exit_code = _run(_file_app(judge), tmp_path, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
     assert captured.err.splitlines() == [
         f"[klint] Warning: File '{locked}' is left out: "
@@ -299,7 +300,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     exit_code = _run(_file_app(judge), tmp_path, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
     assert captured.err.splitlines() == [
         f"[klint] Warning: Directory '{locked}' is left out: "
@@ -332,7 +333,7 @@ def test_file_an_extractor_fails_on_is_left_out_with_a_warning(
     exit_code = _run(app, tmp_path, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     # The Go file is read by the language-neutral extractor, as before.
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.go")]
     assert captured.err.splitlines() == [
@@ -351,7 +352,7 @@ def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
 
     exit_code = _run(_file_app(judge), named_pipe, "--json")
 
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert _json_output(capsys) == {"examined_files": [], "issues": []}
     assert judge.calls == []
 
@@ -429,11 +430,29 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
 
-    assert _run(app, tmp_path / "absent.py") == 1
+    assert _run(app, tmp_path / "absent.py") == ExitCode.RUN_ERROR
     assert "Audit target does not exist" in capsys.readouterr().err
-    assert _run(app, target, "--rules", tmp_path / "absent.json") == 1
+    assert _run(app, target, "--rules", tmp_path / "absent.json") == ExitCode.RUN_ERROR
     assert "Custom rules file does not exist" in capsys.readouterr().err
     # The command stops before anything is audited.
+    assert judge.calls == []
+
+
+def test_rules_file_that_cannot_be_read_exits_with_an_error(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    judge = fake_judge()
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    rules = make_unreadable(write_json(tmp_path / "rules.json", {}))
+
+    exit_code = _run(_file_app(judge), target, "--rules", rules)
+
+    (error_line,) = capsys.readouterr().err.splitlines()
+    assert exit_code == ExitCode.RUN_ERROR
+    assert error_line.startswith("[klint] Error: ")
     assert judge.calls == []
 
 
@@ -459,7 +478,7 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     captured = capsys.readouterr()
-    assert exit_code == 1
+    assert exit_code == ExitCode.RUN_ERROR
     assert captured.out == ""
     assert captured.err.startswith("[klint] Error: Language-to-file-extensions file")
     assert reason in captured.err
@@ -478,7 +497,7 @@ def test_problem_in_one_rule_is_printed_as_a_warning_and_the_audit_goes_on(
     exit_code = _run(_file_app(fake_judge()), target, "--json", "--rules", custom)
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(target)]
     (warning_line,) = captured.err.splitlines()
     assert warning_line.startswith("[klint] Warning: Rule 'typo'")
@@ -494,7 +513,7 @@ def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> 
     exit_code = _run(_file_app(judge), target, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out) == {"examined_files": [], "issues": []}
     assert f"Skipping {target}: judge is down" in captured.err
 
@@ -511,7 +530,7 @@ def test_file_the_judge_fails_on_is_left_out_while_the_others_are_audited(
     captured = capsys.readouterr()
     output = json.loads(captured.out)
     audited = [str(tmp_path / "a.py"), str(tmp_path / "c.py")]
-    assert exit_code == 0
+    assert exit_code == ExitCode.PROBLEMS_FOUND
     assert output["examined_files"] == audited
     # Findings come out one file at a time, in the order of the files.
     reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]

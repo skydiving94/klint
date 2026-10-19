@@ -1,0 +1,142 @@
+"""The audit use case run on its own, with the fake judge and no command."""
+
+import asyncio
+from pathlib import Path
+
+import pytest
+
+from klint.app.audit_mode import AuditMode
+from klint.app.audit_pipeline import AuditOutcome, AuditRequest
+from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
+from klint.core.models.scale import Choice
+from tests.support.builders import FAIL, PASS, build_audit_pipeline, write_text
+from tests.support.fakes import FakeJudge, PickyJudge
+
+
+class RecordingAuditProgressListener(BaseAuditProgressListener):
+    """Writes down every event as one line, in order."""
+
+    def __init__(self) -> None:
+        self.events: list[str] = []
+
+    def report_audit_started(self, unit_count: int) -> None:
+        self.events.append(f"started {unit_count}")
+
+    def report_unit_audited(self, unit_id: str) -> None:
+        self.events.append(f"audited {unit_id}")
+
+    def report_unit_failed(self, unit_id: str, error: Exception) -> None:
+        self.events.append(f"failed {unit_id}: {error}")
+
+
+def _run_audit(judge: FakeJudge, request: AuditRequest) -> AuditOutcome:
+    return asyncio.run(build_audit_pipeline(judge).run_audit(request))
+
+
+def _judgments(outcome: AuditOutcome) -> list[tuple[str, str, Choice]]:
+    return [
+        (finding.unit_id, finding.rule_id, finding.choice)
+        for finding in outcome.report.get_findings(fails_only=False)
+    ]
+
+
+def test_file_contents_audit_returns_the_findings_on_each_file(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    write_text(tmp_path / "b.md", "# Notes\n")
+    judge = fake_judge(choices={"tidy_file": "fail"})
+
+    outcome = _run_audit(
+        judge, AuditRequest(target=tmp_path, audit_mode=AuditMode.FILE_CONTENTS)
+    )
+
+    files = (str(tmp_path / "a.py"), str(tmp_path / "b.md"))
+    assert outcome.scanned_file_count == 2
+    assert outcome.selected_unit_ids == files
+    assert outcome.report.audited_unit_ids() == list(files)
+    assert _judgments(outcome) == [
+        (files[0], "tidy_file", FAIL),
+        (files[1], "tidy_file", FAIL),
+    ]
+
+
+def test_project_structure_audit_returns_the_findings_on_each_directory(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    write_text(tmp_path / "docs" / "notes.md", "# Notes\n")
+
+    outcome = _run_audit(
+        fake_judge(),
+        AuditRequest(target=tmp_path, audit_mode=AuditMode.PROJECT_STRUCTURE),
+    )
+
+    directories = (str(tmp_path), str(tmp_path / "docs"))
+    assert outcome.scanned_file_count == 1
+    assert outcome.selected_unit_ids == directories
+    assert _judgments(outcome) == [
+        (directories[0], "tidy_directory", PASS),
+        (directories[1], "tidy_directory", PASS),
+    ]
+
+
+def test_unit_whose_audit_fails_is_selected_but_left_out_of_the_report(
+    tmp_path: Path,
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    write_text(tmp_path / "b.py", "poison\n")
+    listener = RecordingAuditProgressListener()
+
+    outcome = _run_audit(
+        PickyJudge(refuses="poison"),
+        AuditRequest(
+            target=tmp_path,
+            audit_mode=AuditMode.FILE_CONTENTS,
+            audit_progress_listener=listener,
+        ),
+    )
+
+    a_file, b_file = str(tmp_path / "a.py"), str(tmp_path / "b.py")
+    assert outcome.selected_unit_ids == (a_file, b_file)
+    assert outcome.report.audited_unit_ids() == [a_file]
+    assert listener.events[0] == "started 2"
+    assert sorted(listener.events[1:]) == [
+        f"audited {a_file}",
+        f"failed {b_file}: judge is down",
+    ]
+
+
+def test_rules_file_given_with_the_request_is_asked_too(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    rules = write_text(
+        tmp_path / "rules.json",
+        '{"typed": {"type": "choice", "instructions": "Is it typed?"}}',
+    )
+    judge = fake_judge()
+
+    _run_audit(
+        judge,
+        AuditRequest(
+            target=target,
+            audit_mode=AuditMode.FILE_CONTENTS,
+            custom_rules_source=rules,
+        ),
+    )
+
+    assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+
+
+@pytest.mark.parametrize("audit_mode", list(AuditMode))
+def test_missing_target_is_raised_before_the_judge_is_asked(
+    tmp_path: Path, fake_judge: type[FakeJudge], audit_mode: AuditMode
+) -> None:
+    judge = fake_judge()
+
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        _run_audit(
+            judge, AuditRequest(target=tmp_path / "absent", audit_mode=audit_mode)
+        )
+
+    assert judge.calls == []

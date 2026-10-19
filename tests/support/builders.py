@@ -16,7 +16,6 @@ from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.catalog.common.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
-from klint.core.auditor import Auditor
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
@@ -95,6 +94,23 @@ def make_settings(
     )
 
 
+def build_audit_pipeline(
+    judge: BaseJudge,
+    settings: AppSettings | None = None,
+    *,
+    overrides: Sequence[Override] = (),
+) -> AuditPipeline:
+    """Return klint's audit pipeline, built as the commands build it.
+
+    ``judge`` stands in for the model, and ``settings`` default to those of
+    make_settings. ``overrides`` replace or add further bindings.
+    """
+    injector = create_injector(
+        settings or make_settings(), JudgeOverride(judge), *overrides
+    )
+    return injector.get(AuditPipeline)
+
+
 def build_audit_command_app(
     command: AuditCommand,
     judge: BaseJudge,
@@ -104,13 +120,11 @@ def build_audit_command_app(
 ) -> AuditCommandApp:
     """Return the app of ``command``, built as the command builds it.
 
-    ``judge`` stands in for the model, and ``settings`` default to those of
-    make_settings. ``overrides`` replace or add further bindings.
+    The arguments are those of build_audit_pipeline.
     """
-    injector = create_injector(
-        settings or make_settings(), JudgeOverride(judge), *overrides
+    return AuditCommandApp(
+        command, build_audit_pipeline(judge, settings, overrides=overrides)
     )
-    return AuditCommandApp(command, injector.get(AuditPipeline), injector.get(Auditor))
 
 
 def build_target_scanner() -> TargetScanner:

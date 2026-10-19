@@ -17,6 +17,7 @@ from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataU
 from klint.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
+from klint.cli.exit_code import ExitCode
 from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
 from klint.core.interfaces.judge import BaseJudge
@@ -45,7 +46,7 @@ def _project_app(
     return build_audit_command_app(PROJECT_AUDIT_COMMAND, judge, settings)
 
 
-def _run(app: AuditCommandApp, *argv: str | Path) -> int:
+def _run(app: AuditCommandApp, *argv: str | Path) -> ExitCode:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
@@ -76,7 +77,7 @@ def test_project_audit_json_matches_snapshot(
 
     exit_code = _run(app, MOCK_PROJECT, "--json")
 
-    assert exit_code == 0
+    assert exit_code == ExitCode.PROBLEMS_FOUND
     assert_snapshot("cli_project_audit.json", capsys.readouterr().out)
     # One judge call per directory, the root and its three subdirectories,
     # each asked every rule.
@@ -91,7 +92,7 @@ def test_project_audit_rejects_a_file_target(
 
     exit_code = _run(_project_app(judge), EXAMPLE_FILE)
 
-    assert exit_code == 1
+    assert exit_code == ExitCode.RUN_ERROR
     assert "must be a directory" in capsys.readouterr().err
     # The command stops before anything is audited.
     assert judge.calls == []
@@ -130,7 +131,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     exit_code = _run(_project_app(judge), package, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert captured.err.splitlines() == [
         f"[klint-project] Warning: File '{locked}' is left out: "
@@ -173,7 +174,7 @@ def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
     exit_code = _run(app, package, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert captured.err.splitlines() == [
         f"[klint-project] Warning: File '{broken}' is left out: "
@@ -198,7 +199,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     exit_code = _run(_project_app(judge), repo, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(repo)]
     assert captured.err.splitlines() == [
         f"[klint-project] Warning: Directory '{locked}' is left out: "
@@ -218,7 +219,7 @@ def test_binary_file_is_listed_by_name_only(
 
     exit_code = _run(_project_app(judge), package, "--json")
 
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     ((content, _questions),) = judge.calls
     content_lines = content.splitlines()
     assert "    - logo.dat (binary)" in content_lines
@@ -236,7 +237,7 @@ def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
     exit_code = _run(_project_app(judge), package, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert captured.err.splitlines() == [
         f"[klint-project] Warning: File '{init_file}' is listed by name and line "
@@ -262,7 +263,7 @@ def test_package_description_marks_what_unparseable_files_leave_unknown(
     exit_code = _run(_project_app(judge), package, "--json")
 
     capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     (root_content,) = [
         content
         for content, _questions in judge.calls
@@ -377,7 +378,7 @@ def test_directory_the_judge_fails_on_is_left_out_while_the_others_are_audited(
     exit_code = _run(_project_app(judge), repo, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.PROBLEMS_FOUND
     assert json.loads(captured.out)["examined_directories"] == [str(repo / "pkg")]
     assert f"Skipping {repo}: judge is down" in captured.err
 
@@ -400,7 +401,7 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     exit_code = _run_main(monkeypatch, settings, tmp_path)
 
     captured = capsys.readouterr()
-    assert exit_code == 1
+    assert exit_code == ExitCode.RUN_ERROR
     assert captured.out == ""
     assert captured.err.startswith(
         "[klint-project] Error: Language-to-file-extensions file"

@@ -41,12 +41,14 @@ class AuditProgressReporter:
     current directory.
     """
 
-    def __init__(self, total: int, enabled: bool = True) -> None:
-        self._total = max(total, 1)
+    def __init__(self, enabled: bool = True) -> None:
+        self._total = 1
         self._completed = 0
         self._enabled = enabled and sys.stderr.isatty()
 
-    def start(self) -> None:
+    def start(self, total: int) -> None:
+        """Show an empty bar for ``total`` units."""
+        self._total = max(total, 1)
         if not self._enabled:
             return
         self._render(f"Initializing model & auditing {self._total} units...")
