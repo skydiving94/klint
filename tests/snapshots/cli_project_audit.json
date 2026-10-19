@@ -7,14 +7,14 @@
   ],
   "issues": [
     {
-      "rule_id": "circular_package_dependencies",
+      "rule_id": "acyclic_packages",
       "unit_id": "examples/mock_bad_project",
       "judgment": "Fail",
       "confidence": 0.9,
       "probabilities": {
         "fail": 0.9
       },
-      "instructions": "Do packages and subpackages in this directory tree maintain a clean, acyclic dependency flow rather than importing from each other in circular dependencies?",
+      "instructions": "Do the packages import each other without cycles?",
       "directory_path": "examples/mock_bad_project",
       "file_names": [],
       "subdirectory_names": [
@@ -24,14 +24,14 @@
       ]
     },
     {
-      "rule_id": "circular_package_dependencies",
+      "rule_id": "acyclic_packages",
       "unit_id": "examples/mock_bad_project/api",
       "judgment": "Fail",
       "confidence": 0.9,
       "probabilities": {
         "fail": 0.9
       },
-      "instructions": "Do packages and subpackages in this directory tree maintain a clean, acyclic dependency flow rather than importing from each other in circular dependencies?",
+      "instructions": "Do the packages import each other without cycles?",
       "directory_path": "examples/mock_bad_project/api",
       "file_names": [
         "__init__.py",
@@ -40,14 +40,14 @@
       "subdirectory_names": []
     },
     {
-      "rule_id": "circular_package_dependencies",
+      "rule_id": "acyclic_packages",
       "unit_id": "examples/mock_bad_project/domain",
       "judgment": "Fail",
       "confidence": 0.9,
       "probabilities": {
         "fail": 0.9
       },
-      "instructions": "Do packages and subpackages in this directory tree maintain a clean, acyclic dependency flow rather than importing from each other in circular dependencies?",
+      "instructions": "Do the packages import each other without cycles?",
       "directory_path": "examples/mock_bad_project/domain",
       "file_names": [
         "__init__.py",
@@ -56,14 +56,14 @@
       "subdirectory_names": []
     },
     {
-      "rule_id": "circular_package_dependencies",
+      "rule_id": "acyclic_packages",
       "unit_id": "examples/mock_bad_project/utils",
       "judgment": "Fail",
       "confidence": 0.9,
       "probabilities": {
         "fail": 0.9
       },
-      "instructions": "Do packages and subpackages in this directory tree maintain a clean, acyclic dependency flow rather than importing from each other in circular dependencies?",
+      "instructions": "Do the packages import each other without cycles?",
       "directory_path": "examples/mock_bad_project/utils",
       "file_names": [
         "misc_helpers.py"

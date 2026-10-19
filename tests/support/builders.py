@@ -24,9 +24,8 @@ from klint.infra.language_to_file_extensions_loader.json_loader import (
 )
 from tests.support.fakes import JudgeOverride
 from tests.support.paths import (
-    BUILT_IN_RULE_PACKS,
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
-    FALLBACK_RULE_PACKS,
+    TIDY_RULE_PACK,
 )
 
 RuleSpec = dict[str, Any]
@@ -73,14 +72,18 @@ def write_text(path: Path, text: str) -> Path:
 
 
 def make_settings(
-    built_in_rule_packs: Sequence[Path] = BUILT_IN_RULE_PACKS,
-    fallback_rule_packs: Sequence[Path] = FALLBACK_RULE_PACKS,
+    built_in_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
+    fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     file_contents_rule_pack_override: Path | None = None,
     project_structure_rule_pack_override: Path | None = None,
     kev_mode: str = "remote",
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
-    """Return settings that point at the given rule packs and data files."""
+    """Return settings that point at the given rule packs and data files.
+
+    The rule packs default to the tests' own, so that every file and every
+    directory is asked a rule; a test that needs other packs passes them.
+    """
     return AppSettings(
         model_name="fake",
         kev_mode=kev_mode,

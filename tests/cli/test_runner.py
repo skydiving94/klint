@@ -1,13 +1,12 @@
 """What the two commands share: their arguments and how they start up."""
 
 import asyncio
+import json
 import sys
-import warnings
 from pathlib import Path
 
 import pytest
 
-from klint.app.settings import AppSettings
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
 from klint.cli.runner import (
@@ -15,30 +14,53 @@ from klint.cli.runner import (
     parse_command_arguments,
     run_command_from_shell,
 )
-from klint.core.klint_warning import KlintWarning
-from tests.support.builders import make_settings, write_text
+from tests.support.builders import (
+    DIR_RULE,
+    FILE_RULE,
+    build_audit_command_app,
+    make_settings,
+    write_json,
+    write_text,
+)
+from tests.support.fakes import FakeJudge
 
-COMMANDS = [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND]
 
-
-@pytest.mark.parametrize("command", COMMANDS)
-def test_both_commands_read_the_same_arguments(command: AuditCommand) -> None:
-    args = parse_command_arguments(
-        command,
-        [
-            "some/path",
-            "--rules",
-            "r.json",
-            "--all",
-            "--min-confidence",
-            "0.5",
-            "--json",
-        ],
+@pytest.mark.parametrize(
+    ("command", "audited_path_parts", "rule_id"),
+    [
+        (FILE_AUDIT_COMMAND, ("a.py",), "for_files"),
+        (PROJECT_AUDIT_COMMAND, (), "for_directories"),
+    ],
+)
+def test_both_commands_take_the_same_options(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: pytest.CaptureFixture[str],
+    command: AuditCommand,
+    audited_path_parts: tuple[str, ...],
+    rule_id: str,
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json", {"for_files": FILE_RULE, "for_directories": DIR_RULE}
     )
+    target = tmp_path / "pkg"
+    write_text(target / "a.py", "x = 1\n")
+    # No rule but the custom ones, each answered "pass" with low confidence.
+    settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
+    app = build_audit_command_app(command, fake_judge(confidence=0.4), settings)
+    argv = [str(target), "--json", "--rules", str(custom), "--all"]
 
-    assert args.target == Path("some/path")
-    assert args.rules == Path("r.json")
-    assert (args.all, args.min_confidence, args.json) == (True, 0.5, True)
+    asyncio.run(app.run(argv))
+    every_judgment = json.loads(capsys.readouterr().out)
+    asyncio.run(app.run([*argv, "--min-confidence", "0.5"]))
+    confident_judgments = json.loads(capsys.readouterr().out)
+
+    audited = str(target.joinpath(*audited_path_parts))
+    assert every_judgment[command.json_key] == [audited]
+    assert [(i["rule_id"], i["judgment"]) for i in every_judgment["issues"]] == [
+        (rule_id, "Pass")
+    ]
+    assert confident_judgments == {command.json_key: [audited], "issues": []}
 
 
 @pytest.mark.parametrize(
@@ -73,20 +95,22 @@ def test_klint_json_that_cannot_be_read_stops_the_command_with_one_line(
     assert captured.err.count("\n") == 1
 
 
+@pytest.mark.usefixtures("shell_env")
 def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_on(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    def load_settings_with_a_warning(*_args: object) -> AppSettings:
-        warnings.warn("a setting was ignored", KlintWarning, stacklevel=1)
-        return make_settings()
-
-    monkeypatch.setattr(AppSettings, "from_env", load_settings_with_a_warning)
-    monkeypatch.setattr(sys, "argv", ["klint", str(tmp_path / "absent.py")])
+    # The remote judge is built but never asked, as the target is missing.
+    config = write_json(
+        tmp_path / "klint.json", {"env": {"KEV_MODE": "remote", "KEV_MODLE_NAME": "x"}}
+    )
+    target = tmp_path / "absent.py"
+    monkeypatch.setattr(sys, "argv", ["klint", str(target), "--rules", str(config)])
 
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     # The command went on past the warning, as far as the missing target.
     assert exit_code == 1
     warning_line, error_line = capsys.readouterr().err.splitlines()
-    assert warning_line == "[klint] Warning: a setting was ignored"
+    assert warning_line.startswith("[klint] Warning: ")
+    assert "unknown keys ['KEV_MODLE_NAME']" in warning_line
     assert error_line.startswith("[klint] Error: Audit target does not exist")

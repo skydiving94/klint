@@ -56,16 +56,31 @@ def _json_output(capsys: Capture) -> dict[str, Any]:
 
 @pytest.mark.usefixtures("in_repo_root")
 def test_project_audit_json_matches_snapshot(
-    fake_judge: type[FakeJudge], capsys: Capture, assert_snapshot: SnapshotAsserter
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    assert_snapshot: SnapshotAsserter,
 ) -> None:
-    judge = fake_judge(choices={"circular_package_dependencies": "fail"})
+    pack = write_json(
+        tmp_path / "rules.json",
+        {
+            "acyclic_packages": {
+                **DIR_RULE,
+                "instructions": "Do the packages import each other without cycles?",
+            },
+            "small_packages": {**DIR_RULE, "instructions": "Is each package small?"},
+        },
+    )
+    judge = fake_judge(choices={"acyclic_packages": "fail"})
+    app = _project_app(judge, make_settings(built_in_rule_packs=[pack]))
 
-    exit_code = _run(_project_app(judge), MOCK_PROJECT, "--json")
+    exit_code = _run(app, MOCK_PROJECT, "--json")
 
     assert exit_code == 0
     assert_snapshot("cli_project_audit.json", capsys.readouterr().out)
-    # One judge call per directory: the root and its three subdirectories.
-    assert [len(rule_ids) for rule_ids in judge.asked_rule_ids()] == [18] * 4
+    # One judge call per directory, the root and its three subdirectories,
+    # each asked every rule.
+    assert judge.asked_rule_ids() == [["acyclic_packages", "small_packages"]] * 4
 
 
 @pytest.mark.usefixtures("in_repo_root")
@@ -266,15 +281,21 @@ def test_package_description_marks_what_unparseable_files_leave_unknown(
     ) in content_lines
 
 
-def test_python_project_rules_are_asked_only_about_directories_holding_python(
+def test_rules_for_python_are_asked_only_about_directories_holding_python(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
+    python_pack = write_json(
+        tmp_path / "python.json",
+        {"applies_to": {"languages": ["python"]}, "rules": {"for_python": DIR_RULE}},
+    )
+    # A directory in no language is asked only the fallback packs: none here.
+    settings = make_settings(built_in_rule_packs=[python_pack], fallback_rule_packs=[])
     repo = tmp_path / "repo"
     write_text(repo / "app" / "main.py", "x = 1\n")
     write_text(repo / "docs" / "intro.md", "# Intro\n")
     judge = fake_judge()
 
-    _run(_project_app(judge), repo, "--json", "--all")
+    _run(_project_app(judge, settings), repo, "--json", "--all")
 
     output = _json_output(capsys)
     judged_unit_ids = {issue["unit_id"] for issue in output["issues"]}
@@ -317,8 +338,10 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
     for name in ("a.py", "b.java", "c.txt"):
         write_text(package / name, "x = 1\n")
     judge = fake_judge()
+    # No rule but the custom ones.
+    settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
 
-    _run(_project_app(judge), package, "--json", "--rules", custom)
+    _run(_project_app(judge, settings), package, "--json", "--rules", custom)
 
     contents_asked_the_file_rule = [
         content
