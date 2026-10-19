@@ -20,7 +20,8 @@ class AuditRequest:
     target is the file or directory to audit, and audit_mode the kind of
     audit. The rules in custom_rules_source, when given, merge over the
     loaded ones. scan_progress_listener is told about each directory as it is
-    scanned, and audit_progress_listener about each unit as its audit ends.
+    scanned. audit_progress_listener is told when the audit of the units
+    starts, and about each unit as its audit ends.
     """
 
     target: Path

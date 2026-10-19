@@ -438,6 +438,24 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert judge.calls == []
 
 
+def test_rules_file_that_cannot_be_read_exits_with_an_error(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    judge = fake_judge()
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    rules = make_unreadable(write_json(tmp_path / "rules.json", {}))
+
+    exit_code = _run(_file_app(judge), target, "--rules", rules)
+
+    (error_line,) = capsys.readouterr().err.splitlines()
+    assert exit_code == ExitCode.RUN_ERROR
+    assert error_line.startswith("[klint] Error: ")
+    assert judge.calls == []
+
+
 @pytest.mark.parametrize(
     ("content", "reason"),
     [("{not json", "is not valid JSON"), (None, "does not exist")],

@@ -205,7 +205,9 @@ class AuditCommandApp:
         try:
             with _print_klint_warnings_raised_inside(command):
                 outcome = await self._audit_pipeline.run_audit(request)
-        except (FileNotFoundError, ValueError) as exc:
+        except (OSError, ValueError) as exc:
+            # The audit cannot run, for example the target or a rules file
+            # cannot be used.
             print_error_line(command, exc)
             return ExitCode.RUN_ERROR
         progress.finish()
