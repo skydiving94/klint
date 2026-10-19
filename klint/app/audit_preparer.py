@@ -37,7 +37,7 @@ class PendingAuditPortfolio:
     scanned_file_count: int
 
 
-class AuditPipeline:
+class AuditPreparer:
     """Prepares an audit of a target, in fixed steps.
 
     The target is scanned once. The units are then extracted from what the

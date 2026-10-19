@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from klint import catalog
-from klint.app.audit_pipeline import AuditPipeline
+from klint.app.audit_preparer import AuditPreparer
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override, create_injector
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
@@ -110,7 +110,7 @@ def build_audit_command_app(
     injector = create_injector(
         settings or make_settings(), JudgeOverride(judge), *overrides
     )
-    return AuditCommandApp(command, injector.get(AuditPipeline), injector.get(Auditor))
+    return AuditCommandApp(command, injector.get(AuditPreparer), injector.get(Auditor))
 
 
 def build_target_scanner() -> TargetScanner:

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from klint.app.audit_mode import AuditMode
-from klint.app.audit_pipeline import AuditPipeline
+from klint.app.audit_preparer import AuditPreparer
 from klint.app.settings import AppSettings
 from klint.app.wiring import create_injector
 from klint.cli.formatter import (
@@ -129,7 +129,7 @@ def parse_command_arguments(
 
 
 async def run_audit_command(
-    audit_pipeline: AuditPipeline,
+    audit_preparer: AuditPreparer,
     auditor: Auditor,
     command: AuditCommand,
     target: Path,
@@ -141,7 +141,7 @@ async def run_audit_command(
     scan_progress_listener = TerminalScanProgressListener(enabled=not as_json)
     try:
         with _print_klint_warnings_raised_inside(command):
-            portfolio = await audit_pipeline.prepare_audit(
+            portfolio = await audit_preparer.prepare_audit(
                 target,
                 command.audit_mode,
                 custom_rules_source=rules_source,
@@ -188,19 +188,19 @@ class AuditCommandApp:
     def __init__(
         self,
         command: AuditCommand,
-        audit_pipeline: AuditPipeline,
+        audit_preparer: AuditPreparer,
         auditor: Auditor,
         default_custom_rules: Path | None = None,
     ) -> None:
         self._command = command
-        self._audit_pipeline = audit_pipeline
+        self._audit_preparer = audit_preparer
         self._auditor = auditor
         self._default_custom_rules = default_custom_rules
 
     async def run(self, argv: Sequence[str] | None = None) -> int:
         args = parse_command_arguments(self._command, argv)
         return await run_audit_command(
-            self._audit_pipeline,
+            self._audit_preparer,
             self._auditor,
             self._command,
             target=args.target,
@@ -221,7 +221,7 @@ async def run_command_from_shell(command: AuditCommand) -> int:
                 AppSettings.from_env, args.target, args.rules
             )
             injector = create_injector(settings)
-            audit_pipeline = injector.get(AuditPipeline)
+            audit_preparer = injector.get(AuditPreparer)
             auditor = injector.get(Auditor)
     except (OSError, ValueError) as error:
         # The command cannot be set up, for example a config or data file is
@@ -230,7 +230,7 @@ async def run_command_from_shell(command: AuditCommand) -> int:
         return 1
     app = AuditCommandApp(
         command,
-        audit_pipeline,
+        audit_preparer,
         auditor,
         default_custom_rules=settings.discovered_config_path,
     )
