@@ -139,4 +139,4 @@ def test_missing_target_is_raised_before_the_judge_is_asked(
             judge, AuditRequest(target=tmp_path / "absent", audit_mode=audit_mode)
         )
 
-    assert judge.calls == []
+    assert judge.requests == []

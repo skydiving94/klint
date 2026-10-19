@@ -1,19 +1,15 @@
 """Test doubles that stand in for the model."""
 
 import asyncio
-from collections.abc import Mapping
-from typing import Any
 
 from injector import Module, provider, singleton
 
 from klint.core.interfaces.judge import BaseJudge
-
-Questions = dict[str, Any]
-Answers = dict[str, Any]
+from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
 
 
 class FakeJudge(BaseJudge):
-    """Stands in for the model: answers from canned choices and records every call."""
+    """Stands in for the model: answers from canned choices, records each request."""
 
     def __init__(
         self,
@@ -28,25 +24,42 @@ class FakeJudge(BaseJudge):
         self.choices: dict[str, str | None] = choices or {}
         self.default = default
         self.confidence = confidence
-        self.calls: list[tuple[str, Questions]] = []
+        self.requests: list[JudgeRequest] = []
 
-    async def answer(self, state: str, questions: Mapping[str, Any]) -> Answers:
-        self.calls.append((state, dict(questions)))
-        answers: Answers = {}
-        for rule_id in questions:
-            choice = self.choices.get(rule_id, self.default)
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+        self.requests.append(request)
+        answers: list[JudgeAnswer] = []
+        for question in request.questions:
+            choice = self.choices.get(question.question_id, self.default)
             if choice is None:
                 continue
-            answers[rule_id] = {
-                "choice": choice,
-                "confidence": self.confidence,
-                "probabilities": {choice: self.confidence},
-            }
+            answers.append(
+                JudgeAnswer(
+                    question_id=question.question_id,
+                    choice_key=choice,
+                    confidence=self.confidence,
+                    choice_key_to_probability={choice: self.confidence},
+                )
+            )
         return answers
 
     def asked_rule_ids(self) -> list[list[str]]:
-        """Return the rule ids asked in each call, in call order."""
-        return [sorted(questions) for _, questions in self.calls]
+        """Return the rule ids asked in each request, sorted, in request order."""
+        return [
+            sorted(question.question_id for question in request.questions)
+            for request in self.requests
+        ]
+
+    def subject_to_asked_rule_ids(self) -> dict[str, set[str]]:
+        """Return the rule ids asked about each subject.
+
+        Meant for tests whose subjects all differ: a later request about the
+        same subject replaces an earlier one.
+        """
+        return {
+            request.subject: {question.question_id for question in request.questions}
+            for request in self.requests
+        }
 
 
 class PickyJudge(FakeJudge):
@@ -56,26 +69,26 @@ class PickyJudge(FakeJudge):
         super().__init__(default="fail")
         self.refuses = refuses
 
-    async def answer(self, state: str, questions: Mapping[str, Any]) -> Answers:
-        if self.refuses in state:
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+        if self.refuses in request.subject:
             raise RuntimeError("judge is down")
-        return await super().answer(state, questions)
+        return await super().answer(request)
 
 
 class CountingJudge(FakeJudge):
-    """Records how many questions are being answered at the same time."""
+    """Records how many requests are being answered at the same time."""
 
     def __init__(self) -> None:
         super().__init__()
         self.running = 0
         self.most_at_once = 0
 
-    async def answer(self, state: str, questions: Mapping[str, Any]) -> Answers:
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
         self.running += 1
         self.most_at_once = max(self.most_at_once, self.running)
         await asyncio.sleep(0)
         self.running -= 1
-        return await super().answer(state, questions)
+        return await super().answer(request)
 
 
 class JudgeOverride(Module):

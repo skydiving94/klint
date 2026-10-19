@@ -6,16 +6,21 @@ import sys
 
 import pytest
 
+from klint.core.models.judge_exchange import JudgeAnswer
+from tests.support.builders import build_judge_request
 from tests.support.fakes import FakeJudge
 from tests.support.paths import BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS
 
 
 def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
-    judge = fake_judge(choices={"b": "fail", "c": None})
-    answers = asyncio.run(judge.answer("some state", {"a": {}, "b": {}, "c": {}}))
-    assert answers["a"]["choice"] == "pass"
-    assert answers["b"]["choice"] == "fail"
-    assert "c" not in answers
+    judge = fake_judge(choices={"b": "fail", "c": None}, confidence=0.7)
+    answers = asyncio.run(
+        judge.answer(build_judge_request("some state", "a", "b", "c"))
+    )
+    assert answers == [
+        JudgeAnswer("a", "pass", 0.7, {"pass": 0.7}),
+        JudgeAnswer("b", "fail", 0.7, {"fail": 0.7}),
+    ]
     assert judge.asked_rule_ids() == [["a", "b", "c"]]
 
 

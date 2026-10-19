@@ -17,6 +17,8 @@ from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.catalog.common.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
+from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
@@ -55,6 +57,26 @@ PASS = PASS_FAIL_SCALE.choice("pass")
 FAIL = PASS_FAIL_SCALE.choice("fail")
 IRRELEVANT = PASS_FAIL_SCALE.choice("irrelevant")
 LACK_OF_EVIDENCE = PASS_FAIL_SCALE.choice("lack_of_evidence")
+
+
+def build_judge_request(subject: str, *question_ids: str) -> JudgeRequest:
+    """Return a request asking each of ``question_ids`` about ``subject``.
+
+    Each question has the type and answers of the default scale, and asks
+    "Is <question_id> done?".
+    """
+    return JudgeRequest(
+        subject=subject,
+        questions=tuple(
+            JudgeQuestion(
+                question_id=question_id,
+                question_type=QuestionType.CHOICE,
+                question=f"Is {question_id} done?",
+                choice_key_to_criterion=PASS_FAIL_SCALE.criteria_payload(),
+            )
+            for question_id in question_ids
+        ),
+    )
 
 
 def write_json(path: Path, data: dict[str, Any]) -> Path:
