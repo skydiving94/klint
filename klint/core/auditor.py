@@ -37,9 +37,11 @@ class Auditor:
         """Audit each unit with the rules for its language; return the report.
 
         The report holds the units audited without error, and their findings,
-        in the order of ``units``. The listener, when given, is told about
-        each unit as its audit ends.
+        in the order of ``units``. The listener, when given, is told when the
+        audit starts and about each unit as its audit ends.
         """
+        if audit_progress_listener is not None:
+            audit_progress_listener.report_audit_started(len(units))
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT_AUDITS)
 
         async def audit_one(unit: AuditableUnit) -> list[AuditFinding] | None:
