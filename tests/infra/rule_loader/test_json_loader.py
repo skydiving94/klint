@@ -384,6 +384,50 @@ def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
         _load(_loader([pack]))
 
 
+@pytest.mark.parametrize(
+    ("field_name", "bad_value", "message"),
+    [
+        ("type", "yesno", "has unknown type 'yesno'"),
+        ("type", 1, "has unknown type 1"),
+        ("target_unit_types", "file", "has invalid target_unit_types 'file'"),
+        ("target_unit_types", ["nope"], r"has unknown target_unit_types \['nope'\]"),
+        ("instructions", 7, "has invalid instructions 7"),
+    ],
+)
+def test_malformed_rule_stops_with_an_error_naming_the_rule_and_the_file(
+    tmp_path: Path, field_name: str, bad_value: object, message: str
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json", {"broken": {**FILE_RULE, field_name: bad_value}}
+    )
+
+    with pytest.raises(
+        ValueError, match=rf"^Rule 'broken' {message} in '.*pack\.json'"
+    ):
+        _load(_loader([pack]))
+
+
+def test_malformed_rule_in_a_pack_that_is_not_chosen_stops_nothing(
+    tmp_path: Path,
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        _pack(
+            {"languages": ["typescript"]},
+            {"typo": {"type": "choice"}, "broken": {**FILE_RULE, "type": "yesno"}},
+        ),
+    )
+    loader = _loader([pack])
+
+    # No warning either: an unexpected one fails the test.
+    assert _load(loader, PYTHON) == {}
+    with (
+        pytest.warns(KlintWarning, match="'typo' .* is skipped"),
+        pytest.raises(ValueError, match="has unknown type 'yesno'"),
+    ):
+        _load(loader, TYPESCRIPT)
+
+
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE})
 
