@@ -2,18 +2,18 @@
 
 import asyncio
 import json
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from src.core.klint_warning import KlintWarning
-from src.core.models.file_traits import FileTraits
-from src.core.models.question_type import QuestionType
-from src.core.models.rule import AuditRule
-from src.core.registry import UnitRegistry
-from src.infra.rule_loader.json_loader import JsonRuleLoader
+from klint.core.klint_warning import KlintWarning
+from klint.core.models.file_traits import FileTraits
+from klint.core.models.question_type import QuestionType
+from klint.core.models.rule import AuditRule
+from klint.core.registry import UnitRegistry
+from klint.infra.rule_loader.json_loader import JsonRuleLoader
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -33,18 +33,22 @@ PYTHON = FileTraits(language="python")
 TYPESCRIPT = FileTraits(language="typescript")
 JAVA = FileTraits(language="java")
 UNIDENTIFIED = FileTraits(language=None)
+# The languages a file can be identified as, for the packs written here.
+TEST_PACK_LANGUAGES = frozenset({"python", "typescript", "javascript", "java", "go"})
 
 
 def _loader(
-    rule_packs: Sequence[Path], fallback_rule_packs: Sequence[Path] = ()
+    rule_packs: Sequence[Path],
+    fallback_rule_packs: Sequence[Path] = (),
+    known_languages: Collection[str] = TEST_PACK_LANGUAGES,
 ) -> JsonRuleLoader:
     return JsonRuleLoader(
-        rule_packs, fallback_rule_packs, UNIT_REGISTRY, KNOWN_LANGUAGES
+        rule_packs, fallback_rule_packs, UNIT_REGISTRY, known_languages
     )
 
 
 def _built_in_loader() -> JsonRuleLoader:
-    return _loader(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS)
+    return _loader(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS, KNOWN_LANGUAGES)
 
 
 def _load(
@@ -66,32 +70,29 @@ def _pack(applies_to: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any]:
     return {"applies_to": applies_to, "rules": rules}
 
 
-TYPESCRIPT_RULE_IDS = [
-    "n_plus_1_query",
-    "hardcoded_secrets",
-    "improper_error_handling",
-    "sync_blocking_io",
-    "missing_input_validation",
-    "tight_coupling",
-    "over_fetching_data",
-    "prop_drilling",
-    "ignoring_composition",
-    "improper_state_colocation",
-    "direct_dom_manipulation",
-    "overusing_use_effect",
-    "missing_dependency_arrays",
-    "large_bundle_sizes",
-    "inline_functions",
-    "god_component",
-]
+def test_rules_keep_the_order_of_the_chosen_packs_and_of_each_pack(
+    tmp_path: Path,
+) -> None:
+    first = write_json(tmp_path / "first.json", {"b": FILE_RULE, "a": FILE_RULE})
+    python_only = write_json(
+        tmp_path / "python.json", _pack({"languages": ["python"]}, {"c": FILE_RULE})
+    )
+    typescript_only = write_json(
+        tmp_path / "typescript.json",
+        _pack({"languages": ["typescript"]}, {"d": FILE_RULE}),
+    )
+    last = write_json(tmp_path / "last.json", {"e": FILE_RULE})
+    loader = _loader([first, python_only, typescript_only, last])
+
+    # The judge is asked the rules in this order.
+    assert list(_load(loader, TYPESCRIPT)) == ["b", "a", "d", "e"]
+    assert list(_load(loader, PYTHON)) == ["b", "a", "c", "e"]
 
 
-def test_built_in_packs_for_a_typescript_file_keep_the_original_rule_order() -> None:
+def test_built_in_typescript_file_rules_are_choice_questions_about_files() -> None:
     rules = _load(_built_in_loader(), TYPESCRIPT)
 
-    # The judge is asked the rules in this order, so the split must keep it.
-    assert list(rules) == TYPESCRIPT_RULE_IDS
-    assert _rule_ids_in(*BUILT_IN_RULE_PACKS[:3]) == TYPESCRIPT_RULE_IDS
+    assert rules
     assert all(r.question_type is QuestionType.CHOICE for r in rules.values())
     assert all(r.target_unit_types == ["file"] for r in rules.values())
 
@@ -248,29 +249,37 @@ def test_malformed_header_stops_with_an_error_naming_the_file(
         _load(_loader([pack]), PYTHON)
 
 
-def test_custom_rules_merge_and_override_by_id(tmp_path: Path) -> None:
+def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
+    tmp_path: Path,
+) -> None:
+    first = write_json(tmp_path / "first.json", {"a": FILE_RULE, "b": FILE_RULE})
+    second = write_json(tmp_path / "second.json", {"c": FILE_RULE})
     custom = write_json(
         tmp_path / "custom.json",
         {
-            "hardcoded_secrets": {**FILE_RULE, "instructions": "Overridden?"},
-            "extra": FILE_RULE,
+            "a": {**FILE_RULE, "instructions": "Custom?"},
+            "extra": {**FILE_RULE, "instructions": "Extra?"},
         },
     )
-    defaults = _load(_built_in_loader())
-    merged = _load(_built_in_loader(), custom=custom)
-    assert len(merged) == len(defaults) + 1
-    assert merged["hardcoded_secrets"].instructions == "Overridden?"
-    assert merged["extra"].instructions == "Is it tidy?"
-    assert merged["n_plus_1_query"] == defaults["n_plus_1_query"]
+
+    defaults = _load(_loader([first, second]))
+    rules = _load(_loader([first, second]), custom=custom)
+
+    assert list(rules) == ["a", "b", "c", "extra"]
+    assert rules["a"].instructions == "Custom?"
+    assert rules["extra"].instructions == "Extra?"
+    assert (rules["b"], rules["c"]) == (defaults["b"], defaults["c"])
 
 
 @pytest.mark.parametrize("traits", [PYTHON, UNIDENTIFIED])
 def test_custom_rules_merge_whatever_the_traits(
     tmp_path: Path, traits: FileTraits
 ) -> None:
+    pack = write_json(tmp_path / "pack.json", {"for_code": FILE_RULE})
+    fallback = write_json(tmp_path / "fallback.json", {"for_prose": FILE_RULE})
     custom = write_json(tmp_path / "custom.json", {"house_rule": FILE_RULE})
 
-    assert "house_rule" in _load(_built_in_loader(), traits, custom)
+    assert "house_rule" in _load(_loader([pack], [fallback]), traits, custom)
 
 
 def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
@@ -376,8 +385,10 @@ def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
 
 
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError):
-        _load(_built_in_loader(), custom=tmp_path / "absent.json")
+    pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE})
+
+    with pytest.raises(FileNotFoundError, match="Custom rules file does not exist"):
+        _load(_loader([pack]), custom=tmp_path / "absent.json")
 
 
 def test_missing_pack_gives_no_rules(tmp_path: Path) -> None:
@@ -408,19 +419,6 @@ def test_missing_pack_is_skipped_among_several(tmp_path: Path) -> None:
     rules = _load(_loader([tmp_path / "absent.json", present]))
 
     assert list(rules) == ["a"]
-
-
-def test_custom_rules_override_every_pack(tmp_path: Path) -> None:
-    first = write_json(tmp_path / "first.json", {"a": FILE_RULE})
-    second = write_json(tmp_path / "second.json", {"b": FILE_RULE})
-    custom = write_json(
-        tmp_path / "custom.json", {"a": {**FILE_RULE, "instructions": "Custom?"}}
-    )
-
-    rules = _load(_loader([first, second]), custom=custom)
-
-    assert list(rules) == ["a", "b"]
-    assert rules["a"].instructions == "Custom?"
 
 
 def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
@@ -455,14 +453,14 @@ def test_malformed_languages_or_tags_are_rejected(
 
 
 def test_built_in_python_project_rules_are_limited_to_python() -> None:
-    rules = _load(_loader([PYTHON_PROJECT_RULE_PACK]), PYTHON)
+    rules = _load(_loader([PYTHON_PROJECT_RULE_PACK], (), KNOWN_LANGUAGES), PYTHON)
 
     assert rules
     assert all(rule.languages == ["python"] for rule in rules.values())
 
 
 def test_built_in_react_rules_are_limited_to_typescript_and_javascript() -> None:
-    rules = _load(_loader([REACT_RULE_PACK]), TYPESCRIPT)
+    rules = _load(_loader([REACT_RULE_PACK], (), KNOWN_LANGUAGES), TYPESCRIPT)
 
     assert rules
     assert all(
@@ -481,7 +479,7 @@ def test_rule_loading_only_accepts_registered_unit_types(tmp_path: Path) -> None
     pack = write_json(
         tmp_path / "pack.json", {"a": {**FILE_RULE, "target_unit_types": ["file"]}}
     )
-    loader = JsonRuleLoader([pack], [], UnitRegistry(), KNOWN_LANGUAGES)
+    loader = JsonRuleLoader([pack], [], UnitRegistry(), TEST_PACK_LANGUAGES)
 
     with pytest.raises(ValueError, match="unknown target_unit_types"):
         asyncio.run(loader.load_rules(PYTHON))

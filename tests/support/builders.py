@@ -6,27 +6,26 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from src import catalog
-from src.app.audit_pipeline import AuditPipeline
-from src.app.settings import AppSettings
-from src.app.wiring import Override, create_injector
-from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.code.common.units.directory import AuditableDirectoryUnit
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.catalog.common.scanners.target_scanner import TargetScanner
-from src.cli.runner import AuditCommand, AuditCommandApp
-from src.core.auditor import Auditor
-from src.core.interfaces.judge import BaseJudge
-from src.core.registry import UnitRegistry
-from src.infra.language_to_file_extensions_loader.json_loader import (
+from klint import catalog
+from klint.app.audit_pipeline import AuditPipeline
+from klint.app.settings import AppSettings
+from klint.app.wiring import Override, create_injector
+from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.cli.runner import AuditCommand, AuditCommandApp
+from klint.core.auditor import Auditor
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.registry import UnitRegistry
+from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
 from tests.support.fakes import JudgeOverride
 from tests.support.paths import (
-    BUILT_IN_RULE_PACKS,
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
-    FALLBACK_RULE_PACKS,
+    TIDY_RULE_PACK,
 )
 
 RuleSpec = dict[str, Any]
@@ -73,14 +72,18 @@ def write_text(path: Path, text: str) -> Path:
 
 
 def make_settings(
-    built_in_rule_packs: Sequence[Path] = BUILT_IN_RULE_PACKS,
-    fallback_rule_packs: Sequence[Path] = FALLBACK_RULE_PACKS,
+    built_in_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
+    fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     file_contents_rule_pack_override: Path | None = None,
     project_structure_rule_pack_override: Path | None = None,
     kev_mode: str = "remote",
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
-    """Return settings that point at the given rule packs and data files."""
+    """Return settings that point at the given rule packs and data files.
+
+    The rule packs default to the tests' own, so that every file and every
+    directory is asked a rule; a test that needs other packs passes them.
+    """
     return AppSettings(
         model_name="fake",
         kev_mode=kev_mode,

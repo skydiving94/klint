@@ -5,26 +5,26 @@ from pathlib import Path
 
 import pytest
 
-from src.catalog.code.common.extractors.file_metadata_base import (
+from klint.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from src.catalog.code.common.extractors.language_neutral_directory_factory import (
+from klint.catalog.code.common.extractors.language_neutral_directory_factory import (
     LanguageNeutralDirectoryUnitFactory,
 )
-from src.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from src.catalog.code.common.extractors.traits_based_extraction_delegator import (
+from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from klint.catalog.code.common.extractors.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
-from src.catalog.code.common.units.directory import AuditableDirectoryUnit
-from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.catalog.code.python.extractors.file_metadata import (
+from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
-from src.catalog.code.python.extractors.package_factory import (
+from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.core.models.file_traits import FileTraits
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.core.models.file_traits import FileTraits
 from tests.support.builders import (
     build_target_scanner,
     extract_project,

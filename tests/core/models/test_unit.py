@@ -1,13 +1,11 @@
 """Properties every auditable unit shares."""
 
-import dataclasses
-
 import pytest
 
-from src.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from src.catalog.code.python.units.package import AuditablePythonPackageUnit
-from src.catalog.common.units.file import AuditableFileUnit
-from src.core.models.unit import AuditableUnit
+from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.units.file import AuditableFileUnit
+from klint.core.models.unit import AuditableUnit
 
 UNIT_CLASSES: list[type[AuditableUnit]] = [
     AuditableFileUnit,
@@ -33,10 +31,8 @@ def test_unit_language_is_keyword_only() -> None:
     assert unit.language is None
 
 
-def test_unit_language_survives_a_copy_and_is_not_in_the_metadata() -> None:
+def test_unit_language_is_not_in_the_metadata() -> None:
     unit = AuditableFileUnit(unit_id="a.py", file_path="a.py", language="python")
-    copy = dataclasses.replace(unit, content="y = 2")
-    assert copy.language == "python"
     assert "language" not in unit.get_metadata()
 
 

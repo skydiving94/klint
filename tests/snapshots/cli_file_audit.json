@@ -4,14 +4,14 @@
   ],
   "issues": [
     {
-      "rule_id": "hardcoded_secrets",
+      "rule_id": "clear_names",
       "unit_id": "examples/backend_data_and_security.py",
       "judgment": "Fail",
       "confidence": 0.9,
       "probabilities": {
         "fail": 0.9
       },
-      "instructions": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
+      "instructions": "Are the names clear?",
       "file_path": "examples/backend_data_and_security.py",
       "line_range": [
         1,
@@ -19,14 +19,14 @@
       ]
     },
     {
-      "rule_id": "n_plus_1_query",
+      "rule_id": "short_functions",
       "unit_id": "examples/backend_data_and_security.py",
       "judgment": "Fail",
       "confidence": 0.9,
       "probabilities": {
         "fail": 0.9
       },
-      "instructions": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
+      "instructions": "Are functions short?",
       "file_path": "examples/backend_data_and_security.py",
       "line_range": [
         1,

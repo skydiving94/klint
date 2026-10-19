@@ -14,17 +14,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run klint Project Structure Audit on src/
+      - name: Run klint Project Structure Audit on klint/
         uses: ./
         with:
-          target: "src/"
+          target: "klint/"
           mode: "project"
           min_confidence: "0.50"
           kev_model_name: "jaredpalmer/kev-0.8b"
 
-      - name: Run klint File Audit on src/
+      - name: Run klint File Audit on klint/
         uses: ./
         with:
-          target: "src/"
+          target: "klint/"
           mode: "file"
           min_confidence: "0.75"

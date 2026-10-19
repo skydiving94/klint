@@ -11,15 +11,15 @@ from unittest.mock import Mock
 import pytest
 from injector import Binder
 
-from src.app.settings import AppSettings
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.cli.basic_audit import FILE_AUDIT_COMMAND
-from src.cli.runner import AuditCommandApp, run_command_from_shell
-from src.core.interfaces.extractor import BaseUnitExtractor
-from src.core.interfaces.judge import BaseJudge
-from src.core.models.scanned_tree import ScannedFile
-from src.core.models.unit import AuditableUnit
-from src.infra.system_one.remote import RemoteSystemOneJudge
+from klint.app.settings import AppSettings
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli.runner import AuditCommandApp, run_command_from_shell
+from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.scanned_tree import ScannedFile
+from klint.core.models.unit import AuditableUnit
+from klint.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -30,7 +30,7 @@ from tests.support.builders import (
     write_text,
 )
 from tests.support.fakes import CountingJudge, FakeJudge, PickyJudge
-from tests.support.paths import BUILT_IN_RULE_PACKS, REACT_RULE_PACK, SnapshotAsserter
+from tests.support.paths import SnapshotAsserter
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -53,67 +53,96 @@ def _json_output(capsys: Capture) -> dict[str, Any]:
 
 @pytest.mark.usefixtures("in_repo_root")
 def test_file_audit_json_matches_snapshot(
-    fake_judge: type[FakeJudge], capsys: Capture, assert_snapshot: SnapshotAsserter
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    assert_snapshot: SnapshotAsserter,
 ) -> None:
-    judge = fake_judge(choices={"hardcoded_secrets": "fail", "n_plus_1_query": "fail"})
+    pack = write_json(
+        tmp_path / "rules.json",
+        {
+            "clear_names": {**FILE_RULE, "instructions": "Are the names clear?"},
+            "short_functions": {**FILE_RULE, "instructions": "Are functions short?"},
+            "typed_functions": {**FILE_RULE, "instructions": "Are functions typed?"},
+        },
+    )
+    judge = fake_judge(choices={"clear_names": "fail", "short_functions": "fail"})
+    app = _file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
-    exit_code = _run(_file_app(judge), EXAMPLE_FILE, "--json")
+    exit_code = _run(app, EXAMPLE_FILE, "--json")
 
     assert exit_code == 0  # failures do not change the exit code today
     assert_snapshot("cli_file_audit.json", capsys.readouterr().out)
 
 
-@pytest.mark.usefixtures("in_repo_root")
 def test_all_flag_reports_every_judgment(
-    fake_judge: type[FakeJudge], capsys: Capture
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    judge = fake_judge(choices={"hardcoded_secrets": "fail"})
+    pack = write_json(
+        tmp_path / "rules.json",
+        {"a_rule": FILE_RULE, "b_rule": FILE_RULE, "c_rule": FILE_RULE},
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge(choices={"b_rule": "fail"})
+    app = _file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
-    _run(_file_app(judge), EXAMPLE_FILE, "--json", "--all")
+    _run(app, target, "--json")
+    failed = [(i["rule_id"], i["judgment"]) for i in _json_output(capsys)["issues"]]
+    _run(app, target, "--json", "--all")
+    judged = [(i["rule_id"], i["judgment"]) for i in _json_output(capsys)["issues"]]
 
-    judgments = [issue["judgment"] for issue in _json_output(capsys)["issues"]]
+    assert failed == [("b_rule", "Fail")]
     # Every rule that was asked is reported, and only the one failed.
-    assert len(judgments) == len(judge.asked_rule_ids()[0])
-    assert sorted(set(judgments)) == ["Fail", "Pass"]
-    assert judgments.count("Fail") == 1
+    assert judged == [("b_rule", "Fail"), ("a_rule", "Pass"), ("c_rule", "Pass")]
 
 
-@pytest.mark.usefixtures("in_repo_root")
 def test_min_confidence_hides_low_confidence_findings(
-    fake_judge: type[FakeJudge], capsys: Capture
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    judge = fake_judge(default="fail", confidence=0.4)
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    app = _file_app(fake_judge(default="fail", confidence=0.4))
 
-    _run(_file_app(judge), EXAMPLE_FILE, "--json", "--min-confidence", "0.5")
+    _run(app, target, "--json", "--min-confidence", "0.5")
+    above_confidence = _json_output(capsys)
+    _run(app, target, "--json", "--min-confidence", "0.3")
+    below_confidence = _json_output(capsys)
 
-    assert _json_output(capsys) == {"examined_files": [EXAMPLE_FILE], "issues": []}
+    assert above_confidence == {"examined_files": [str(target)], "issues": []}
+    assert below_confidence["issues"]
 
 
-@pytest.mark.usefixtures("in_repo_root")
-def test_react_rules_are_asked_only_about_typescript_and_javascript_files(
-    fake_judge: type[FakeJudge],
+def test_pack_for_some_languages_is_asked_only_about_files_in_them(
+    tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
+    shared = write_json(tmp_path / "shared.json", {"for_every_file": FILE_RULE})
+    web = write_json(
+        tmp_path / "web.json",
+        {
+            "applies_to": {"languages": ["typescript", "javascript"]},
+            "rules": {"for_web": FILE_RULE},
+        },
+    )
+    settings = make_settings(
+        built_in_rule_packs=[shared, web], fallback_rule_packs=[shared]
+    )
+    sources = tmp_path / "sources"
+    # Each file holds its own name, which tells the judge calls apart.
+    for name in ("a.py", "b.tsx", "c.js", "notes.txt"):
+        write_text(sources / name, name)
     judge = fake_judge()
 
-    _run(_file_app(judge), "examples", "--json")
+    _run(_file_app(judge, settings), sources, "--json")
 
-    react_pack = json.loads(REACT_RULE_PACK.read_text(encoding="utf-8"))
-    react_rule_ids = set(react_pack["rules"])
-    content_to_asked_rule_ids = {
+    file_name_to_asked_rule_ids = {
         content: set(questions) for content, questions in judge.calls
     }
-
-    def asked_about(path: str) -> set[str]:
-        return content_to_asked_rule_ids[Path(path).read_text(encoding="utf-8")]
-
-    python_file = asked_about("examples/backend_data_and_security.py")
-    typescript_file = asked_about("examples/frontend_hooks_and_dom.tsx")
-    other_file = asked_about("examples/custom_rules_demo.json")
-    assert react_rule_ids <= typescript_file
-    assert react_rule_ids.isdisjoint(python_file)
-    assert react_rule_ids.isdisjoint(other_file)
-    # A rule that names no language is asked about every file.
-    assert "hardcoded_secrets" in python_file & typescript_file & other_file
+    # A rule in a pack that names no language is asked about every file.
+    assert file_name_to_asked_rule_ids == {
+        "a.py": {"for_every_file"},
+        "b.tsx": {"for_every_file", "for_web"},
+        "c.js": {"for_every_file", "for_web"},
+        "notes.txt": {"for_every_file"},
+    }
 
 
 def test_custom_rule_is_asked_only_about_the_unit_type_and_language_it_names(
@@ -151,26 +180,33 @@ def test_custom_rule_is_asked_only_about_the_unit_type_and_language_it_names(
 def test_file_of_unidentified_language_is_asked_only_the_fallback_packs(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
+    code = write_json(tmp_path / "code.json", {"for_code": FILE_RULE})
     fallback = write_json(tmp_path / "prose.json", {"for_prose": FILE_RULE})
+    settings = make_settings(built_in_rule_packs=[code], fallback_rule_packs=[fallback])
     sources = tmp_path / "sources"
     # Each file holds its own name, which tells the judge calls apart.
     for name in ("a.py", "notes.txt"):
         write_text(sources / name, name)
     judge = fake_judge()
 
-    _run(_file_app(judge, make_settings(fallback_rule_packs=[fallback])), sources)
+    _run(_file_app(judge, settings), sources)
 
     file_name_to_asked_rule_ids = {
         content: set(questions) for content, questions in judge.calls
     }
-    assert file_name_to_asked_rule_ids["notes.txt"] == {"for_prose"}
-    assert "for_prose" not in file_name_to_asked_rule_ids["a.py"]
-    assert "hardcoded_secrets" in file_name_to_asked_rule_ids["a.py"]
+    assert file_name_to_asked_rule_ids == {
+        "a.py": {"for_code"},
+        "notes.txt": {"for_prose"},
+    }
 
 
 def test_tree_of_python_files_loads_no_pack_made_for_another_language(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
+    python_pack = write_json(
+        tmp_path / "python.json",
+        {"applies_to": {"languages": ["python"]}, "rules": {"for_python": FILE_RULE}},
+    )
     # A pack for TypeScript whose rule is warned about as soon as it is read.
     typescript_pack = write_json(
         tmp_path / "typescript.json",
@@ -179,9 +215,7 @@ def test_tree_of_python_files_loads_no_pack_made_for_another_language(
             "rules": {"typo": {**FILE_RULE, "langauges": ["typescript"]}},
         },
     )
-    settings = make_settings(
-        built_in_rule_packs=[*BUILT_IN_RULE_PACKS, typescript_pack]
-    )
+    settings = make_settings(built_in_rule_packs=[python_pack, typescript_pack])
     sources = tmp_path / "sources"
     write_text(sources / "a.py", "x = 1\n")
     write_text(sources / "pkg" / "b.py", "y = 2\n")
@@ -189,12 +223,8 @@ def test_tree_of_python_files_loads_no_pack_made_for_another_language(
 
     _run(_file_app(judge, settings), sources, "--json")
 
-    react_pack = json.loads(REACT_RULE_PACK.read_text(encoding="utf-8"))
-    asked_rule_ids = {
-        rule_id for rule_ids in judge.asked_rule_ids() for rule_id in rule_ids
-    }
     assert capsys.readouterr().err == ""
-    assert asked_rule_ids.isdisjoint({"typo", *react_pack["rules"]})
+    assert judge.asked_rule_ids() == [["for_python"]] * 2
 
     write_text(sources / "c.ts", "let z = 3;\n")
     _run(_file_app(fake_judge(), settings), sources, "--json")
@@ -341,19 +371,20 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
     assert len(judge.calls) == 2
 
 
-@pytest.mark.usefixtures("in_repo_root")
 def test_rules_flag_adds_custom_rules_to_the_defaults(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
+    pack = write_json(tmp_path / "pack.json", {"pack_rule": FILE_RULE})
     custom = write_json(tmp_path / "custom.json", {"house_rule": FILE_RULE})
+    target = write_text(tmp_path / "a.py", "x = 1\n")
     judge = fake_judge(choices={"house_rule": "fail"})
+    app = _file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
-    _run(_file_app(judge), EXAMPLE_FILE, "--json", "--rules", custom)
+    _run(app, target, "--json", "--rules", custom)
 
     assert [i["rule_id"] for i in _json_output(capsys)["issues"]] == ["house_rule"]
-    asked = judge.asked_rule_ids()[0]
-    assert "house_rule" in asked
-    assert "hardcoded_secrets" in asked  # the built-in rules are still asked
+    # The rules of the packs are still asked.
+    assert judge.asked_rule_ids() == [["house_rule", "pack_rule"]]
 
 
 def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
@@ -498,21 +529,26 @@ def test_no_more_than_the_limit_is_audited_at_once(tmp_path: Path) -> None:
     assert 1 < judge.most_at_once <= 8
 
 
-@pytest.mark.usefixtures("in_repo_root")
 def test_terminal_report_shows_findings_and_summary(
-    fake_judge: type[FakeJudge], capsys: Capture
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
-    _run(_file_app(fake_judge()), EXAMPLE_FILE)
+    pack = write_json(
+        tmp_path / "rules.json", {"house_rule": FILE_RULE, "other_rule": FILE_RULE}
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\ny = 2\nz = 3\n")
+    settings = make_settings(built_in_rule_packs=[pack])
+
+    _run(_file_app(fake_judge(), settings), target)
     assert "No architectural or semantic issues found." in capsys.readouterr().out
 
-    judge = fake_judge(choices={"hardcoded_secrets": "fail"})
-    _run(_file_app(judge), EXAMPLE_FILE)
+    judge = fake_judge(choices={"house_rule": "fail"})
+    _run(_file_app(judge, settings), target)
 
     report = capsys.readouterr().out
     assert "klint Audit Report" in report
     assert "[FAIL]" in report
-    assert "hardcoded_secrets" in report
-    assert "(lines 1-43)" in report
+    assert "house_rule" in report
+    assert "(lines 1-3)" in report
     assert "1 files scanned | 1 units audited" in report
     assert "1 failure(s)" in report
 

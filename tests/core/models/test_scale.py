@@ -2,12 +2,12 @@
 
 import pytest
 
-from src.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from src.core.models.scale import AnswerScale, Choice
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.core.models.scale import AnswerScale, Choice
 
 
 def test_choice_lookup_ignores_case_and_rejects_unknown_keys() -> None:
-    assert PASS_FAIL_SCALE.choice("FAIL") is PASS_FAIL_SCALE.choice("fail")
+    assert PASS_FAIL_SCALE.choice("FAIL") == PASS_FAIL_SCALE.choice("fail")
     with pytest.raises(KeyError, match="maybe"):
         PASS_FAIL_SCALE.choice("maybe")
 

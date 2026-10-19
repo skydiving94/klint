@@ -41,7 +41,7 @@ These override personal defaults for work under #22.
 ## Commands
 - Set up once: `uv sync && uv run pre-commit install`
 - Checks: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy`, `uv run lint-imports`
-- The package folder is `src/` until #23 renames it to `klint/`.
+- The package folder is `klint/`.
 
 ## Live judge (wave gate)
 1. Start the model server in the kev checkout (`uv sync --extra serve` once first):

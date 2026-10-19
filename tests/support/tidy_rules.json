@@ -1,0 +1,11 @@
+{
+  "tidy_file": {
+    "type": "choice",
+    "instructions": "Is the file tidy?"
+  },
+  "tidy_directory": {
+    "type": "choice",
+    "instructions": "Is the directory tidy?",
+    "target_unit_types": ["project_directory"]
+  }
+}

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from src.app.settings import AppSettings
-from src.core.klint_warning import KlintWarning
+from klint.app.settings import AppSettings
+from klint.core.klint_warning import KlintWarning
 from tests.support.builders import write_json, write_text
 from tests.support.paths import (
     BUILT_IN_RULE_PACKS,
@@ -203,7 +203,7 @@ def test_rules_path_variables_name_the_pack_that_replaces_the_built_in_ones(
 def test_relative_rules_path_resolves_against_the_klint_repo(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
-    relative = "src/resources/catalog/code/python/project_structure.json"
+    relative = "klint/resources/catalog/code/python/project_structure.json"
     shell_env["KEV_DEFAULT_RULES_PATH"] = relative
 
     settings = AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))

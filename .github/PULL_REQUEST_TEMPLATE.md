@@ -27,7 +27,7 @@
 - [ ] Verify that <existing behavior> is unchanged
 
 ## Verification Checklist
-- [ ] `uv run pytest`, `uv run ruff check src tests`, `uv run ruff format --check src tests`, `uv run mypy` and `uv run lint-imports` pass
+- [ ] `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy` and `uv run lint-imports` pass
 - [ ] Tested locally against `klint examples/` and `klint-project examples/mock_bad_project/`
 - [ ] If adding or updating rules: phrased as a positive practice (`"<positive practice> rather than <antipattern>?"`) and verified confidence scores on both passing and failing examples
 

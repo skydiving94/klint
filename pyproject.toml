@@ -37,27 +37,29 @@ dev = [
 ]
 
 [project.scripts]
-klint = "src.cli.basic_audit:cli_main"
-klint-project = "src.cli.project_audit:cli_main"
+klint = "klint.cli.basic_audit:cli_main"
+klint-project = "klint.cli.project_audit:cli_main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["klint*"]
 
 [tool.setuptools.package-data]
-"src.resources" = ["**/*.json"]
+"klint.resources" = ["**/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 # A test that expects a klint warning says so; any other one is a failure.
-filterwarnings = ["error::src.core.klint_warning.KlintWarning"]
+filterwarnings = ["error::klint.core.klint_warning.KlintWarning"]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 88
 # examples/ holds deliberately bad code for klint to find; never lint it.
-extend-exclude = ["examples"]
+# Markdown files are documentation; ruff format must not rewrite their code
+# blocks, so `ruff format --check .` checks Python files only.
+extend-exclude = ["examples", "*.md"]
 
 [tool.ruff.lint]
 select = [
@@ -83,7 +85,7 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-files = ["src", "tests"]
+files = ["klint", "tests"]
 # Every function must be fully annotated.
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
@@ -113,30 +115,30 @@ module = ["torch.*", "kev.*", "huggingface_hub.*"]
 ignore_missing_imports = true
 
 # Checked with `uv run lint-imports`. A layer may import from the layers listed
-# below it, never from one above. src/resources holds data only.
+# below it, never from one above. klint/resources holds data only.
 [tool.importlinter]
-root_package = "src"
+root_package = "klint"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Layers: cli > app > catalog > infra > core"
 type = "layers"
 layers = [
-    "src.cli",
-    "src.app",
-    "src.catalog",
-    "src.infra",
-    "src.core",
+    "klint.cli",
+    "klint.app",
+    "klint.catalog",
+    "klint.infra",
+    "klint.core",
 ]
 
 [[tool.importlinter.contracts]]
 name = "Catalog: shared suites do not import specific ones"
 type = "forbidden"
-source_modules = ["src.catalog.common"]
-forbidden_modules = ["src.catalog.code"]
+source_modules = ["klint.catalog.common"]
+forbidden_modules = ["klint.catalog.code"]
 
 [[tool.importlinter.contracts]]
 name = "Catalog: code shared across languages does not import one language"
 type = "forbidden"
-source_modules = ["src.catalog.code.common"]
-forbidden_modules = ["src.catalog.code.python"]
+source_modules = ["klint.catalog.code.common"]
+forbidden_modules = ["klint.catalog.code.python"]
