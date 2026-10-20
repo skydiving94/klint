@@ -16,7 +16,7 @@ class AuditKindRegistry:
         for audit_kind in audit_kinds:
             if audit_kind.kind_id in self._kind_id_to_audit_kind:
                 raise ValueError(
-                    f"Audit kind '{audit_kind.kind_id}' is offered by two suites"
+                    f"Audit kind '{audit_kind.kind_id}' is offered more than once"
                 )
             self._kind_id_to_audit_kind[audit_kind.kind_id] = audit_kind
 

@@ -126,6 +126,8 @@ class KlintModule(Module):
         registry: UnitRegistry,
         file_extension_to_language: FileExtensionToLanguage,
     ) -> AuditKindRegistry:
+        known_languages = set(file_extension_to_language.values())
+
         def apply_rule_pack_override(audit_kind: AuditKind) -> AuditKind:
             rule_pack_override = self._kind_id_to_rule_pack_override.get(
                 audit_kind.kind_id
@@ -138,7 +140,7 @@ class KlintModule(Module):
                     (rule_pack_override,),
                     (rule_pack_override,),
                     registry,
-                    set(file_extension_to_language.values()),
+                    known_languages,
                     project_rule_packs=settings.project_rule_packs,
                 ),
             )

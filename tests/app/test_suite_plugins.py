@@ -210,7 +210,7 @@ def test_two_kinds_with_different_scales_run_in_one_process(
 def test_two_suites_offering_one_kind_id_stop_the_run_from_being_built(
     fake_judge: type[FakeJudge],
 ) -> None:
-    with pytest.raises(ValueError, match="'file_contents' is offered by two suites"):
+    with pytest.raises(ValueError, match="'file_contents' is offered more than once"):
         build_audit_pipeline(
             fake_judge(), overrides=[add_a_suite_with_a_duplicate_kind]
         )
