@@ -61,10 +61,10 @@ def test_both_commands_take_the_same_options(
 
     audited = str(target.joinpath(*audited_path_parts))
     assert every_judgment[command.json_key] == [audited]
-    assert [(i["rule_id"], i["judgment"]) for i in every_judgment["issues"]] == [
+    assert [(i["rule_id"], i["answer"]) for i in every_judgment["findings"]] == [
         (rule_id, "Pass")
     ]
-    assert confident_judgments == {command.json_key: [audited], "issues": []}
+    assert confident_judgments == {command.json_key: [audited], "findings": []}
 
 
 @pytest.mark.parametrize(

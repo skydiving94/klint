@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.core.models.location import Location
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit import AuditableUnit, UnitContext
 
 
 @dataclass(frozen=True)
-class ProjectDirectoryUnitMetadata:
-    directory_path: str = ""
+class ProjectDirectoryContext(UnitContext):
+    """The names of the files and subdirectories directly in a directory."""
+
     file_names: list[str] = field(default_factory=list)
     subdirectory_names: list[str] = field(default_factory=list)
 
@@ -76,13 +77,11 @@ class AuditableDirectoryUnit(AuditableUnit):
     def get_location(self) -> Location | None:
         return Location(source=self.directory_path or self.unit_id)
 
-    def get_metadata(self) -> dict[str, Any]:
-        metadata = ProjectDirectoryUnitMetadata(
-            directory_path=self.directory_path,
+    def get_context(self) -> ProjectDirectoryContext:
+        return ProjectDirectoryContext(
             file_names=[f.file_name for f in self.files],
             subdirectory_names=[d.directory_name for d in self.subdirectories],
         )
-        return asdict(metadata)
 
     def children(self) -> Sequence[AuditableUnit]:
         return [*self.files, *self.subdirectories]

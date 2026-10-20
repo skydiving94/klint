@@ -16,14 +16,18 @@ class FakeJudge(BaseJudge):
         choices: dict[str, str | None] | None = None,
         default: str | None = "pass",
         confidence: float = 0.9,
+        rule_id_to_confidence: dict[str, float] | None = None,
     ) -> None:
         """Answer ``choices[rule_id]`` per rule, else ``default``.
 
         A choice of ``None`` means the model returned no answer for that rule.
+        Each answer has the confidence ``rule_id_to_confidence`` gives its
+        rule, else ``confidence``.
         """
         self.choices: dict[str, str | None] = choices or {}
         self.default = default
         self.confidence = confidence
+        self.rule_id_to_confidence = rule_id_to_confidence or {}
         self.requests: list[JudgeRequest] = []
 
     async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
@@ -33,12 +37,15 @@ class FakeJudge(BaseJudge):
             choice = self.choices.get(question.question_id, self.default)
             if choice is None:
                 continue
+            confidence = self.rule_id_to_confidence.get(
+                question.question_id, self.confidence
+            )
             answers.append(
                 JudgeAnswer(
                     question_id=question.question_id,
                     choice_key=choice,
-                    confidence=self.confidence,
-                    choice_key_to_probability={choice: self.confidence},
+                    confidence=confidence,
+                    choice_key_to_probability={choice: confidence},
                 )
             )
         return answers

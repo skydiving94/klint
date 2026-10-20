@@ -91,21 +91,10 @@ strict = true
 warn_unused_configs = true
 
 # klint/ also may not write out `Any`, so that what crosses a boundary has a
-# type. The modules after this one are the places allowed to.
+# type.
 [[tool.mypy.overrides]]
 module = "klint.*"
 disallow_any_explicit = true
-
-# Untyped data: unit metadata and the dictionary form of a finding.
-[[tool.mypy.overrides]]
-module = [
-    "klint.core.models.report",
-    "klint.core.models.unit",
-    "klint.catalog.common.units.file",
-    "klint.catalog.code.common.units.directory",
-    "klint.catalog.code.common.units.file_metadata",
-]
-disallow_any_explicit = false
 
 # The local model runtime is optional and may be absent where mypy runs;
 # when it is, these imports are treated as untyped. huggingface_hub names
@@ -131,6 +120,15 @@ layers = [
     "klint.infra",
     "klint.core",
 ]
+
+# A named suite is any package under klint/catalog but the shared one,
+# klint.catalog.common; each new suite is added to forbidden_modules. The
+# caller of the use case chooses the suites an audit draws on.
+[[tool.importlinter.contracts]]
+name = "Suites: app and core import no named suite"
+type = "forbidden"
+source_modules = ["klint.app", "klint.core"]
+forbidden_modules = ["klint.catalog.code"]
 
 [[tool.importlinter.contracts]]
 name = "Catalog: shared suites do not import specific ones"

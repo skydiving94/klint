@@ -3,7 +3,7 @@
 import asyncio
 import sys
 
-from klint.app.audit_mode import AuditMode
+from klint.catalog.code import FILE_CONTENTS_KIND_ID
 from klint.cli.runner import AuditCommand, run_command_from_shell
 
 FILE_AUDIT_COMMAND = AuditCommand(
@@ -11,7 +11,7 @@ FILE_AUDIT_COMMAND = AuditCommand(
     description="klint - Declarative Code Auditor CLI",
     target_argument_name="file",
     target_argument_help="Path to the code file or directory to audit",
-    audit_mode=AuditMode.FILE_CONTENTS,
+    audit_kind_id=FILE_CONTENTS_KIND_ID,
     json_key="examined_files",
 )
 

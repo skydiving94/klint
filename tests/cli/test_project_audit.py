@@ -112,7 +112,7 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
     directories = [str(project), str(project / "pkg")]
     assert output["examined_directories"] == directories
     # The judge is asked about the directories listed as examined, and no others.
-    reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]
+    reported_unit_ids = [issue["unit_id"] for issue in output["findings"]]
     assert list(dict.fromkeys(reported_unit_ids)) == directories
     assert len(judge.requests) == 2
 
@@ -299,7 +299,7 @@ def test_rules_for_python_are_asked_only_about_directories_holding_python(
     _run(_project_app(judge, settings), repo, "--json", "--all")
 
     output = _json_output(capsys)
-    judged_unit_ids = {issue["unit_id"] for issue in output["issues"]}
+    judged_unit_ids = {issue["unit_id"] for issue in output["findings"]}
     assert judged_unit_ids == {str(repo), str(repo / "app")}
     # The directory without Python is not sent to the judge at all, so it is
     # not listed as examined either.

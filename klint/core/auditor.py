@@ -24,21 +24,22 @@ class Auditor:
     """
 
     @inject
-    def __init__(self, judge: BaseJudge, scale: AnswerScale) -> None:
+    def __init__(self, judge: BaseJudge) -> None:
         self._judge = judge
-        self._scale = scale
 
     async def audit(
         self,
         units: Sequence[AuditableUnit],
         language_to_rules: Mapping[str | None, Sequence[AuditRule]],
+        answer_scale: AnswerScale,
         audit_progress_listener: BaseAuditProgressListener | None = None,
     ) -> AuditReport:
         """Audit each unit with the rules for its language; return the report.
 
-        The report holds the units audited without error, and their findings,
-        in the order of ``units``. The listener, when given, is told when the
-        audit starts and about each unit as its audit ends.
+        The judge answers each rule on ``answer_scale``. The report holds the
+        units audited without error, and their findings, in the order of
+        ``units``. The listener, when given, is told when the audit starts and
+        about each unit as its audit ends.
         """
         if audit_progress_listener is not None:
             audit_progress_listener.report_audit_started(len(units))
@@ -49,7 +50,7 @@ class Auditor:
             async with semaphore:
                 try:
                     findings = await self._audit_unit(
-                        unit, language_to_rules.get(unit.language, ())
+                        unit, language_to_rules.get(unit.language, ()), answer_scale
                     )
                 except Exception as error:
                     # Whatever went wrong, such as the judge not answering,
@@ -72,13 +73,18 @@ class Auditor:
         return report
 
     async def _audit_unit(
-        self, unit: AuditableUnit, rules: Sequence[AuditRule]
+        self,
+        unit: AuditableUnit,
+        rules: Sequence[AuditRule],
+        answer_scale: AnswerScale,
     ) -> list[AuditFinding]:
         """Ask the judge the rules that apply to one unit; none means no call."""
         applicable_rules = [r for r in rules if r.is_applicable_to(unit)]
         if not applicable_rules:
             return []
-        answers = await self._judge.answer(self._build_request(unit, applicable_rules))
+        answers = await self._judge.answer(
+            _build_request(unit, applicable_rules, answer_scale)
+        )
         question_id_to_answer = {answer.question_id: answer for answer in answers}
         findings: list[AuditFinding] = []
         for rule in applicable_rules:
@@ -89,30 +95,33 @@ class Auditor:
                 AuditFinding(
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
-                    choice=self._scale.choice(answer.choice_key),
-                    instructions=rule.instructions,
+                    answer=answer_scale.find_choice(answer.choice_key),
+                    question=rule.instructions,
                     confidence=answer.confidence,
-                    probabilities=answer.choice_key_to_probability,
+                    choice_key_to_probability=answer.choice_key_to_probability,
+                    tags=tuple(rule.tags),
                     location=unit.get_location(),
-                    metadata=unit.get_metadata(),
+                    evidence_location=unit.get_evidence_location(),
+                    context=unit.get_context(),
                 )
             )
         return findings
 
-    def _build_request(
-        self, unit: AuditableUnit, rules: Sequence[AuditRule]
-    ) -> JudgeRequest:
-        """Return the request that asks each rule about ``unit``, by rule id."""
-        choice_key_to_criterion = self._scale.criteria_payload()
-        return JudgeRequest(
-            subject=unit.get_content(),
-            questions=tuple(
-                JudgeQuestion(
-                    question_id=rule.rule_id,
-                    question_type=rule.question_type,
-                    question=rule.instructions,
-                    choice_key_to_criterion=choice_key_to_criterion,
-                )
-                for rule in rules
-            ),
-        )
+
+def _build_request(
+    unit: AuditableUnit, rules: Sequence[AuditRule], answer_scale: AnswerScale
+) -> JudgeRequest:
+    """Return the request that asks each rule about ``unit``, by rule id."""
+    choice_key_to_criterion = answer_scale.map_choice_key_to_criterion()
+    return JudgeRequest(
+        subject=unit.get_content(),
+        questions=tuple(
+            JudgeQuestion(
+                question_id=rule.rule_id,
+                question_type=rule.question_type,
+                question=rule.instructions,
+                choice_key_to_criterion=choice_key_to_criterion,
+            )
+            for rule in rules
+        ),
+    )
