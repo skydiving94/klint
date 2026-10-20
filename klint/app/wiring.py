@@ -138,6 +138,7 @@ class KlintModule(Module):
             settings.fallback_rule_packs,
             registry,
             known_languages,
+            project_rule_packs=settings.project_rule_packs,
         )
 
         def choose_rule_loader(rule_pack_override: Path | None) -> BaseRuleLoader:
@@ -150,6 +151,7 @@ class KlintModule(Module):
                 (rule_pack_override,),
                 registry,
                 known_languages,
+                project_rule_packs=settings.project_rule_packs,
             )
 
         return {

@@ -86,16 +86,63 @@ def test_config_is_discovered_next_to_a_file_target(tmp_path: Path, name: str) -
 
 
 @pytest.mark.usefixtures("shell_env")
-def test_explicit_config_path_wins_over_a_discovered_one(tmp_path: Path) -> None:
+def test_settings_in_a_rules_file_are_ignored_with_a_warning(tmp_path: Path) -> None:
     project = _project(tmp_path, {"KEV_MODEL_NAME": "discovered"})
-    explicit = write_json(
-        tmp_path / "custom.json", {"env": {"KEV_MODEL_NAME": "explicit"}}
+    rules_file = write_json(
+        tmp_path / "custom.json",
+        {
+            "env": {"KEV_MODEL_NAME": "from-rules-file"},
+            "fallback_rule_packs": ["docs.json"],
+            "rules": {},
+        },
     )
 
-    settings = AppSettings.from_env(project, explicit)
+    with pytest.warns(KlintWarning) as caught:
+        settings = AppSettings.from_env(project, rules_file)
 
-    assert settings.model_name == "explicit"
-    assert settings.discovered_config_path == explicit
+    # The project's klint.json is still found and applies.
+    assert settings.model_name == "discovered"
+    assert settings.discovered_config_path == project / "klint.json"
+    assert settings.fallback_rule_packs == FALLBACK_RULE_PACKS
+    assert [str(warning.message) for warning in caught] == [
+        f"The '{key}' key in '{rules_file}' is ignored: settings come from "
+        "environment variables and the project's klint.json, not from a "
+        "--rules file"
+        for key in ("env", "fallback_rule_packs")
+    ]
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_klint_json_given_as_the_rules_file_too_is_not_warned_about(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path, {"KEV_MODEL_NAME": "discovered"})
+
+    # An unexpected warning fails the test.
+    settings = AppSettings.from_env(project, project / "klint.json")
+
+    assert settings.model_name == "discovered"
+
+
+@pytest.mark.usefixtures("shell_env")
+@pytest.mark.parametrize(
+    ("content", "does_hold_rules"),
+    [
+        ({"env": {"KEV_MODE": "remote"}}, False),
+        ({"fallback_rule_packs": []}, False),
+        ({"env": {}, "rules": {"a": {"type": "choice", "instructions": "?"}}}, True),
+        ({"a": {"type": "choice", "instructions": "?"}}, True),
+    ],
+)
+def test_klint_json_is_a_project_rule_pack_when_it_holds_rules(
+    tmp_path: Path, content: dict[str, object], does_hold_rules: bool
+) -> None:
+    project = _project(tmp_path)
+    config = write_json(project / "klint.json", content)
+
+    settings = AppSettings.from_env(project, None)
+
+    assert settings.project_rule_packs == ((config,) if does_hold_rules else ())
 
 
 @pytest.mark.usefixtures("shell_env")

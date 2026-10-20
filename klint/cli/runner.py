@@ -176,11 +176,9 @@ class AuditCommandApp:
         self,
         command: AuditCommand,
         audit_pipeline: AuditPipeline,
-        default_custom_rules: Path | None = None,
     ) -> None:
         self._command = command
         self._audit_pipeline = audit_pipeline
-        self._default_custom_rules = default_custom_rules
 
     async def run(self, argv: Sequence[str] | None = None) -> ExitCode:
         """Parse ``argv`` and run the command; return the exit code."""
@@ -196,7 +194,7 @@ class AuditCommandApp:
         request = AuditRequest(
             target=arguments.target,
             audit_mode=command.audit_mode,
-            custom_rules_source=arguments.rules_source or self._default_custom_rules,
+            custom_rules_source=arguments.rules_source,
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress
             ),
@@ -254,9 +252,5 @@ async def run_command_from_shell(command: AuditCommand) -> ExitCode:
         # not valid.
         print_error_line(command, error)
         return ExitCode.RUN_ERROR
-    app = AuditCommandApp(
-        command,
-        audit_pipeline,
-        default_custom_rules=settings.discovered_config_path,
-    )
+    app = AuditCommandApp(command, audit_pipeline)
     return await app.run_with_arguments(arguments)

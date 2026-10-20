@@ -18,9 +18,6 @@ RULE_FIELD_NAMES = frozenset(
 # The header of a pack: which files the pack is for.
 HEADER_KEY = "applies_to"
 _HEADER_FIELD_NAMES = frozenset({"languages"})
-# Keys that may sit beside the rules in the same file and are not rules: the
-# header, and the settings a klint.json holds.
-_NON_RULE_KEYS = frozenset({HEADER_KEY, "env", "fallback_rule_packs"})
 
 
 @dataclass(frozen=True)
@@ -106,13 +103,14 @@ def read_rule_pack(path: Path) -> RulePackSpec:
 def _select_raw_rules(raw_data: dict[object, object]) -> dict[object, object]:
     """Return the entries of the file that are rules.
 
-    Both a flat file of rules and a config of the form {"rules": {...}}
-    beside other settings are read.
+    In a file with a "rules" object, the rules are its entries and the other
+    keys belong to whatever else reads the file. In a flat file, every key
+    but the header is a rule.
     """
     raw_rules = raw_data.get("rules")
     if isinstance(raw_rules, dict) and "type" not in raw_rules:
         return raw_rules
-    return {key: value for key, value in raw_data.items() if key not in _NON_RULE_KEYS}
+    return {key: value for key, value in raw_data.items() if key != HEADER_KEY}
 
 
 def _read_scope(raw_header: object, path: Path) -> PackScope:

@@ -26,6 +26,7 @@ from tests.support.builders import (
     write_text,
 )
 from tests.support.fakes import FakeJudge
+from tests.support.stub_system_one_server import StubSystemOneServer
 
 
 @pytest.mark.parametrize(
@@ -102,12 +103,14 @@ def test_klint_json_that_cannot_be_read_stops_the_command_with_one_line(
 def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_on(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # The remote judge is built but never asked, as the target is missing.
-    config = write_json(
-        tmp_path / "klint.json", {"env": {"KEV_MODE": "remote", "KEV_MODLE_NAME": "x"}}
+    # The project's klint.json, found in the working directory. The remote
+    # judge is built but never asked, as the target is missing.
+    write_json(
+        Path.cwd() / "klint.json",
+        {"env": {"KEV_MODE": "remote", "KEV_MODLE_NAME": "x"}},
     )
     target = tmp_path / "absent.py"
-    monkeypatch.setattr(sys, "argv", ["klint", str(target), "--rules", str(config)])
+    monkeypatch.setattr(sys, "argv", ["klint", str(target)])
 
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
@@ -195,3 +198,56 @@ def test_unknown_mode_stops_the_command_before_any_judge_is_built(
     assert exit_code == ExitCode.RUN_ERROR
     assert "KEV_MODE 'locl'" in error_line
     assert "valid values: ['local', 'remote']" in error_line
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    system_one_server: StubSystemOneServer,
+) -> None:
+    target = write_text(tmp_path / "project" / "a.py", "x = 1\n")
+    write_json(
+        tmp_path / "project" / "klint.json",
+        {
+            "env": {
+                "KEV_MODE": "remote",
+                "KEV_BASE_URL": system_one_server.base_url,
+                "KEV_MODEL_NAME": "from-klint-json",
+            },
+            "rules": {
+                "shared": {**FILE_RULE, "instructions": "From klint.json?"},
+                "project_only": FILE_RULE,
+            },
+        },
+    )
+    rules_file = write_json(
+        tmp_path / "custom.json",
+        {
+            "env": {"KEV_MODEL_NAME": "from-rules-file"},
+            "rules": {
+                "shared": {**FILE_RULE, "instructions": "From --rules?"},
+                "custom_only": FILE_RULE,
+            },
+        },
+    )
+    argv = ["klint", str(target), "--rules", str(rules_file), "--json"]
+    monkeypatch.setattr(sys, "argv", argv)
+
+    exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
+
+    assert exit_code == ExitCode.NO_PROBLEMS
+    (warning_line,) = capsys.readouterr().err.splitlines()
+    assert warning_line.startswith(f"[klint] Warning: The 'env' key in '{rules_file}'")
+    # Settings come from klint.json only; the rules of both files are asked,
+    # and those of --rules win by rule ID.
+    (received,) = system_one_server.received
+    assert isinstance(received.body, dict)
+    assert received.body["model"] == "from-klint-json"
+    rule_id_to_instructions = {
+        rule_id: question["instructions"]
+        for rule_id, question in received.body["questions"].items()
+    }
+    assert rule_id_to_instructions["shared"] == "From --rules?"
+    assert {"project_only", "custom_only"} <= set(rule_id_to_instructions)
