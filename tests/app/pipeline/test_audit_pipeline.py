@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from klint.app.audit_mode import AuditMode
-from klint.app.audit_pipeline import AuditOutcome, AuditRequest
+from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.models.scale import Choice
 from tests.support.builders import FAIL, PASS, build_audit_pipeline, write_text

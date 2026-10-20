@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TextIO
 
 from klint.app.audit_mode import AuditMode
-from klint.app.audit_pipeline import AuditPipeline, AuditRequest
+from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import create_injector
 from klint.cli.exit_code import ExitCode

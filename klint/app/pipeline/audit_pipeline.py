@@ -5,12 +5,21 @@ from pathlib import Path
 
 from injector import inject
 
+from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.audit_mode import AuditMode
-from klint.app.audit_preparer import AuditPreparer
-from klint.core.auditor import Auditor
+from klint.app.pipeline.audit_preparer import AuditPreparer
+from klint.app.pipeline.auditing import UnitAuditing
+from klint.app.pipeline.roll_up import FindingRollUp
+from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.report import AuditReport
+
+# The kind of audit each mode asks for.
+_AUDIT_MODE_TO_KIND_ID = {
+    AuditMode.FILE_CONTENTS: FILE_CONTENTS_KIND_ID,
+    AuditMode.PROJECT_STRUCTURE: PROJECT_STRUCTURE_KIND_ID,
+}
 
 
 @dataclass(frozen=True)
@@ -48,12 +57,25 @@ class AuditOutcome:
 
 
 class AuditPipeline:
-    """Runs an audit end to end: prepares it, then audits what was prepared."""
+    """Runs an audit end to end, stage by stage.
+
+    The kind of audit the request names is looked up first. The units are
+    then acquired and their rules selected, the units audited, and the
+    findings rolled up.
+    """
 
     @inject
-    def __init__(self, audit_preparer: AuditPreparer, auditor: Auditor) -> None:
+    def __init__(
+        self,
+        audit_kind_registry: AuditKindRegistry,
+        audit_preparer: AuditPreparer,
+        unit_auditing: UnitAuditing,
+        finding_roll_up: FindingRollUp,
+    ) -> None:
+        self._audit_kind_registry = audit_kind_registry
         self._audit_preparer = audit_preparer
-        self._auditor = auditor
+        self._unit_auditing = unit_auditing
+        self._finding_roll_up = finding_roll_up
 
     async def run_audit(self, request: AuditRequest) -> AuditOutcome:
         """Audit what ``request`` names and return the outcome.
@@ -61,19 +83,20 @@ class AuditPipeline:
         Raises when the target or a rules file cannot be used. A unit whose
         audit fails is left out of the report and the others go on.
         """
+        audit_kind = self._audit_kind_registry.find_audit_kind(
+            _AUDIT_MODE_TO_KIND_ID[request.audit_mode]
+        )
         portfolio = await self._audit_preparer.prepare_audit(
             request.target,
-            request.audit_mode,
+            audit_kind,
             custom_rules_source=request.custom_rules_source,
             scan_progress_listener=request.scan_progress_listener,
         )
-        report = await self._auditor.audit(
-            portfolio.units,
-            portfolio.language_to_rules,
-            request.audit_progress_listener,
+        report = await self._unit_auditing.audit_units(
+            portfolio, request.audit_progress_listener
         )
         return AuditOutcome(
-            report=report,
+            report=self._finding_roll_up.roll_up(report),
             scanned_file_count=portfolio.scanned_file_count,
             selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
         )

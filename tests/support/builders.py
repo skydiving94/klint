@@ -6,8 +6,8 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from klint.app.audit_pipeline import AuditPipeline
 from klint.app.judge_mode import JudgeMode
+from klint.app.pipeline.audit_pipeline import AuditPipeline
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override, create_injector
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
