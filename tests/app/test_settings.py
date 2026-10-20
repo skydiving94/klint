@@ -1,5 +1,6 @@
 """Settings precedence: shell variables, klint.json, klint's own .env, defaults."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -289,3 +290,30 @@ def test_unknown_mode_stops_with_an_error_listing_the_valid_values(
         r"\['local', 'remote'\]",
     ):
         AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))
+
+
+def test_loading_the_settings_leaves_the_environment_as_it_was(
+    shell_env: dict[str, str], tmp_path: Path
+) -> None:
+    shell_env["KEV_API_KEY"] = "from-shell"
+    project = _project(tmp_path, {"KEV_MODEL_NAME": "from-json"})
+    dotenv = _dotenv(tmp_path, "KEV_BASE_URL=http://dotenv:1\n")
+    environment_before = dict(os.environ)
+
+    settings = AppSettings.from_env(project, None, dotenv)
+
+    assert dict(os.environ) == environment_before
+    assert (settings.kev_api_key, settings.model_name, settings.kev_base_url) == (
+        "from-shell",
+        "from-json",
+        "http://dotenv:1",
+    )
+    # A later load without those files sees none of their values.
+    other_project = tmp_path / "other"
+    other_project.mkdir()
+    later = AppSettings.from_env(other_project, None, _dotenv(tmp_path / "other"))
+    assert (later.kev_api_key, later.model_name, later.kev_base_url) == (
+        "from-shell",
+        "jaredpalmer/kev-4b",
+        "http://127.0.0.1:8009",
+    )

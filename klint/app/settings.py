@@ -1,7 +1,7 @@
 import json
 import os
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
@@ -140,35 +140,68 @@ def _load_fallback_rule_packs(
     return tuple(fallback_rule_packs)
 
 
-def _load_klint_dotenv(dotenv_path: Path | None = None) -> None:
-    """Load klint's own .env / .env.example as lowest-priority defaults."""
+def _read_klint_dotenv(dotenv_path: Path | None = None) -> dict[str, str]:
+    """Return the settings in klint's own .env, or else .env.example."""
     target_env = dotenv_path or (_PACKAGE_ROOT / ".env")
     if not target_env.is_file():
         target_env = _PACKAGE_ROOT / ".env.example"
     if not target_env.is_file():
-        return
-
+        return {}
+    key_to_value: dict[str, str] = {}
     for raw_line in target_env.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip("'\"")
-        os.environ.setdefault(key, value)
+        key_to_value[key.strip()] = value.strip().strip("'\"")
+    return key_to_value
 
 
-def _read_judge_mode(raw_mode: str) -> JudgeMode:
-    """Return the judge mode ``raw_mode`` names, in any case.
+@dataclass(frozen=True)
+class _SettingSource:
+    """One place settings are read from.
+
+    description names it in messages, and key_to_value holds the settings
+    it sets.
+    """
+
+    description: str
+    key_to_value: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class _SettingValue:
+    """The value a setting takes, and the source that set it."""
+
+    value: str
+    source: _SettingSource
+
+
+def _find_setting(key: str, sources: Sequence[_SettingSource]) -> _SettingValue | None:
+    """Return the value of ``key`` from the first source that sets it.
+
+    An empty value counts as not set. None when no source sets it.
+    """
+    for source in sources:
+        value = source.key_to_value.get(key)
+        if value:
+            return _SettingValue(value=value, source=source)
+    return None
+
+
+def _read_judge_mode(setting: _SettingValue | None) -> JudgeMode:
+    """Return the judge mode ``setting`` names, in any case; LOCAL when unset.
 
     Raises ValueError listing the valid values when it names none.
     """
+    if setting is None:
+        return JudgeMode.LOCAL
     try:
-        return JudgeMode(raw_mode.lower())
+        return JudgeMode(setting.value.lower())
     except ValueError:
         raise ValueError(
-            f"KEV_MODE {raw_mode!r} is not a judge mode; valid values: "
-            f"{[mode.value for mode in JudgeMode]}"
+            f"KEV_MODE {setting.value!r} set in {setting.source.description} "
+            f"is not a judge mode; valid values: {[mode.value for mode in JudgeMode]}"
         ) from None
 
 
@@ -234,38 +267,48 @@ class AppSettings:
         config_path: Path | None = None,
         dotenv_path: Path | None = None,
     ) -> "AppSettings":
-        # 1. Capture any shell variables explicitly exported by the user
-        shell_env = dict(os.environ)
+        """Load the settings for an audit of ``target_path``.
 
-        # 2. Load klint's internal .env / .env.example as fallback defaults
-        _load_klint_dotenv(dotenv_path)
-
-        # 3. Check explicit --rules config file or auto-discovered klint.json
+        Each setting is taken from the first of these that sets it: the
+        shell's environment variables, the "env" block of the config file,
+        klint's own .env, the built-in default. Nothing outside the returned
+        value is changed.
+        """
         active_config = config_path or find_project_config(target_path)
         config = _read_config(active_config)
-        json_env: dict[str, str] = {}
+        sources = [
+            _SettingSource(
+                description="the environment",
+                key_to_value={
+                    key: os.environ[key] for key in _KNOWN_ENV_KEYS if key in os.environ
+                },
+            )
+        ]
         fallback_rule_packs: tuple[Path, ...] | None = None
         if active_config is not None:
-            json_env = _load_env_block(config, active_config)
+            sources.append(
+                _SettingSource(
+                    description=f"'{active_config}'",
+                    key_to_value=_load_env_block(config, active_config),
+                )
+            )
             fallback_rule_packs = _load_fallback_rule_packs(config, active_config)
+        sources.append(
+            _SettingSource(
+                description="klint's .env", key_to_value=_read_klint_dotenv(dotenv_path)
+            )
+        )
 
         def _get_setting(key: str, default: str | None = None) -> str | None:
-            # Priority: Shell Export > Project klint.json "env" > klint .env > Default
-            if shell_env.get(key):
-                return shell_env[key]
-            if json_env.get(key):
-                return json_env[key]
-            return os.environ.get(key) or default
+            setting = _find_setting(key, sources)
+            return default if setting is None else setting.value
 
         model_name = _get_setting("KEV_MODEL_NAME", _DEFAULT_MODEL_NAME)
         # When set, each variable names one file that replaces the built-in
         # packs for its command.
         rules_override = _get_setting("KEV_DEFAULT_RULES_PATH")
         project_rules_override = _get_setting("KEV_DEFAULT_PROJECT_RULES_PATH")
-        raw_kev_mode = _get_setting("KEV_MODE")
-        kev_mode = (
-            JudgeMode.LOCAL if raw_kev_mode is None else _read_judge_mode(raw_kev_mode)
-        )
+        kev_mode = _read_judge_mode(_find_setting("KEV_MODE", sources))
         kev_base_url = (
             _get_setting("KEV_BASE_URL", "http://127.0.0.1:8009")
             or "http://127.0.0.1:8009"
