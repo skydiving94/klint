@@ -8,7 +8,8 @@ class ExitCode(IntEnum):
 
     PROBLEMS_FOUND means at least one failure was found with the confidence
     the command line asks for. RUN_ERROR means the audit could not run, for
-    example because the target or a rules file cannot be used.
+    example because the target or a rules file cannot be used, or that there
+    were units to audit and none of them could be audited.
     """
 
     NO_PROBLEMS = 0
