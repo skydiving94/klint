@@ -11,7 +11,7 @@ import pytest
 from injector import Binder
 
 from klint.app.settings import AppSettings
-from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
@@ -407,7 +407,7 @@ def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
         question_id="house_rule",
         question_type=QuestionType.CHOICE,
         question=FILE_RULE["instructions"],
-        choice_key_to_criterion=PASS_FAIL_SCALE.criteria_payload(),
+        choice_key_to_criterion=PRACTICE_SCALE.criteria_payload(),
     )
 
 

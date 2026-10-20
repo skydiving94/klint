@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from klint.app.audit_mode import AuditMode
-from klint.app.audit_pipeline import AuditOutcome, AuditRequest
+from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
+from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.models.scale import Choice
 from tests.support.builders import FAIL, PASS, build_audit_pipeline, write_text
@@ -48,7 +48,7 @@ def test_file_contents_audit_returns_the_findings_on_each_file(
     judge = fake_judge(choices={"tidy_file": "fail"})
 
     outcome = _run_audit(
-        judge, AuditRequest(target=tmp_path, audit_mode=AuditMode.FILE_CONTENTS)
+        judge, AuditRequest(target=tmp_path, audit_kind_id=FILE_CONTENTS_KIND_ID)
     )
 
     files = (str(tmp_path / "a.py"), str(tmp_path / "b.md"))
@@ -68,7 +68,7 @@ def test_project_structure_audit_returns_the_findings_on_each_directory(
 
     outcome = _run_audit(
         fake_judge(),
-        AuditRequest(target=tmp_path, audit_mode=AuditMode.PROJECT_STRUCTURE),
+        AuditRequest(target=tmp_path, audit_kind_id=PROJECT_STRUCTURE_KIND_ID),
     )
 
     directories = (str(tmp_path), str(tmp_path / "docs"))
@@ -91,7 +91,7 @@ def test_unit_whose_audit_fails_is_selected_but_left_out_of_the_report(
         PickyJudge(refuses="poison"),
         AuditRequest(
             target=tmp_path,
-            audit_mode=AuditMode.FILE_CONTENTS,
+            audit_kind_id=FILE_CONTENTS_KIND_ID,
             audit_progress_listener=listener,
         ),
     )
@@ -120,7 +120,7 @@ def test_rules_file_given_with_the_request_is_asked_too(
         judge,
         AuditRequest(
             target=target,
-            audit_mode=AuditMode.FILE_CONTENTS,
+            audit_kind_id=FILE_CONTENTS_KIND_ID,
             custom_rules_source=rules,
         ),
     )
@@ -128,15 +128,32 @@ def test_rules_file_given_with_the_request_is_asked_too(
     assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
 
 
-@pytest.mark.parametrize("audit_mode", list(AuditMode))
+@pytest.mark.parametrize(
+    "audit_kind_id", [FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID]
+)
 def test_missing_target_is_raised_before_the_judge_is_asked(
-    tmp_path: Path, fake_judge: type[FakeJudge], audit_mode: AuditMode
+    tmp_path: Path, fake_judge: type[FakeJudge], audit_kind_id: str
 ) -> None:
     judge = fake_judge()
 
     with pytest.raises(FileNotFoundError, match="does not exist"):
         _run_audit(
-            judge, AuditRequest(target=tmp_path / "absent", audit_mode=audit_mode)
+            judge,
+            AuditRequest(target=tmp_path / "absent", audit_kind_id=audit_kind_id),
         )
 
+    assert judge.requests == []
+
+
+def test_unknown_kind_of_audit_is_raised_with_the_known_ones(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge()
+
+    with pytest.raises(ValueError, match="Unknown audit kind 'spelling'") as raised:
+        _run_audit(judge, AuditRequest(target=tmp_path, audit_kind_id="spelling"))
+
+    assert f"'{FILE_CONTENTS_KIND_ID}'" in str(raised.value)
+    assert f"'{PROJECT_STRUCTURE_KIND_ID}'" in str(raised.value)
     assert judge.requests == []

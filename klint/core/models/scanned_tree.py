@@ -52,3 +52,17 @@ class ScannedDirectory:
         yield self
         for subdirectory in sorted(self.subdirectories, key=lambda entry: entry.path):
             yield from subdirectory.yield_directories()
+
+
+@dataclass(frozen=True)
+class ScannedTarget:
+    """What the scan of one audit target found.
+
+    path is the target as given. directory is the tree found beneath it, or
+    None when the target is not a directory. files lists every file the
+    scan recorded, in path order: the target itself when it is a file.
+    """
+
+    path: Path
+    directory: ScannedDirectory | None
+    files: tuple[ScannedFile, ...]

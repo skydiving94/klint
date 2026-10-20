@@ -1,28 +1,16 @@
 """Scans an audit target once and records the directories and files it holds."""
 
-from dataclasses import dataclass
 from pathlib import Path
-
-from injector import inject
 
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.klint_warning import warn_about_unreadable_directory
-from klint.core.models.scanned_tree import ScannedDirectory, ScannedFile
-
-
-@dataclass(frozen=True)
-class IgnoredNames:
-    """The names a scan leaves out.
-
-    directory_names and file_names are compared with the name of an entry.
-    file_suffixes are compared with the suffix of a file in lower case, with
-    its leading dot, such as ".png".
-    """
-
-    directory_names: frozenset[str] = frozenset()
-    file_names: frozenset[str] = frozenset()
-    file_suffixes: frozenset[str] = frozenset()
+from klint.core.models.ignored_names import IgnoredNames
+from klint.core.models.scanned_tree import (
+    ScannedDirectory,
+    ScannedFile,
+    ScannedTarget,
+)
 
 
 class TargetScanner:
@@ -35,7 +23,6 @@ class TargetScanner:
     cannot be read is left out, with a warning.
     """
 
-    @inject
     def __init__(
         self,
         file_traits_identifier: BaseFileTraitsIdentifier,
@@ -43,6 +30,27 @@ class TargetScanner:
     ) -> None:
         self._file_traits_identifier = file_traits_identifier
         self._ignored_names = ignored_names
+
+    def scan_target(
+        self,
+        target: Path,
+        scan_progress_listener: BaseScanProgressListener | None = None,
+    ) -> ScannedTarget:
+        """Return what ``target`` holds: a directory tree, one file, or nothing.
+
+        Raises FileNotFoundError when the target does not exist. A target
+        that is neither a file nor a directory, such as a named pipe, holds
+        no file. The listener is used as by scan_directory.
+        """
+        if not target.exists():
+            raise FileNotFoundError(f"Audit target does not exist: {target}")
+        if target.is_dir():
+            directory = self.scan_directory(target, scan_progress_listener)
+            return ScannedTarget(
+                path=target, directory=directory, files=tuple(directory.yield_files())
+            )
+        files = (self.scan_file(target),) if target.is_file() else ()
+        return ScannedTarget(path=target, directory=None, files=files)
 
     def scan_file(self, file_path: Path) -> ScannedFile:
         """Return the file at ``file_path`` with its traits, as a target of its own."""

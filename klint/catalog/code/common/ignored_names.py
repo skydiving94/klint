@@ -1,6 +1,6 @@
 """The directories and files of a code project that are never audited."""
 
-from klint.catalog.common.scanners.target_scanner import IgnoredNames
+from klint.core.models.ignored_names import IgnoredNames
 
 CODE_IGNORED_NAMES = IgnoredNames(
     directory_names=frozenset(
