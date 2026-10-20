@@ -443,6 +443,27 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert judge.requests == []
 
 
+def test_malformed_custom_rule_stops_the_command_naming_the_rule_and_the_file(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json",
+        {"house_rule": {**FILE_RULE, "target_unit_types": "file"}},
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge()
+
+    exit_code = _run(_file_app(judge), target, "--rules", custom)
+
+    (error_line,) = capsys.readouterr().err.splitlines()
+    assert exit_code == ExitCode.RUN_ERROR
+    assert error_line == (
+        "[klint] Error: Rule 'house_rule' has invalid target_unit_types 'file' "
+        f"in '{custom.resolve()}'; expected a list of strings"
+    )
+    assert judge.requests == []
+
+
 def test_rules_file_that_cannot_be_read_exits_with_an_error(
     tmp_path: Path,
     fake_judge: type[FakeJudge],

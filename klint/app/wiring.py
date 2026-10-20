@@ -43,7 +43,7 @@ from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
-from klint.infra.rule_loader.json_loader import JsonRuleLoader
+from klint.infra.rule_loader.json_rule_loader import JsonRuleLoader
 from klint.infra.system_one.remote import RemoteSystemOneJudge
 
 # The language each file extension stands for, loaded once per injector.

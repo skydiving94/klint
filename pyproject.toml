@@ -96,8 +96,7 @@ warn_unused_configs = true
 module = "klint.*"
 disallow_any_explicit = true
 
-# Untyped data: unit metadata and the dictionary form of a finding, and the
-# rule loader, where raw JSON is read.
+# Untyped data: unit metadata and the dictionary form of a finding.
 [[tool.mypy.overrides]]
 module = [
     "klint.core.models.report",
@@ -105,7 +104,6 @@ module = [
     "klint.catalog.common.units.file",
     "klint.catalog.code.common.units.directory",
     "klint.catalog.code.common.units.file_metadata",
-    "klint.infra.rule_loader.json_loader",
 ]
 disallow_any_explicit = false
 
