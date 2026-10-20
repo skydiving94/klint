@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-from klint.app.audit_mode import AuditMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import create_injector
@@ -31,15 +30,15 @@ class AuditCommand:
 
     name is what the user types and description is shown in the help.
     target_argument_name and target_argument_help describe the path to audit.
-    audit_mode is the kind of audit the command asks for, and json_key is the
-    key the audited units are listed under in JSON output.
+    audit_kind_id names the kind of audit the command asks for, and json_key
+    is the key the audited units are listed under in JSON output.
     """
 
     name: str
     description: str
     target_argument_name: str
     target_argument_help: str
-    audit_mode: AuditMode
+    audit_kind_id: str
     json_key: str
 
 
@@ -193,7 +192,7 @@ class AuditCommandApp:
         progress = AuditProgressReporter(enabled=should_show_progress)
         request = AuditRequest(
             target=arguments.target,
-            audit_mode=command.audit_mode,
+            audit_kind_id=command.audit_kind_id,
             custom_rules_source=arguments.rules_source,
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress

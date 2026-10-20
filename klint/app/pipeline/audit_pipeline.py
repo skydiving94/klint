@@ -6,35 +6,28 @@ from pathlib import Path
 from injector import inject
 
 from klint.app.audit_kind_registry import AuditKindRegistry
-from klint.app.audit_mode import AuditMode
 from klint.app.pipeline.audit_preparer import AuditPreparer
 from klint.app.pipeline.auditing import UnitAuditing
 from klint.app.pipeline.roll_up import FindingRollUp
-from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.report import AuditReport
-
-# The kind of audit each mode asks for.
-_AUDIT_MODE_TO_KIND_ID = {
-    AuditMode.FILE_CONTENTS: FILE_CONTENTS_KIND_ID,
-    AuditMode.PROJECT_STRUCTURE: PROJECT_STRUCTURE_KIND_ID,
-}
 
 
 @dataclass(frozen=True)
 class AuditRequest:
     """What to audit, and who to tell as the audit goes.
 
-    target is the file or directory to audit, and audit_mode the kind of
-    audit. The rules in custom_rules_source, when given, merge over the
-    loaded ones. scan_progress_listener is told about each directory as it is
-    scanned. audit_progress_listener is told when the audit of the units
-    starts, and about each unit as its audit ends.
+    target is the file or directory to audit, and audit_kind_id names the
+    kind of audit, as a suite offers it. The rules in custom_rules_source,
+    when given, merge over the loaded ones. scan_progress_listener is told
+    about each directory as it is scanned. audit_progress_listener is told
+    when the audit of the units starts, and about each unit as its audit
+    ends.
     """
 
     target: Path
-    audit_mode: AuditMode
+    audit_kind_id: str
     custom_rules_source: Path | None = None
     scan_progress_listener: BaseScanProgressListener | None = None
     audit_progress_listener: BaseAuditProgressListener | None = None
@@ -80,12 +73,11 @@ class AuditPipeline:
     async def run_audit(self, request: AuditRequest) -> AuditOutcome:
         """Audit what ``request`` names and return the outcome.
 
-        Raises when the target or a rules file cannot be used. A unit whose
-        audit fails is left out of the report and the others go on.
+        Raises ValueError when no suite offers the kind of audit, and raises
+        when the target or a rules file cannot be used. A unit whose audit
+        fails is left out of the report and the others go on.
         """
-        audit_kind = self._audit_kind_registry.find_audit_kind(
-            _AUDIT_MODE_TO_KIND_ID[request.audit_mode]
-        )
+        audit_kind = self._audit_kind_registry.find_audit_kind(request.audit_kind_id)
         portfolio = await self._audit_preparer.prepare_audit(
             request.target,
             audit_kind,
