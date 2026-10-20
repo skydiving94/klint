@@ -9,7 +9,6 @@ from pathlib import Path
 from klint.app.judge_mode import JudgeMode
 from klint.core.klint_warning import KlintWarning
 
-_PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 # The model and the server address the judge uses unless a setting names others.
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
 _DEFAULT_BASE_URL = "http://127.0.0.1:8009"
@@ -142,33 +141,17 @@ def _load_fallback_rule_packs(
     return tuple(fallback_rule_packs)
 
 
-def _read_klint_dotenv(dotenv_path: Path | None = None) -> dict[str, str]:
-    """Return the settings in klint's own .env, or else .env.example."""
-    target_env = dotenv_path or (_PACKAGE_ROOT / ".env")
-    if not target_env.is_file():
-        target_env = _PACKAGE_ROOT / ".env.example"
-    if not target_env.is_file():
-        return {}
-    key_to_value: dict[str, str] = {}
-    for raw_line in target_env.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key_to_value[key.strip()] = value.strip().strip("'\"")
-    return key_to_value
-
-
 @dataclass(frozen=True)
 class _SettingSource:
     """One place settings are read from.
 
     description names it in messages, and key_to_value holds the settings
-    it sets.
+    it sets. A relative path it sets is taken from base_folder.
     """
 
     description: str
     key_to_value: Mapping[str, str]
+    base_folder: Path
 
 
 @dataclass(frozen=True)
@@ -231,11 +214,11 @@ def _locate_built_in_language_to_file_extensions() -> Path:
     return _locate_built_in_resource(_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS)
 
 
-def _resolve_resource_path(raw_path: str | Path) -> Path:
-    candidate = Path(raw_path)
-    if candidate.is_absolute() or candidate.exists():
-        return candidate.resolve()
-    return (_PACKAGE_ROOT / candidate).resolve()
+def _resolve_setting_path(setting: _SettingValue | None) -> Path | None:
+    """Return the path ``setting`` names; a relative one is taken from its source."""
+    if setting is None:
+        return None
+    return (setting.source.base_folder / setting.value).resolve()
 
 
 @dataclass(frozen=True)
@@ -267,14 +250,15 @@ class AppSettings:
         cls,
         target_path: Path | None = None,
         config_path: Path | None = None,
-        dotenv_path: Path | None = None,
     ) -> "AppSettings":
         """Load the settings for an audit of ``target_path``.
 
         Each setting is taken from the first of these that sets it: the
         shell's environment variables, the "env" block of the config file,
-        klint's own .env, the built-in default. Nothing outside the returned
-        value is changed.
+        the built-in default. A relative path is taken from the working
+        directory when the shell sets it, and from the folder of the config
+        file when the file does. Nothing outside the returned value is
+        changed.
         """
         active_config = config_path or find_project_config(target_path)
         config = _read_config(active_config)
@@ -284,6 +268,7 @@ class AppSettings:
                 key_to_value={
                     key: os.environ[key] for key in _KNOWN_ENV_KEYS if key in os.environ
                 },
+                base_folder=Path.cwd(),
             )
         ]
         fallback_rule_packs: tuple[Path, ...] | None = None
@@ -292,23 +277,15 @@ class AppSettings:
                 _SettingSource(
                     description=f"'{active_config}'",
                     key_to_value=_load_env_block(config, active_config),
+                    base_folder=active_config.parent,
                 )
             )
             fallback_rule_packs = _load_fallback_rule_packs(config, active_config)
-        sources.append(
-            _SettingSource(
-                description="klint's .env", key_to_value=_read_klint_dotenv(dotenv_path)
-            )
-        )
 
         def _get_setting(key: str) -> str | None:
             setting = _find_setting(key, sources)
             return None if setting is None else setting.value
 
-        # When set, each variable names one file that replaces the built-in
-        # packs for its command.
-        rules_override = _get_setting("KEV_DEFAULT_RULES_PATH")
-        project_rules_override = _get_setting("KEV_DEFAULT_PROJECT_RULES_PATH")
         return cls(
             model_name=_get_setting("KEV_MODEL_NAME") or _DEFAULT_MODEL_NAME,
             kev_mode=_read_judge_mode(_find_setting("KEV_MODE", sources)),
@@ -319,13 +296,13 @@ class AppSettings:
                 if fallback_rule_packs is None
                 else fallback_rule_packs
             ),
-            file_contents_rule_pack_override=(
-                _resolve_resource_path(rules_override) if rules_override else None
+            # When set, each variable names one file that replaces the
+            # built-in packs for its command.
+            file_contents_rule_pack_override=_resolve_setting_path(
+                _find_setting("KEV_DEFAULT_RULES_PATH", sources)
             ),
-            project_structure_rule_pack_override=(
-                _resolve_resource_path(project_rules_override)
-                if project_rules_override
-                else None
+            project_structure_rule_pack_override=_resolve_setting_path(
+                _find_setting("KEV_DEFAULT_PROJECT_RULES_PATH", sources)
             ),
             discovered_config_path=active_config,
         )
