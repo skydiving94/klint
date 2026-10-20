@@ -5,6 +5,7 @@ from pathlib import Path
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.report import AuditFinding
+from klint.core.models.scale import AnswerChoice
 
 
 class _ANSI:
@@ -89,29 +90,40 @@ def _directory_of(unit_id: str) -> str:
     return str(path if path.is_dir() else path.parent)
 
 
-def _badge(judgment: str) -> str:
-    upper = judgment.upper()
-    if upper == "FAIL":
-        return f"{_ANSI.BOLD}{_ANSI.RED}[FAIL]{_ANSI.RESET}"
-    if upper == "PASS":
-        return f"{_ANSI.BOLD}{_ANSI.GREEN}[PASS]{_ANSI.RESET}"
-    if upper == "LACK OF EVIDENCE":
-        return f"{_ANSI.BOLD}{_ANSI.YELLOW}[LACK OF EVIDENCE]{_ANSI.RESET}"
-    return f"{_ANSI.DIM}[{upper}]{_ANSI.RESET}"
+# How an answer that is not a problem is styled, by its sort rank: those that
+# sort right after the problems as needing a look, the next as fine, the
+# rest as not mattering.
+_NON_PROBLEM_SORT_RANK_TO_STYLE = {
+    0: _ANSI.BOLD + _ANSI.YELLOW,
+    1: _ANSI.BOLD + _ANSI.YELLOW,
+    2: _ANSI.BOLD + _ANSI.GREEN,
+}
 
 
-def _confidence_bar(confidence: float | None, width: int = 10) -> str:
+def _pick_answer_style(answer: AnswerChoice) -> str:
+    """Return the style of ``answer``, from its scale: a problem is bold red."""
+    if answer.is_problem:
+        return _ANSI.BOLD + _ANSI.RED
+    return _NON_PROBLEM_SORT_RANK_TO_STYLE.get(answer.sort_rank, _ANSI.DIM)
+
+
+def _badge(answer: AnswerChoice) -> str:
+    return f"{_pick_answer_style(answer)}[{answer.label.upper()}]{_ANSI.RESET}"
+
+
+def _confidence_bar(confidence: float | None, is_problem: bool, width: int = 10) -> str:
+    """Return the bar of ``confidence``; coloured by it for a problem, else dim."""
     if confidence is None:
         return f"{_ANSI.DIM}n/a{_ANSI.RESET}"
     clamped = max(0.0, min(1.0, confidence))
     filled = round(clamped * width)
     bar = "\u2588" * filled + "\u2591" * (width - filled)
     pct = f"{clamped * 100:5.1f}%"
-    color = (
-        _ANSI.RED
-        if clamped >= 0.75
-        else (_ANSI.YELLOW if clamped >= 0.4 else _ANSI.DIM)
-    )
+    color = _ANSI.DIM
+    if is_problem and clamped >= 0.75:
+        color = _ANSI.RED
+    elif is_problem and clamped >= 0.4:
+        color = _ANSI.YELLOW
     return f"{color}{bar}{_ANSI.RESET} {_ANSI.BOLD}{pct}{_ANSI.RESET}"
 
 
@@ -140,7 +152,7 @@ def format_audit_report(
     for finding in findings:
         grouped[finding.unit_id].append(finding)
 
-    fail_count = sum(1 for finding in findings if finding.is_failure())
+    fail_count = sum(1 for finding in findings if finding.is_problem())
 
     for unit_id, unit_findings in grouped.items():
         lines.append(
@@ -156,9 +168,10 @@ def format_audit_report(
                 )
 
             lines.append(
-                f"  {_badge(finding.answer.label)} "
+                f"  {_badge(finding.answer)} "
                 f"{_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
-                f"Confidence: {_confidence_bar(finding.confidence)}"
+                "Confidence: "
+                f"{_confidence_bar(finding.confidence, finding.is_problem())}"
             )
             if finding.question:
                 lines.append(f"      {_ANSI.DIM}\u21b3 {finding.question}{_ANSI.RESET}")

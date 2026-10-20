@@ -5,13 +5,13 @@ from typing import Any
 
 from klint.core.models.location import Location
 from klint.core.models.report import AuditFinding, AuditReport
-from klint.core.models.scale import Choice
+from klint.core.models.scale import AnswerChoice
 from klint.core.models.unit import UnitContext
 from tests.support.builders import FAIL, IRRELEVANT, LACK_OF_EVIDENCE, PASS
 
 
 def _finding(
-    rule_id: str, choice: Choice, confidence: float | None, unit_id: str = "a.py"
+    rule_id: str, choice: AnswerChoice, confidence: float | None, unit_id: str = "a.py"
 ) -> AuditFinding:
     return AuditFinding(
         rule_id=rule_id,
@@ -119,5 +119,5 @@ def test_get_findings_returns_the_same_selection_as_objects() -> None:
     report = _report(_finding("a", PASS, 0.9), _finding("b", FAIL, 0.9))
     (finding,) = report.get_findings()
     assert finding.rule_id == "b"
-    assert finding.is_failure()
+    assert finding.is_problem()
     assert report.get_issues() == [finding.convert_to_dict()]

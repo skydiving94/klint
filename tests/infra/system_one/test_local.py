@@ -124,7 +124,7 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
     answers = asyncio.run(_local_judge().answer(request))
 
     # The keys and values kev has always been sent.
-    criteria = PRACTICE_SCALE.criteria_payload()
+    criteria = PRACTICE_SCALE.map_choice_key_to_criterion()
     expected_questions = {
         rule_id: {
             "type": "choice",

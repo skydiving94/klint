@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass, field
 
 from klint.core.models.json_value import JsonValue
 from klint.core.models.location import Location
-from klint.core.models.scale import Choice
+from klint.core.models.scale import AnswerChoice
 from klint.core.models.unit import UnitContext
 
 
@@ -19,7 +19,7 @@ class AuditFinding:
 
     rule_id: str
     unit_id: str
-    answer: Choice
+    answer: AnswerChoice
     question: str
     confidence: float | None = None
     choice_key_to_probability: dict[str, float] | None = None
@@ -28,10 +28,11 @@ class AuditFinding:
     evidence_location: Location | None = None
     context: UnitContext = field(default_factory=UnitContext)
 
-    def is_failure(self) -> bool:
-        return self.answer.is_finding
+    def is_problem(self) -> bool:
+        """Return True when the answer counts as a problem on its scale."""
+        return self.answer.is_problem
 
-    def meets_confidence(self, min_confidence: float = 0.0) -> bool:
+    def does_meet_confidence(self, min_confidence: float = 0.0) -> bool:
         if self.confidence is None:
             return True
         return self.confidence >= min_confidence
@@ -90,12 +91,13 @@ class AuditReport:
         selected = [
             f
             for f in self._findings
-            if (not fails_only or f.is_failure()) and f.meets_confidence(min_confidence)
+            if (not fails_only or f.is_problem())
+            and f.does_meet_confidence(min_confidence)
         ]
         selected.sort(
             key=lambda f: (
                 unit_id_to_rank[f.unit_id],
-                f.answer.priority,
+                f.answer.sort_rank,
                 -(f.confidence if f.confidence is not None else -1.0),
                 f.rule_id,
             )

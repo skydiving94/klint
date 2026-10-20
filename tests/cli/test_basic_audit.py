@@ -407,7 +407,7 @@ def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
         question_id="house_rule",
         question_type=QuestionType.CHOICE,
         question=FILE_RULE["instructions"],
-        choice_key_to_criterion=PRACTICE_SCALE.criteria_payload(),
+        choice_key_to_criterion=PRACTICE_SCALE.map_choice_key_to_criterion(),
     )
 
 

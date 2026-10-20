@@ -8,7 +8,7 @@ import pytest
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.models.scale import Choice
+from klint.core.models.scale import AnswerChoice
 from tests.support.builders import FAIL, PASS, build_audit_pipeline, write_text
 from tests.support.fakes import FakeJudge, PickyJudge
 
@@ -33,7 +33,7 @@ def _run_audit(judge: FakeJudge, request: AuditRequest) -> AuditOutcome:
     return asyncio.run(build_audit_pipeline(judge).run_audit(request))
 
 
-def _judgments(outcome: AuditOutcome) -> list[tuple[str, str, Choice]]:
+def _judgments(outcome: AuditOutcome) -> list[tuple[str, str, AnswerChoice]]:
     return [
         (finding.unit_id, finding.rule_id, finding.answer)
         for finding in outcome.report.get_findings(fails_only=False)
