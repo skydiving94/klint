@@ -5,7 +5,7 @@ import urllib.error
 
 import pytest
 
-from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
 from klint.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import build_judge_request
@@ -38,7 +38,7 @@ def test_request_is_posted_to_the_systemone_endpoint_in_its_format(
     assert received.headers["Content-Type"] == "application/json"
     assert received.headers["Authorization"] == "Bearer secret"
     # The keys and values System One has always been sent.
-    criteria = PASS_FAIL_SCALE.criteria_payload()
+    criteria = PRACTICE_SCALE.criteria_payload()
     assert received.body == {
         "model": "kev-latest",
         "state": "x = 1\n",

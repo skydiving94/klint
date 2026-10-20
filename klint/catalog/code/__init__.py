@@ -14,6 +14,7 @@ from klint.catalog.code.common.extractors.project_structure import (
     ProjectStructureExtractor,
 )
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.extractors.file_metadata import (
@@ -22,7 +23,6 @@ from klint.catalog.code.python.extractors.file_metadata import (
 from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.rule_loader import BaseRuleLoader
@@ -59,14 +59,14 @@ class CodeSuite(BaseSuite):
                 kind_id=FILE_CONTENTS_KIND_ID,
                 extractor=self._file_contents_extractor,
                 rule_loader=rule_loader,
-                answer_scale=PASS_FAIL_SCALE,
+                answer_scale=PRACTICE_SCALE,
                 ignored_names=CODE_IGNORED_NAMES,
             ),
             AuditKind(
                 kind_id=PROJECT_STRUCTURE_KIND_ID,
                 extractor=self._project_structure_extractor,
                 rule_loader=rule_loader,
-                answer_scale=PASS_FAIL_SCALE,
+                answer_scale=PRACTICE_SCALE,
                 ignored_names=CODE_IGNORED_NAMES,
             ),
         ]

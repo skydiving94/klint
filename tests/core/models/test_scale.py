@@ -2,14 +2,14 @@
 
 import pytest
 
-from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.core.models.scale import AnswerScale, Choice
 
 
 def test_choice_lookup_ignores_case_and_rejects_unknown_keys() -> None:
-    assert PASS_FAIL_SCALE.choice("FAIL") == PASS_FAIL_SCALE.choice("fail")
+    assert PRACTICE_SCALE.choice("FAIL") == PRACTICE_SCALE.choice("fail")
     with pytest.raises(KeyError, match="maybe"):
-        PASS_FAIL_SCALE.choice("maybe")
+        PRACTICE_SCALE.choice("maybe")
 
 
 def test_a_suite_can_define_its_own_scale() -> None:

@@ -7,6 +7,7 @@ from pathlib import Path
 from injector import inject
 
 from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.audit_kind import AuditKind
 from klint.core.models.unit import AuditableUnit
@@ -26,11 +27,14 @@ class AcquiredUnits:
 
 
 class UnitAcquisition:
-    """Scans an audit target once and extracts its units by the kind of audit."""
+    """Scans an audit target once and extracts its units by the kind of audit.
+
+    The scan leaves out the names the kind ignores.
+    """
 
     @inject
-    def __init__(self, target_scanner: TargetScanner) -> None:
-        self._target_scanner = target_scanner
+    def __init__(self, file_traits_identifier: BaseFileTraitsIdentifier) -> None:
+        self._file_traits_identifier = file_traits_identifier
 
     async def acquire_units(
         self,
@@ -43,8 +47,11 @@ class UnitAcquisition:
         Raises when the target cannot be used. The listener, when given, is
         told about each directory as it is scanned.
         """
+        target_scanner = TargetScanner(
+            self._file_traits_identifier, audit_kind.ignored_names
+        )
         scanned_target = await asyncio.to_thread(
-            self._target_scanner.scan_target, target, scan_progress_listener
+            target_scanner.scan_target, target, scan_progress_listener
         )
         return AcquiredUnits(
             units=await audit_kind.extractor.extract_units(scanned_target),

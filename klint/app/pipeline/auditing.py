@@ -5,6 +5,7 @@ from injector import inject
 from klint.app.pipeline.audit_preparer import PendingAuditPortfolio
 from klint.core.auditor import Auditor
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
+from klint.core.models.audit_kind import AuditKind
 from klint.core.models.report import AuditReport
 
 
@@ -18,14 +19,19 @@ class UnitAuditing:
     async def audit_units(
         self,
         portfolio: PendingAuditPortfolio,
+        audit_kind: AuditKind,
         audit_progress_listener: BaseAuditProgressListener | None = None,
     ) -> AuditReport:
-        """Audit every unit of ``portfolio``; return the report.
+        """Audit every unit of ``portfolio`` for ``audit_kind``; return the report.
 
-        A unit whose audit fails is left out of the report and the others go
-        on. The listener, when given, is told when the audit starts and about
-        each unit as its audit ends.
+        The judge answers on the kind's scale. A unit whose audit fails is
+        left out of the report and the others go on. The listener, when
+        given, is told when the audit starts and about each unit as its audit
+        ends.
         """
         return await self._auditor.audit(
-            portfolio.units, portfolio.language_to_rules, audit_progress_listener
+            portfolio.units,
+            portfolio.language_to_rules,
+            audit_kind.answer_scale,
+            audit_progress_listener,
         )

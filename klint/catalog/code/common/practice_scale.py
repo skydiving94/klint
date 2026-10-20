@@ -1,36 +1,28 @@
-"""The default four-way answer scale for pass/fail audits."""
+"""The answer scale for asking whether content follows a described practice."""
 
 from klint.core.models.scale import AnswerScale, Choice
 
-PASS_FAIL_SCALE = AnswerScale(
-    name="pass_fail",
+PRACTICE_SCALE = AnswerScale(
+    name="practice",
     choices=(
         Choice(
             key="pass",
             label="Pass",
-            criterion=(
-                "The provided code or project structure follows the described practice."
-            ),
+            criterion="The provided content follows the described practice.",
             is_finding=False,
             priority=2,
         ),
         Choice(
             key="fail",
             label="Fail",
-            criterion=(
-                "The provided code or project structure violates the described "
-                "practice."
-            ),
+            criterion="The provided content violates the described practice.",
             is_finding=True,
             priority=0,
         ),
         Choice(
             key="irrelevant",
             label="Irrelevant",
-            criterion=(
-                "The described practice does not apply to this specific code or "
-                "directory."
-            ),
+            criterion="The described practice does not apply to the provided content.",
             is_finding=False,
             priority=3,
         ),
@@ -38,8 +30,8 @@ PASS_FAIL_SCALE = AnswerScale(
             key="lack_of_evidence",
             label="Lack of Evidence",
             criterion=(
-                "There is not enough information in the provided context to determine "
-                "pass, fail, or irrelevance."
+                "There is not enough information in the provided content to "
+                "determine pass, fail, or irrelevance."
             ),
             is_finding=False,
             priority=1,

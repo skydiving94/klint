@@ -11,9 +11,13 @@ from klint.app.pipeline.audit_pipeline import AuditPipeline
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override, create_injector
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
+from klint.catalog.common.file_traits_identifiers.extension_identifier import (
+    ExtensionFileTraitsIdentifier,
+)
 from klint.catalog.common.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.core.interfaces.judge import BaseJudge
@@ -49,10 +53,10 @@ def build_unit_registry() -> UnitRegistry:
 
 
 # The four answers of the default scale, for building and checking findings.
-PASS = PASS_FAIL_SCALE.choice("pass")
-FAIL = PASS_FAIL_SCALE.choice("fail")
-IRRELEVANT = PASS_FAIL_SCALE.choice("irrelevant")
-LACK_OF_EVIDENCE = PASS_FAIL_SCALE.choice("lack_of_evidence")
+PASS = PRACTICE_SCALE.choice("pass")
+FAIL = PRACTICE_SCALE.choice("fail")
+IRRELEVANT = PRACTICE_SCALE.choice("irrelevant")
+LACK_OF_EVIDENCE = PRACTICE_SCALE.choice("lack_of_evidence")
 
 
 def build_judge_request(subject: str, *question_ids: str) -> JudgeRequest:
@@ -68,7 +72,7 @@ def build_judge_request(subject: str, *question_ids: str) -> JudgeRequest:
                 question_id=question_id,
                 question_type=QuestionType.CHOICE,
                 question=f"Is {question_id} done?",
-                choice_key_to_criterion=PASS_FAIL_SCALE.criteria_payload(),
+                choice_key_to_criterion=PRACTICE_SCALE.criteria_payload(),
             )
             for question_id in question_ids
         ),
@@ -149,8 +153,13 @@ def build_audit_command_app(
 
 
 def build_target_scanner() -> TargetScanner:
-    """Return klint's target scanner, built the way the commands build it."""
-    return create_injector(make_settings()).get(TargetScanner)
+    """Return the target scanner the code suite's kinds of audit scan with."""
+    return TargetScanner(
+        ExtensionFileTraitsIdentifier(
+            load_file_extension_to_language(DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS)
+        ),
+        CODE_IGNORED_NAMES,
+    )
 
 
 def build_project_extractor() -> RecursiveProjectExtractor:

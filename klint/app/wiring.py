@@ -16,18 +16,14 @@ from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
 from klint.catalog import BuiltInSuitesModule
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_kind import AuditKind
-from klint.core.models.ignored_names import IgnoredNames
-from klint.core.models.scale import AnswerScale
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
@@ -49,9 +45,6 @@ class KlintModule(Module):
 
     def configure(self, binder: Binder) -> None:
         binder.bind(AppSettings, to=self._settings)
-        # One answer scale for now; it is meant to vary by suite.
-        binder.bind(AnswerScale, to=PASS_FAIL_SCALE)
-        binder.bind(IgnoredNames, to=CODE_IGNORED_NAMES)
         # The suites an audit can draw on; each one adds itself.
         binder.multibind(list[BaseSuite], to=[])
         binder.install(BuiltInSuitesModule())

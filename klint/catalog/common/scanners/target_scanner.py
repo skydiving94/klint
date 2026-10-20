@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-from injector import inject
-
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.klint_warning import warn_about_unreadable_directory
@@ -25,7 +23,6 @@ class TargetScanner:
     cannot be read is left out, with a warning.
     """
 
-    @inject
     def __init__(
         self,
         file_traits_identifier: BaseFileTraitsIdentifier,

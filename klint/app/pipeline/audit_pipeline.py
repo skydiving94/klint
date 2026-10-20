@@ -85,7 +85,7 @@ class AuditPipeline:
             scan_progress_listener=request.scan_progress_listener,
         )
         report = await self._unit_auditing.audit_units(
-            portfolio, request.audit_progress_listener
+            portfolio, audit_kind, request.audit_progress_listener
         )
         return AuditOutcome(
             report=self._finding_roll_up.roll_up(report),
