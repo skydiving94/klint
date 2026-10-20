@@ -4,6 +4,7 @@ import asyncio
 
 import pytest
 
+from klint.core.models.location import Location
 from tests.support.builders import (
     build_project_extractor,
     build_target_scanner,
@@ -18,8 +19,8 @@ def test_project_extractor_builds_one_root_unit() -> None:
 
     assert unit.unit_type == "project_directory"
     assert unit.unit_id == str(MOCK_PROJECT)
+    assert unit.get_location() == Location(source=str(MOCK_PROJECT))
     assert unit.get_metadata() == {
-        "directory_path": str(MOCK_PROJECT),
         "file_names": [],
         "subdirectory_names": ["api", "domain", "utils"],
     }

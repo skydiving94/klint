@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from klint.core.models.location import Location
@@ -7,33 +7,52 @@ from klint.core.models.scale import Choice
 
 @dataclass(frozen=True)
 class AuditFinding:
+    """The judge's answer to one rule about one unit.
+
+    question is the rule's question as the judge was asked it, and tags are
+    the rule's topic labels. location is where the unit, the claim judged,
+    sits; evidence_location is where its evidence sits, when the unit has
+    evidence apart from itself. context is what the unit tells beyond its
+    ID and location.
+    """
+
     rule_id: str
     unit_id: str
-    choice: Choice
-    instructions: str
+    answer: Choice
+    question: str
     confidence: float | None = None
-    probabilities: dict[str, float] | None = None
+    choice_key_to_probability: dict[str, float] | None = None
+    tags: tuple[str, ...] = ()
     location: Location | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    evidence_location: Location | None = None
+    context: dict[str, Any] = field(default_factory=dict)
 
     def is_failure(self) -> bool:
-        return self.choice.is_finding
+        return self.answer.is_finding
 
     def meets_confidence(self, min_confidence: float = 0.0) -> bool:
         if self.confidence is None:
             return True
         return self.confidence >= min_confidence
 
-    def to_dict(self) -> dict[str, Any]:
+    def convert_to_dict(self) -> dict[str, Any]:
+        """Return the finding as written to JSON: the same keys for any unit."""
         return {
             "rule_id": self.rule_id,
             "unit_id": self.unit_id,
-            "judgment": self.choice.label,
+            "answer": self.answer.label,
             "confidence": self.confidence,
-            "probabilities": self.probabilities,
-            "instructions": self.instructions,
-            **self.metadata,
+            "choice_key_to_probability": self.choice_key_to_probability,
+            "question": self.question,
+            "tags": list(self.tags),
+            "location": _convert_location_to_dict(self.location),
+            "evidence_location": _convert_location_to_dict(self.evidence_location),
+            "context": self.context,
         }
+
+
+def _convert_location_to_dict(location: Location | None) -> dict[str, Any] | None:
+    return None if location is None else asdict(location)
 
 
 @dataclass
@@ -75,7 +94,7 @@ class AuditReport:
         selected.sort(
             key=lambda f: (
                 unit_id_to_rank[f.unit_id],
-                f.choice.priority,
+                f.answer.priority,
                 -(f.confidence if f.confidence is not None else -1.0),
                 f.rule_id,
             )
@@ -85,4 +104,6 @@ class AuditReport:
     def get_issues(
         self, fails_only: bool = True, min_confidence: float = 0.0
     ) -> list[dict[str, Any]]:
-        return [f.to_dict() for f in self.get_findings(fails_only, min_confidence)]
+        return [
+            f.convert_to_dict() for f in self.get_findings(fails_only, min_confidence)
+        ]

@@ -8,7 +8,6 @@ from klint.core.models.unit import AuditableUnit
 @dataclass(frozen=True)
 class FileMetadataPayload:
     file_name: str = ""
-    file_path: str = ""
     line_count: int | None = 0
     imports: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
@@ -60,7 +59,6 @@ class AuditableFileMetadataUnit(AuditableUnit):
     def get_metadata(self) -> dict[str, Any]:
         payload = FileMetadataPayload(
             file_name=self.file_name,
-            file_path=self.file_path,
             line_count=self.line_count,
             imports=list(self.imports),
             exports=list(self.exports),

@@ -14,10 +14,9 @@ def _finding(
     return AuditFinding(
         rule_id=rule_id,
         unit_id=unit_id,
-        choice=choice,
-        instructions="?",
+        answer=choice,
+        question="?",
         confidence=confidence,
-        metadata={"file_path": "a.py"},
     )
 
 
@@ -84,16 +83,28 @@ def test_report_lists_the_audited_units_in_recorded_order() -> None:
     assert report.audited_unit_ids() == ["b.py", "a.py"]
 
 
-def test_finding_dict_carries_judgment_text_and_unit_metadata() -> None:
-    issue = _finding("r", LACK_OF_EVIDENCE, 0.5).to_dict()
-    assert issue == {
+def test_finding_dict_has_the_finding_keys_with_the_unit_context_apart() -> None:
+    finding = AuditFinding(
+        rule_id="r",
+        unit_id="a.py",
+        answer=LACK_OF_EVIDENCE,
+        question="?",
+        confidence=0.5,
+        tags=("style",),
+        location=Location("a.py", 1, 9),
+        context={"rule_id": "from the unit"},
+    )
+    assert finding.convert_to_dict() == {
         "rule_id": "r",
         "unit_id": "a.py",
-        "judgment": "Lack of Evidence",
+        "answer": "Lack of Evidence",
         "confidence": 0.5,
-        "probabilities": None,
-        "instructions": "?",
-        "file_path": "a.py",
+        "choice_key_to_probability": None,
+        "question": "?",
+        "tags": ["style"],
+        "location": {"source": "a.py", "start_line": 1, "end_line": 9},
+        "evidence_location": None,
+        "context": {"rule_id": "from the unit"},
     }
 
 
@@ -102,17 +113,4 @@ def test_get_findings_returns_the_same_selection_as_objects() -> None:
     (finding,) = report.get_findings()
     assert finding.rule_id == "b"
     assert finding.is_failure()
-    assert report.get_issues() == [finding.to_dict()]
-
-
-def test_location_is_not_part_of_the_finding_dict() -> None:
-    finding = AuditFinding(
-        rule_id="r",
-        unit_id="a.py",
-        choice=FAIL,
-        instructions="?",
-        location=Location("a.py", 1, 9),
-    )
-    assert finding.location is not None
-    assert finding.location.line_range == (1, 9)
-    assert "location" not in finding.to_dict()
+    assert report.get_issues() == [finding.convert_to_dict()]

@@ -1,14 +1,8 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from klint.core.models.location import Location
 from klint.core.models.unit import AuditableUnit
-
-
-@dataclass(frozen=True)
-class FileUnitMetadata:
-    file_path: str | None = None
-    line_range: list[int] | None = None
 
 
 @dataclass(frozen=True)
@@ -22,12 +16,6 @@ class AuditableFileUnit(AuditableUnit):
     start_line: int | None = None
     end_line: int | None = None
 
-    @property
-    def line_range(self) -> tuple[int, int] | None:
-        if self.start_line is not None and self.end_line is not None:
-            return (self.start_line, self.end_line)
-        return None
-
     def get_content(self) -> str:
         return self.content
 
@@ -39,8 +27,5 @@ class AuditableFileUnit(AuditableUnit):
         )
 
     def get_metadata(self) -> dict[str, Any]:
-        metadata = FileUnitMetadata(
-            file_path=self.file_path,
-            line_range=list(self.line_range) if self.line_range else None,
-        )
-        return asdict(metadata)
+        # The path and the line range are the location's.
+        return {}

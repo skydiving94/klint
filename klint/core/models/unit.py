@@ -41,6 +41,10 @@ class AuditableUnit(ABC):
         """Return where this unit sits in its source, if it has a location."""
         return None
 
+    def get_evidence_location(self) -> Location | None:
+        """Return where this unit's evidence sits, when apart from the unit itself."""
+        return None
+
     def children(self) -> Sequence[AuditableUnit]:
         """Return the units nested directly inside this one."""
         return ()

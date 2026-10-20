@@ -215,10 +215,12 @@ class AuditCommandApp:
             min_confidence=arguments.min_confidence,
         )
         if arguments.should_print_json:
-            issues = [finding.to_dict() for finding in findings]
             print(
                 json.dumps(
-                    {command.json_key: report.audited_unit_ids(), "issues": issues},
+                    {
+                        command.json_key: report.audited_unit_ids(),
+                        "findings": [finding.convert_to_dict() for finding in findings],
+                    },
                     indent=2,
                 )
             )

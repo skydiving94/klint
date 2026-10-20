@@ -49,8 +49,8 @@ def test_labels_are_unchanged_and_only_fail_counts_as_a_problem(
     for key in EXPECTED_CRITERIA:
         app = build_audit_command_app(FILE_AUDIT_COMMAND, fake_judge(default=key))
         exit_code = asyncio.run(app.run([str(target), "--all", "--json"]))
-        (issue,) = json.loads(capsys.readouterr().out)["issues"]
-        key_to_label_and_exit_code[key] = (issue["judgment"], int(exit_code))
+        (issue,) = json.loads(capsys.readouterr().out)["findings"]
+        key_to_label_and_exit_code[key] = (issue["answer"], int(exit_code))
 
     assert key_to_label_and_exit_code == {
         "pass": ("Pass", 0),

@@ -153,7 +153,7 @@ def test_command_for_a_suite_added_in_test_code_runs_end_to_end(
     notes = [str(tmp_path / "build" / "reply.txt"), str(tmp_path / "thanks.txt")]
     assert exit_code == ExitCode.PROBLEMS_FOUND
     assert output["examined_notes"] == notes
-    assert [(issue["unit_id"], issue["judgment"]) for issue in output["issues"]] == [
+    assert [(issue["unit_id"], issue["answer"]) for issue in output["findings"]] == [
         (notes[0], "Rude"),
         (notes[1], "Rude"),
     ]
@@ -180,11 +180,11 @@ def test_two_kinds_with_different_scales_run_in_one_process(
     notes_requests = judge.requests[len(code_requests) :]
 
     code_labels = {
-        finding.choice.label
+        finding.answer.label
         for finding in code_outcome.report.get_findings(fails_only=False)
     }
     notes_labels = {
-        finding.choice.label
+        finding.answer.label
         for finding in notes_outcome.report.get_findings(fails_only=False)
     }
     assert (code_labels, notes_labels) == ({"Fail"}, {"Polite"})

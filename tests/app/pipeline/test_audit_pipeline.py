@@ -35,7 +35,7 @@ def _run_audit(judge: FakeJudge, request: AuditRequest) -> AuditOutcome:
 
 def _judgments(outcome: AuditOutcome) -> list[tuple[str, str, Choice]]:
     return [
-        (finding.unit_id, finding.rule_id, finding.choice)
+        (finding.unit_id, finding.rule_id, finding.answer)
         for finding in outcome.report.get_findings(fails_only=False)
     ]
 

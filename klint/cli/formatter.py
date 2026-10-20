@@ -156,14 +156,12 @@ def format_audit_report(
                 )
 
             lines.append(
-                f"  {_badge(finding.choice.label)} "
+                f"  {_badge(finding.answer.label)} "
                 f"{_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
                 f"Confidence: {_confidence_bar(finding.confidence)}"
             )
-            if finding.instructions:
-                lines.append(
-                    f"      {_ANSI.DIM}\u21b3 {finding.instructions}{_ANSI.RESET}"
-                )
+            if finding.question:
+                lines.append(f"      {_ANSI.DIM}\u21b3 {finding.question}{_ANSI.RESET}")
 
     lines.append("\n" + divider)
     summary_color = _ANSI.RED if fail_count > 0 else _ANSI.GREEN

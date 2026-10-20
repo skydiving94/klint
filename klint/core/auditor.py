@@ -95,12 +95,14 @@ class Auditor:
                 AuditFinding(
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
-                    choice=answer_scale.choice(answer.choice_key),
-                    instructions=rule.instructions,
+                    answer=answer_scale.choice(answer.choice_key),
+                    question=rule.instructions,
                     confidence=answer.confidence,
-                    probabilities=answer.choice_key_to_probability,
+                    choice_key_to_probability=answer.choice_key_to_probability,
+                    tags=tuple(rule.tags),
                     location=unit.get_location(),
-                    metadata=unit.get_metadata(),
+                    evidence_location=unit.get_evidence_location(),
+                    context=unit.get_metadata(),
                 )
             )
         return findings

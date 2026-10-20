@@ -12,7 +12,6 @@ from klint.core.models.unit import AuditableUnit
 
 @dataclass(frozen=True)
 class ProjectDirectoryUnitMetadata:
-    directory_path: str = ""
     file_names: list[str] = field(default_factory=list)
     subdirectory_names: list[str] = field(default_factory=list)
 
@@ -78,7 +77,6 @@ class AuditableDirectoryUnit(AuditableUnit):
 
     def get_metadata(self) -> dict[str, Any]:
         metadata = ProjectDirectoryUnitMetadata(
-            directory_path=self.directory_path,
             file_names=[f.file_name for f in self.files],
             subdirectory_names=[d.directory_name for d in self.subdirectories],
         )
