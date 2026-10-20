@@ -78,9 +78,9 @@ class _ProgressListener(BaseAuditProgressListener):
         self._progress.advance(unit_id)
 
 
-def print_error_line(command: AuditCommand, error: Exception) -> None:
+def print_error_line(command: AuditCommand, reason: Exception | str) -> None:
     """Print one line on stderr saying why the command stopped."""
-    print(f"[{command.name}] Error: {error}", file=sys.stderr)
+    print(f"[{command.name}] Error: {reason}", file=sys.stderr)
 
 
 def print_warning_line(command: AuditCommand, message: str) -> None:
@@ -124,7 +124,8 @@ def parse_command_arguments(
         epilog=(
             f"Exit status: {ExitCode.NO_PROBLEMS.value} when no failure is found, "
             f"{ExitCode.PROBLEMS_FOUND.value} when one is, "
-            f"{ExitCode.RUN_ERROR.value} when the audit cannot run."
+            f"{ExitCode.RUN_ERROR.value} when the audit cannot run or no unit "
+            "could be audited."
         ),
     )
     parser.add_argument(
@@ -210,6 +211,14 @@ class AuditCommandApp:
         progress.finish()
 
         report = outcome.report
+        selected_unit_count = len(outcome.selected_unit_ids)
+        if selected_unit_count and not report.audited_unit_ids():
+            # Each unit's failure has had its own line; nothing was checked.
+            print_error_line(
+                command,
+                f"None of the {selected_unit_count} unit(s) to audit could be audited",
+            )
+            return ExitCode.RUN_ERROR
         findings = report.select_findings(
             should_include_non_problems=arguments.should_show_all,
             min_confidence=arguments.min_confidence,
