@@ -6,7 +6,6 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from klint import catalog
 from klint.app.audit_pipeline import AuditPipeline
 from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
@@ -46,12 +45,8 @@ DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
 
 def build_unit_registry() -> UnitRegistry:
     """Return a registry holding the unit types of every built-in suite."""
-    registry = UnitRegistry()
-    catalog.register(registry)
-    return registry
+    return create_injector(make_settings()).get(UnitRegistry)
 
-
-UNIT_REGISTRY = build_unit_registry()
 
 # The four answers of the default scale, for building and checking findings.
 PASS = PASS_FAIL_SCALE.choice("pass")
@@ -115,6 +110,9 @@ def make_settings(
         project_structure_rule_pack_override=project_structure_rule_pack_override,
         language_to_file_extensions_path=language_to_file_extensions_path,
     )
+
+
+UNIT_REGISTRY = build_unit_registry()
 
 
 def build_audit_pipeline(

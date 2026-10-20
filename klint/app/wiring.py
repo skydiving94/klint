@@ -2,43 +2,31 @@
 
 Each class asks for what it needs with @inject. What is left here is what
 its signature cannot express: the settings, what is chosen from them, and
-which implementation stands for each language.
+the suites an audit draws on. Each suite binds what it needs itself.
 """
 
 from collections.abc import Callable, Mapping
-from pathlib import Path
+from dataclasses import replace
 from typing import NewType, assert_never
 
-from injector import Binder, Injector, Module, multiprovider, provider, singleton
+from injector import Binder, Injector, Module, provider, singleton
 
-from klint import catalog
-from klint.app.audit_mode import AuditMode
+from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
-from klint.catalog.code import python as python_suite
-from klint.catalog.code.common.extractors.directory_factory import (
-    BaseDirectoryUnitFactory,
-)
-from klint.catalog.code.common.extractors.file_metadata_base import (
-    BaseFileMetadataExtractor,
-)
+from klint.catalog import BuiltInSuitesModule
+from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
-from klint.catalog.code.python.extractors.file_metadata import (
-    PythonFileMetadataExtractor,
-)
-from klint.catalog.code.python.extractors.package_factory import (
-    PythonPackageUnitFactory,
-)
-from klint.catalog.common.extractors.whole_file import WholeFileExtractor
 from klint.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
 from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
-from klint.catalog.common.scanners.target_scanner import IgnoredNames
-from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_loader import BaseRuleLoader
+from klint.core.interfaces.suite import BaseSuite
+from klint.core.models.audit_kind import AuditKind
+from klint.core.models.ignored_names import IgnoredNames
 from klint.core.models.scale import AnswerScale
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
@@ -64,30 +52,16 @@ class KlintModule(Module):
         # One answer scale for now; it is meant to vary by suite.
         binder.bind(AnswerScale, to=PASS_FAIL_SCALE)
         binder.bind(IgnoredNames, to=CODE_IGNORED_NAMES)
-        # What handles each language, looked up by the traits of each file. A
-        # language not listed is handled in a language-neutral way.
-        binder.multibind(dict[str, BaseUnitExtractor], to={})
-        binder.multibind(
-            dict[str, BaseFileMetadataExtractor],
-            to={python_suite.SUITE_LANGUAGE: PythonFileMetadataExtractor},
-        )
-        binder.multibind(
-            dict[str, BaseDirectoryUnitFactory],
-            to={python_suite.SUITE_LANGUAGE: PythonPackageUnitFactory},
-        )
+        # The suites an audit can draw on; each one adds itself.
+        binder.multibind(list[BaseSuite], to=[])
+        binder.install(BuiltInSuitesModule())
 
     @singleton
     @provider
-    def provide_language_neutral_unit_extractor(self) -> BaseUnitExtractor:
-        # Reads a file in the file contents audit when its language has no
-        # extractor of its own: as one whole file.
-        return WholeFileExtractor()
-
-    @singleton
-    @provider
-    def provide_unit_registry(self) -> UnitRegistry:
+    def provide_unit_registry(self, suites: list[BaseSuite]) -> UnitRegistry:
         registry = UnitRegistry()
-        catalog.register(registry)
+        for suite in suites:
+            suite.register_unit_types(registry)
         return registry
 
     @singleton
@@ -125,43 +99,60 @@ class KlintModule(Module):
         return ExtensionFileTraitsIdentifier(file_extension_to_language)
 
     @singleton
-    @multiprovider
-    def provide_audit_mode_to_rule_loader(
+    @provider
+    def provide_rule_loader(
         self,
         settings: AppSettings,
         registry: UnitRegistry,
         file_extension_to_language: FileExtensionToLanguage,
-    ) -> dict[AuditMode, BaseRuleLoader]:
-        known_languages = set(file_extension_to_language.values())
-        built_in_rule_loader = JsonRuleLoader(
+    ) -> BaseRuleLoader:
+        # The built-in packs, chosen by the traits of each file.
+        return JsonRuleLoader(
             settings.built_in_rule_packs,
             settings.fallback_rule_packs,
             registry,
-            known_languages,
+            set(file_extension_to_language.values()),
             project_rule_packs=settings.project_rule_packs,
         )
 
-        def choose_rule_loader(rule_pack_override: Path | None) -> BaseRuleLoader:
+    @singleton
+    @provider
+    def provide_audit_kind_registry(
+        self,
+        settings: AppSettings,
+        suites: list[BaseSuite],
+        registry: UnitRegistry,
+        file_extension_to_language: FileExtensionToLanguage,
+    ) -> AuditKindRegistry:
+        kind_id_to_rule_pack_override = {
+            FILE_CONTENTS_KIND_ID: settings.file_contents_rule_pack_override,
+            PROJECT_STRUCTURE_KIND_ID: settings.project_structure_rule_pack_override,
+        }
+
+        def apply_rule_pack_override(audit_kind: AuditKind) -> AuditKind:
+            rule_pack_override = kind_id_to_rule_pack_override.get(audit_kind.kind_id)
             if rule_pack_override is None:
-                return built_in_rule_loader
+                return audit_kind
             # The file replaces every built-in pack, the fallback ones too, so
             # its rules are asked about every file.
-            return JsonRuleLoader(
-                (rule_pack_override,),
-                (rule_pack_override,),
-                registry,
-                known_languages,
-                project_rule_packs=settings.project_rule_packs,
+            return replace(
+                audit_kind,
+                rule_loader=JsonRuleLoader(
+                    (rule_pack_override,),
+                    (rule_pack_override,),
+                    registry,
+                    set(file_extension_to_language.values()),
+                    project_rule_packs=settings.project_rule_packs,
+                ),
             )
 
-        return {
-            AuditMode.FILE_CONTENTS: choose_rule_loader(
-                settings.file_contents_rule_pack_override
-            ),
-            AuditMode.PROJECT_STRUCTURE: choose_rule_loader(
-                settings.project_structure_rule_pack_override
-            ),
-        }
+        return AuditKindRegistry(
+            [
+                apply_rule_pack_override(audit_kind)
+                for suite in suites
+                for audit_kind in suite.list_audit_kinds()
+            ]
+        )
 
 
 def create_injector(settings: AppSettings, *overrides: Override) -> Injector:

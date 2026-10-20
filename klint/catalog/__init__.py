@@ -1,11 +1,14 @@
-"""Built-in suites of auditable units and their extractors."""
+"""The built-in suites of units, extractors and kinds of audit."""
 
-from klint.catalog import common
-from klint.catalog.code import common as code_common
-from klint.core.registry import UnitRegistry
+from injector import Binder, Module
+
+from klint.catalog.code import CodeSuiteModule
+from klint.catalog.common import DomainNeutralSuiteModule
 
 
-def register(registry: UnitRegistry) -> None:
-    """Add the unit types of every built-in suite to ``registry``."""
-    common.register(registry)
-    code_common.register(registry)
+class BuiltInSuitesModule(Module):
+    """Adds every built-in suite to an audit."""
+
+    def configure(self, binder: Binder) -> None:
+        binder.install(DomainNeutralSuiteModule())
+        binder.install(CodeSuiteModule())
