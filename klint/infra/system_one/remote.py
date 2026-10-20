@@ -16,7 +16,7 @@ class RemoteSystemOneJudge(BaseJudge):
     def __init__(
         self,
         model_name: str,
-        base_url: str = "http://127.0.0.1:8009",
+        base_url: str,
         api_key: str | None = None,
         timeout_seconds: float = 60.0,
     ) -> None:

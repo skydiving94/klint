@@ -10,7 +10,9 @@ from klint.app.judge_mode import JudgeMode
 from klint.core.klint_warning import KlintWarning
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+# The model and the server address the judge uses unless a setting names others.
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
+_DEFAULT_BASE_URL = "http://127.0.0.1:8009"
 # Built-in rule packs, relative to klint/resources/catalog/ and merged in this
 # order. Each pack states in its header the files it loads for.
 _BUILT_IN_RULE_PACKS = (
@@ -240,7 +242,7 @@ def _resolve_resource_path(raw_path: str | Path) -> Path:
 class AppSettings:
     model_name: str
     kev_mode: JudgeMode = JudgeMode.LOCAL
-    kev_base_url: str = "http://127.0.0.1:8009"
+    kev_base_url: str = _DEFAULT_BASE_URL
     kev_api_key: str | None = None
     # The packs chosen by the traits of each file, and the packs a file whose
     # language is not identified is asked instead.
@@ -299,28 +301,19 @@ class AppSettings:
             )
         )
 
-        def _get_setting(key: str, default: str | None = None) -> str | None:
+        def _get_setting(key: str) -> str | None:
             setting = _find_setting(key, sources)
-            return default if setting is None else setting.value
+            return None if setting is None else setting.value
 
-        model_name = _get_setting("KEV_MODEL_NAME", _DEFAULT_MODEL_NAME)
         # When set, each variable names one file that replaces the built-in
         # packs for its command.
         rules_override = _get_setting("KEV_DEFAULT_RULES_PATH")
         project_rules_override = _get_setting("KEV_DEFAULT_PROJECT_RULES_PATH")
-        kev_mode = _read_judge_mode(_find_setting("KEV_MODE", sources))
-        kev_base_url = (
-            _get_setting("KEV_BASE_URL", "http://127.0.0.1:8009")
-            or "http://127.0.0.1:8009"
-        )
-        kev_api_key = _get_setting("KEV_API_KEY") or None
-
-        assert model_name is not None
         return cls(
-            model_name=model_name,
-            kev_mode=kev_mode,
-            kev_base_url=kev_base_url,
-            kev_api_key=kev_api_key,
+            model_name=_get_setting("KEV_MODEL_NAME") or _DEFAULT_MODEL_NAME,
+            kev_mode=_read_judge_mode(_find_setting("KEV_MODE", sources)),
+            kev_base_url=_get_setting("KEV_BASE_URL") or _DEFAULT_BASE_URL,
+            kev_api_key=_get_setting("KEV_API_KEY"),
             fallback_rule_packs=(
                 _locate_built_in_fallback_rule_packs()
                 if fallback_rule_packs is None
