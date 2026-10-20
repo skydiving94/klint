@@ -10,7 +10,7 @@ from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.models.file_traits import FileTraits
 from klint.core.models.location import Location
 from klint.core.models.scanned_tree import ScannedFile
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit import AuditableUnit, UnitContext
 from tests.support.builders import write_text
 
 
@@ -31,7 +31,7 @@ def test_whole_file_extractor_returns_one_unit_spanning_the_file(
     assert unit.unit_id == str(target)
     assert unit.get_content() == "x = 1\ny = 2\nz = 3\n"
     assert unit.get_location() == Location(source=str(target), start_line=1, end_line=3)
-    assert unit.get_metadata() == {}
+    assert unit.get_context() == UnitContext()
 
 
 @pytest.mark.parametrize("language", ["python", None])

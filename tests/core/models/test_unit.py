@@ -1,5 +1,7 @@
 """Properties every auditable unit shares."""
 
+from dataclasses import asdict
+
 import pytest
 
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
@@ -31,9 +33,9 @@ def test_unit_language_is_keyword_only() -> None:
     assert unit.language is None
 
 
-def test_unit_language_is_not_in_the_metadata() -> None:
+def test_unit_language_is_not_in_the_context() -> None:
     unit = AuditableFileUnit(unit_id="a.py", file_path="a.py", language="python")
-    assert "language" not in unit.get_metadata()
+    assert "language" not in asdict(unit.get_context())
 
 
 def test_a_unit_has_no_children_unless_it_says_so() -> None:

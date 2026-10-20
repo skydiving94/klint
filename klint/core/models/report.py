@@ -1,8 +1,9 @@
 from dataclasses import asdict, dataclass, field
-from typing import Any
 
+from klint.core.models.json_value import JsonValue
 from klint.core.models.location import Location
 from klint.core.models.scale import Choice
+from klint.core.models.unit import UnitContext
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,7 @@ class AuditFinding:
     tags: tuple[str, ...] = ()
     location: Location | None = None
     evidence_location: Location | None = None
-    context: dict[str, Any] = field(default_factory=dict)
+    context: UnitContext = field(default_factory=UnitContext)
 
     def is_failure(self) -> bool:
         return self.answer.is_finding
@@ -35,7 +36,7 @@ class AuditFinding:
             return True
         return self.confidence >= min_confidence
 
-    def convert_to_dict(self) -> dict[str, Any]:
+    def convert_to_dict(self) -> dict[str, JsonValue]:
         """Return the finding as written to JSON: the same keys for any unit."""
         return {
             "rule_id": self.rule_id,
@@ -47,11 +48,11 @@ class AuditFinding:
             "tags": list(self.tags),
             "location": _convert_location_to_dict(self.location),
             "evidence_location": _convert_location_to_dict(self.evidence_location),
-            "context": self.context,
+            "context": asdict(self.context),
         }
 
 
-def _convert_location_to_dict(location: Location | None) -> dict[str, Any] | None:
+def _convert_location_to_dict(location: Location | None) -> JsonValue:
     return None if location is None else asdict(location)
 
 
@@ -103,7 +104,7 @@ class AuditReport:
 
     def get_issues(
         self, fails_only: bool = True, min_confidence: float = 0.0
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, JsonValue]]:
         return [
             f.convert_to_dict() for f in self.get_findings(fails_only, min_confidence)
         ]

@@ -69,9 +69,6 @@ class NoteUnit(AuditableUnit):
     def get_content(self) -> str:
         return self.text
 
-    def get_metadata(self) -> dict[str, object]:
-        return {}
-
 
 class NoteExtractor(BaseTargetExtractor):
     """Reads each .txt file of a target as one note."""

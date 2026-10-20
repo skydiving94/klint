@@ -102,7 +102,7 @@ class Auditor:
                     tags=tuple(rule.tags),
                     location=unit.get_location(),
                     evidence_location=unit.get_evidence_location(),
-                    context=unit.get_metadata(),
+                    context=unit.get_context(),
                 )
             )
         return findings

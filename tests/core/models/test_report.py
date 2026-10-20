@@ -1,10 +1,12 @@
 """Findings and report filtering and ordering."""
 
+from dataclasses import dataclass
 from typing import Any
 
 from klint.core.models.location import Location
 from klint.core.models.report import AuditFinding, AuditReport
 from klint.core.models.scale import Choice
+from klint.core.models.unit import UnitContext
 from tests.support.builders import FAIL, IRRELEVANT, LACK_OF_EVIDENCE, PASS
 
 
@@ -18,6 +20,11 @@ def _finding(
         question="?",
         confidence=confidence,
     )
+
+
+@dataclass(frozen=True)
+class _ContextWithRuleId(UnitContext):
+    rule_id: str
 
 
 def _report(*findings: AuditFinding) -> AuditReport:
@@ -92,7 +99,7 @@ def test_finding_dict_has_the_finding_keys_with_the_unit_context_apart() -> None
         confidence=0.5,
         tags=("style",),
         location=Location("a.py", 1, 9),
-        context={"rule_id": "from the unit"},
+        context=_ContextWithRuleId(rule_id="from the unit"),
     )
     assert finding.convert_to_dict() == {
         "rule_id": "r",

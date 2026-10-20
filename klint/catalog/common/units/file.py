@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from klint.core.models.location import Location
 from klint.core.models.unit import AuditableUnit
@@ -25,7 +25,3 @@ class AuditableFileUnit(AuditableUnit):
             start_line=self.start_line,
             end_line=self.end_line,
         )
-
-    def get_metadata(self) -> dict[str, Any]:
-        # The path and the line range are the location's.
-        return {}

@@ -3,9 +3,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from klint.core.models.location import Location
+
+
+@dataclass(frozen=True)
+class UnitContext:
+    """What a finding tells about its unit beyond its ID and location.
+
+    A unit type with more to tell extends it with fields of its own.
+    """
 
 
 @dataclass(frozen=True)
@@ -32,14 +40,13 @@ class AuditableUnit(ABC):
         """Return the text of this unit (and any child units) for evaluation."""
         pass
 
-    @abstractmethod
-    def get_metadata(self) -> dict[str, Any]:
-        """Return unit-specific context metadata to attach to an AuditFinding."""
-        pass
-
     def get_location(self) -> Location | None:
         """Return where this unit sits in its source, if it has a location."""
         return None
+
+    def get_context(self) -> UnitContext:
+        """Return what a finding on this unit tells beyond its ID and location."""
+        return UnitContext()
 
     def get_evidence_location(self) -> Location | None:
         """Return where this unit's evidence sits, when apart from the unit itself."""
