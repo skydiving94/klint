@@ -13,7 +13,7 @@ from klint.core.models.file_traits import FileTraits
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.registry import UnitRegistry
-from klint.infra.rule_loader.json_loader import JsonRuleLoader
+from klint.infra.rule_loader.json_rule_loader import JsonRuleLoader
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -334,18 +334,62 @@ def test_unknown_rule_field_is_ignored_with_a_warning(tmp_path: Path) -> None:
     assert rules["typo"].languages == []
 
 
-def test_settings_beside_flat_rules_are_not_taken_for_rules(tmp_path: Path) -> None:
+def test_keys_beside_a_rules_block_are_not_rules(tmp_path: Path) -> None:
     pack = write_json(
         tmp_path / "pack.json",
         {
             "env": {"KEV_MODE": "local"},
             "fallback_rule_packs": ["docs.json"],
-            "a": FILE_RULE,
+            "rules": {"a": FILE_RULE},
         },
     )
 
     # No warning either: an unexpected one fails the test.
     assert list(_load(_loader([pack]))) == ["a"]
+
+
+def test_every_key_of_a_flat_file_but_its_header_is_a_rule(tmp_path: Path) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        {"applies_to": {}, "env": {"KEV_MODE": "local"}, "a": FILE_RULE},
+    )
+
+    with pytest.warns(KlintWarning, match="Rule 'env' .* is skipped"):
+        assert list(_load(_loader([pack]))) == ["a"]
+
+
+def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_them(
+    tmp_path: Path,
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        _pack({"languages": ["python"]}, {"shared": FILE_RULE, "pack_only": FILE_RULE}),
+    )
+    project = write_json(
+        tmp_path / "klint.json",
+        {
+            "env": {"KEV_MODE": "local"},
+            "rules": {
+                "shared": {**FILE_RULE, "instructions": "From the project?"},
+                "project_only": FILE_RULE,
+            },
+        },
+    )
+    custom = write_json(
+        tmp_path / "custom.json",
+        {"project_only": {**FILE_RULE, "instructions": "From --rules?"}},
+    )
+    loader = JsonRuleLoader([pack], [], UNIT_REGISTRY, TEST_PACK_LANGUAGES, [project])
+
+    python_rules = _load(loader, PYTHON, custom)
+    java_rules = _load(loader, JAVA)
+
+    assert {rule_id: rule.instructions for rule_id, rule in python_rules.items()} == {
+        "shared": "From the project?",
+        "pack_only": FILE_RULE["instructions"],
+        "project_only": "From --rules?",
+    }
+    assert list(java_rules) == ["shared", "project_only"]
 
 
 @pytest.mark.parametrize(
@@ -382,6 +426,50 @@ def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": {**FILE_RULE, "type": "essay"}})
     with pytest.raises(ValueError, match="essay"):
         _load(_loader([pack]))
+
+
+@pytest.mark.parametrize(
+    ("field_name", "bad_value", "message"),
+    [
+        ("type", "yesno", "has unknown type 'yesno'"),
+        ("type", 1, "has unknown type 1"),
+        ("target_unit_types", "file", "has invalid target_unit_types 'file'"),
+        ("target_unit_types", ["nope"], r"has unknown target_unit_types \['nope'\]"),
+        ("instructions", 7, "has invalid instructions 7"),
+    ],
+)
+def test_malformed_rule_stops_with_an_error_naming_the_rule_and_the_file(
+    tmp_path: Path, field_name: str, bad_value: object, message: str
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json", {"broken": {**FILE_RULE, field_name: bad_value}}
+    )
+
+    with pytest.raises(
+        ValueError, match=rf"^Rule 'broken' {message} in '.*pack\.json'"
+    ):
+        _load(_loader([pack]))
+
+
+def test_malformed_rule_in_a_pack_that_is_not_chosen_stops_nothing(
+    tmp_path: Path,
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        _pack(
+            {"languages": ["typescript"]},
+            {"typo": {"type": "choice"}, "broken": {**FILE_RULE, "type": "yesno"}},
+        ),
+    )
+    loader = _loader([pack])
+
+    # No warning either: an unexpected one fails the test.
+    assert _load(loader, PYTHON) == {}
+    with (
+        pytest.warns(KlintWarning, match="'typo' .* is skipped"),
+        pytest.raises(ValueError, match="has unknown type 'yesno'"),
+    ):
+        _load(loader, TYPESCRIPT)
 
 
 def test_missing_custom_file_raises(tmp_path: Path) -> None:

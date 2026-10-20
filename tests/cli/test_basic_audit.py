@@ -6,7 +6,6 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 from injector import Binder
@@ -14,9 +13,12 @@ from injector import Binder
 from klint.app.settings import AppSettings
 from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeQuestion
+from klint.core.models.question_type import QuestionType
 from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit import AuditableUnit
 from klint.infra.system_one.remote import RemoteSystemOneJudge
@@ -31,6 +33,7 @@ from tests.support.builders import (
 )
 from tests.support.fakes import CountingJudge, FakeJudge, PickyJudge
 from tests.support.paths import SnapshotAsserter
+from tests.support.stub_system_one_server import StubSystemOneServer
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -42,7 +45,7 @@ def _file_app(judge: BaseJudge, settings: AppSettings | None = None) -> AuditCom
     return build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
 
 
-def _run(app: AuditCommandApp, *argv: str | Path) -> int:
+def _run(app: AuditCommandApp, *argv: str | Path) -> ExitCode:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
@@ -71,7 +74,7 @@ def test_file_audit_json_matches_snapshot(
 
     exit_code = _run(app, EXAMPLE_FILE, "--json")
 
-    assert exit_code == 0  # failures do not change the exit code today
+    assert exit_code == ExitCode.PROBLEMS_FOUND
     assert_snapshot("cli_file_audit.json", capsys.readouterr().out)
 
 
@@ -126,16 +129,14 @@ def test_pack_for_some_languages_is_asked_only_about_files_in_them(
         built_in_rule_packs=[shared, web], fallback_rule_packs=[shared]
     )
     sources = tmp_path / "sources"
-    # Each file holds its own name, which tells the judge calls apart.
+    # Each file holds its own name, which tells the requests to the judge apart.
     for name in ("a.py", "b.tsx", "c.js", "notes.txt"):
         write_text(sources / name, name)
     judge = fake_judge()
 
     _run(_file_app(judge, settings), sources, "--json")
 
-    file_name_to_asked_rule_ids = {
-        content: set(questions) for content, questions in judge.calls
-    }
+    file_name_to_asked_rule_ids = judge.subject_to_asked_rule_ids()
     # A rule in a pack that names no language is asked about every file.
     assert file_name_to_asked_rule_ids == {
         "a.py": {"for_every_file"},
@@ -157,7 +158,7 @@ def test_custom_rule_is_asked_only_about_the_unit_type_and_language_it_names(
         },
     )
     sources = tmp_path / "sources"
-    # Each file holds its own name, which tells the judge calls apart.
+    # Each file holds its own name, which tells the requests to the judge apart.
     for name in ("a.py", "a.go", "notes.txt"):
         write_text(sources / name, name)
     judge = fake_judge()
@@ -166,7 +167,8 @@ def test_custom_rule_is_asked_only_about_the_unit_type_and_language_it_names(
 
     custom_rule_ids = {"any_language", "python_only", "for_directory"}
     file_name_to_asked_rule_ids = {
-        content: custom_rule_ids & set(questions) for content, questions in judge.calls
+        content: custom_rule_ids & rule_ids
+        for content, rule_ids in judge.subject_to_asked_rule_ids().items()
     }
     # A file in another language, or in none that is known, is not asked the
     # Python rule. No file is asked the rule for directories.
@@ -184,16 +186,14 @@ def test_file_of_unidentified_language_is_asked_only_the_fallback_packs(
     fallback = write_json(tmp_path / "prose.json", {"for_prose": FILE_RULE})
     settings = make_settings(built_in_rule_packs=[code], fallback_rule_packs=[fallback])
     sources = tmp_path / "sources"
-    # Each file holds its own name, which tells the judge calls apart.
+    # Each file holds its own name, which tells the requests to the judge apart.
     for name in ("a.py", "notes.txt"):
         write_text(sources / name, name)
     judge = fake_judge()
 
     _run(_file_app(judge, settings), sources)
 
-    file_name_to_asked_rule_ids = {
-        content: set(questions) for content, questions in judge.calls
-    }
+    file_name_to_asked_rule_ids = judge.subject_to_asked_rule_ids()
     assert file_name_to_asked_rule_ids == {
         "a.py": {"for_code"},
         "notes.txt": {"for_prose"},
@@ -261,7 +261,7 @@ def test_directory_audit_skips_ignored_and_binary_files(
 
     examined = _json_output(capsys)["examined_files"]
     assert examined == [str(tmp_path / "a.py"), str(tmp_path / "b.tsx")]
-    assert len(judge.calls) == 2
+    assert len(judge.requests) == 2
 
 
 def test_file_that_cannot_be_read_is_left_out_with_a_warning(
@@ -277,13 +277,13 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     exit_code = _run(_file_app(judge), tmp_path, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
     assert captured.err.splitlines() == [
         f"[klint] Warning: File '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
-    assert len(judge.calls) == 1
+    assert len(judge.requests) == 1
 
 
 def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
@@ -299,13 +299,13 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     exit_code = _run(_file_app(judge), tmp_path, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
     assert captured.err.splitlines() == [
         f"[klint] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
-    assert len(judge.calls) == 1
+    assert len(judge.requests) == 1
 
 
 class BrokenExtractor(BaseUnitExtractor):
@@ -332,14 +332,14 @@ def test_file_an_extractor_fails_on_is_left_out_with_a_warning(
     exit_code = _run(app, tmp_path, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     # The Go file is read by the language-neutral extractor, as before.
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.go")]
     assert captured.err.splitlines() == [
         f"[klint] Warning: File '{broken}' is left out: "
         "it cannot be processed (the extractor is broken on b.py)"
     ]
-    assert len(judge.calls) == 1
+    assert len(judge.requests) == 1
 
 
 def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
@@ -351,9 +351,9 @@ def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
 
     exit_code = _run(_file_app(judge), named_pipe, "--json")
 
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert _json_output(capsys) == {"examined_files": [], "issues": []}
-    assert judge.calls == []
+    assert judge.requests == []
 
 
 def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
@@ -368,7 +368,7 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
 
     examined = _json_output(capsys)["examined_files"]
     assert examined == [str(target / "a.py"), str(target / "pkg" / "b.py")]
-    assert len(judge.calls) == 2
+    assert len(judge.requests) == 2
 
 
 def test_rules_flag_adds_custom_rules_to_the_defaults(
@@ -396,13 +396,19 @@ def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
 
     _run(_file_app(judge), target, "--json", "--rules", custom)
 
-    ((content, questions),) = judge.calls
-    assert content == "x = 1\n"
-    assert questions["house_rule"] == {
-        "type": "choice",
-        "instructions": FILE_RULE["instructions"],
-        "criteria": PASS_FAIL_SCALE.criteria_payload(),
-    }
+    (request,) = judge.requests
+    assert request.subject == "x = 1\n"
+    (house_rule_question,) = [
+        question
+        for question in request.questions
+        if question.question_id == "house_rule"
+    ]
+    assert house_rule_question == JudgeQuestion(
+        question_id="house_rule",
+        question_type=QuestionType.CHOICE,
+        question=FILE_RULE["instructions"],
+        choice_key_to_criterion=PASS_FAIL_SCALE.criteria_payload(),
+    )
 
 
 def test_rule_the_judge_does_not_answer_is_left_out_of_the_report(
@@ -429,12 +435,51 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
 
-    assert _run(app, tmp_path / "absent.py") == 1
+    assert _run(app, tmp_path / "absent.py") == ExitCode.RUN_ERROR
     assert "Audit target does not exist" in capsys.readouterr().err
-    assert _run(app, target, "--rules", tmp_path / "absent.json") == 1
+    assert _run(app, target, "--rules", tmp_path / "absent.json") == ExitCode.RUN_ERROR
     assert "Custom rules file does not exist" in capsys.readouterr().err
     # The command stops before anything is audited.
-    assert judge.calls == []
+    assert judge.requests == []
+
+
+def test_malformed_custom_rule_stops_the_command_naming_the_rule_and_the_file(
+    tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
+) -> None:
+    custom = write_json(
+        tmp_path / "custom.json",
+        {"house_rule": {**FILE_RULE, "target_unit_types": "file"}},
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge()
+
+    exit_code = _run(_file_app(judge), target, "--rules", custom)
+
+    (error_line,) = capsys.readouterr().err.splitlines()
+    assert exit_code == ExitCode.RUN_ERROR
+    assert error_line == (
+        "[klint] Error: Rule 'house_rule' has invalid target_unit_types 'file' "
+        f"in '{custom.resolve()}'; expected a list of strings"
+    )
+    assert judge.requests == []
+
+
+def test_rules_file_that_cannot_be_read_exits_with_an_error(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: Capture,
+    make_unreadable: MakeUnreadable,
+) -> None:
+    judge = fake_judge()
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    rules = make_unreadable(write_json(tmp_path / "rules.json", {}))
+
+    exit_code = _run(_file_app(judge), target, "--rules", rules)
+
+    (error_line,) = capsys.readouterr().err.splitlines()
+    assert exit_code == ExitCode.RUN_ERROR
+    assert error_line.startswith("[klint] Error: ")
+    assert judge.requests == []
 
 
 @pytest.mark.parametrize(
@@ -459,7 +504,7 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     captured = capsys.readouterr()
-    assert exit_code == 1
+    assert exit_code == ExitCode.RUN_ERROR
     assert captured.out == ""
     assert captured.err.startswith("[klint] Error: Language-to-file-extensions file")
     assert reason in captured.err
@@ -478,25 +523,27 @@ def test_problem_in_one_rule_is_printed_as_a_warning_and_the_audit_goes_on(
     exit_code = _run(_file_app(fake_judge()), target, "--json", "--rules", custom)
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(target)]
     (warning_line,) = captured.err.splitlines()
     assert warning_line.startswith("[klint] Warning: Rule 'typo'")
     assert "unknown languages ['pyhton']" in warning_line
 
 
-def test_file_the_judge_fails_on_is_skipped(tmp_path: Path, capsys: Capture) -> None:
+def test_file_the_judge_fails_on_is_skipped(
+    tmp_path: Path, capsys: Capture, system_one_server: StubSystemOneServer
+) -> None:
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
-    broken_judge = Mock(side_effect=RuntimeError("judge is down"))
-    judge = RemoteSystemOneJudge(model_name="fake", inference_fn=broken_judge)
+    system_one_server.response_status = 503
+    judge = RemoteSystemOneJudge(model_name="fake", base_url=system_one_server.base_url)
 
     exit_code = _run(_file_app(judge), target, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == 0
+    assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out) == {"examined_files": [], "issues": []}
-    assert f"Skipping {target}: judge is down" in captured.err
+    assert f"Skipping {target}: HTTP Error 503" in captured.err
 
 
 def test_file_the_judge_fails_on_is_left_out_while_the_others_are_audited(
@@ -511,7 +558,7 @@ def test_file_the_judge_fails_on_is_left_out_while_the_others_are_audited(
     captured = capsys.readouterr()
     output = json.loads(captured.out)
     audited = [str(tmp_path / "a.py"), str(tmp_path / "c.py")]
-    assert exit_code == 0
+    assert exit_code == ExitCode.PROBLEMS_FOUND
     assert output["examined_files"] == audited
     # Findings come out one file at a time, in the order of the files.
     reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]

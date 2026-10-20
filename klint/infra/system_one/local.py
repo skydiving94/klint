@@ -1,8 +1,6 @@
 import asyncio
 import os
-from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any
 
 # Silence Hugging Face Hub & Xet download/reconstruction progress bars before
 # importing kev
@@ -16,12 +14,17 @@ from kev.device import default_device
 from kev.serve import Server
 
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.infra.system_one.system_one_format import (
+    build_system_one_questions,
+    read_system_one_answers,
+)
 
 disable_progress_bars()
 
 
 class LocalKevJudge(BaseJudge):
-    def __init__(self, checkpoint: str = "jaredpalmer/kev-0.8b") -> None:
+    def __init__(self, checkpoint: str) -> None:
         self._checkpoint = checkpoint
         self._server: Server | None = None
         self._lock = asyncio.Lock()
@@ -45,21 +48,18 @@ class LocalKevJudge(BaseJudge):
         tok, model = ck.load(dev, opts)
         self._server = Server(ck, tok, model, dev)
 
-    async def answer(
-        self, state: str, questions: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
         async with self._lock:
             if self._server is None:
                 await asyncio.to_thread(self._load_server_sync)
 
         from kev.api import SystemOneRequest
 
-        req = SystemOneRequest(
+        system_one_request = SystemOneRequest(
             model=self._checkpoint,
-            state=state,
-            questions=dict(questions),
+            state=request.subject,
+            questions=build_system_one_questions(request),
         )
         assert self._server is not None
-        response_data = await self._server.answer_async(req)
-        answers: Mapping[str, Any] = response_data.get("answers", {})
-        return answers
+        response: object = await self._server.answer_async(system_one_request)
+        return read_system_one_answers(response)

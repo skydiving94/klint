@@ -10,7 +10,10 @@ from typing import Any
 
 import pytest
 
+from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeAnswer
+from tests.support.builders import build_judge_request
 
 LOCAL_MODULE = "klint.infra.system_one.local"
 
@@ -116,19 +119,33 @@ def _local_judge(checkpoint: str = "org/model") -> BaseJudge:
 def test_answer_sends_model_state_and_questions_and_returns_the_answers(
     runtime: FakeRuntime,
 ) -> None:
-    questions = {"rule_a": {"type": "choice"}, "rule_b": {"type": "choice"}}
+    request = build_judge_request("x = 1", "rule_a", "rule_b")
 
-    answers = asyncio.run(_local_judge().answer("x = 1", questions))
+    answers = asyncio.run(_local_judge().answer(request))
 
-    assert runtime.requests == [FakeRequest("org/model", "x = 1", questions)]
-    assert answers == {"rule_a": {"choice": "fail"}, "rule_b": {"choice": "fail"}}
+    # The keys and values kev has always been sent.
+    criteria = PASS_FAIL_SCALE.criteria_payload()
+    expected_questions = {
+        rule_id: {
+            "type": "choice",
+            "instructions": f"Is {rule_id} done?",
+            "criteria": criteria,
+        }
+        for rule_id in ("rule_a", "rule_b")
+    }
+    assert runtime.requests == [FakeRequest("org/model", "x = 1", expected_questions)]
+    assert answers == [
+        JudgeAnswer(question_id="rule_a", choice_key="fail"),
+        JudgeAnswer(question_id="rule_b", choice_key="fail"),
+    ]
 
 
 def test_model_is_loaded_once_and_reused(runtime: FakeRuntime) -> None:
     judge = _local_judge()
 
     async def ask_three_times() -> None:
-        await asyncio.gather(*(judge.answer("x", {"r": {}}) for _ in range(3)))
+        request = build_judge_request("x", "r")
+        await asyncio.gather(*(judge.answer(request) for _ in range(3)))
 
     asyncio.run(ask_three_times())
 
@@ -155,11 +172,11 @@ def test_load_options_depend_on_the_device(
 ) -> None:
     runtime.device = device
 
-    asyncio.run(_local_judge().answer("x", {"r": {}}))
+    asyncio.run(_local_judge().answer(build_judge_request("x", "r")))
 
     assert runtime.load_options == [expected]
 
 
 def test_response_without_answers_gives_no_answers(runtime: FakeRuntime) -> None:
     runtime.response_has_answers = False
-    assert asyncio.run(_local_judge().answer("x", {"r": {}})) == {}
+    assert asyncio.run(_local_judge().answer(build_judge_request("x", "r"))) == []

@@ -8,6 +8,7 @@ from typing import Any
 
 from klint import catalog
 from klint.app.audit_pipeline import AuditPipeline
+from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override, create_injector
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
@@ -16,8 +17,9 @@ from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.catalog.common.scales.pass_fail import PASS_FAIL_SCALE
 from klint.catalog.common.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
-from klint.core.auditor import Auditor
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
+from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
@@ -58,6 +60,26 @@ IRRELEVANT = PASS_FAIL_SCALE.choice("irrelevant")
 LACK_OF_EVIDENCE = PASS_FAIL_SCALE.choice("lack_of_evidence")
 
 
+def build_judge_request(subject: str, *question_ids: str) -> JudgeRequest:
+    """Return a request asking each of ``question_ids`` about ``subject``.
+
+    Each question has the type and answers of the default scale, and asks
+    "Is <question_id> done?".
+    """
+    return JudgeRequest(
+        subject=subject,
+        questions=tuple(
+            JudgeQuestion(
+                question_id=question_id,
+                question_type=QuestionType.CHOICE,
+                question=f"Is {question_id} done?",
+                choice_key_to_criterion=PASS_FAIL_SCALE.criteria_payload(),
+            )
+            for question_id in question_ids
+        ),
+    )
+
+
 def write_json(path: Path, data: dict[str, Any]) -> Path:
     """Write ``data`` to ``path`` as JSON and return the path."""
     path.write_text(json.dumps(data), encoding="utf-8")
@@ -76,7 +98,7 @@ def make_settings(
     fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     file_contents_rule_pack_override: Path | None = None,
     project_structure_rule_pack_override: Path | None = None,
-    kev_mode: str = "remote",
+    kev_mode: JudgeMode = JudgeMode.REMOTE,
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
     """Return settings that point at the given rule packs and data files.
@@ -95,6 +117,23 @@ def make_settings(
     )
 
 
+def build_audit_pipeline(
+    judge: BaseJudge,
+    settings: AppSettings | None = None,
+    *,
+    overrides: Sequence[Override] = (),
+) -> AuditPipeline:
+    """Return klint's audit pipeline, built as the commands build it.
+
+    ``judge`` stands in for the model, and ``settings`` default to those of
+    make_settings. ``overrides`` replace or add further bindings.
+    """
+    injector = create_injector(
+        settings or make_settings(), JudgeOverride(judge), *overrides
+    )
+    return injector.get(AuditPipeline)
+
+
 def build_audit_command_app(
     command: AuditCommand,
     judge: BaseJudge,
@@ -104,13 +143,11 @@ def build_audit_command_app(
 ) -> AuditCommandApp:
     """Return the app of ``command``, built as the command builds it.
 
-    ``judge`` stands in for the model, and ``settings`` default to those of
-    make_settings. ``overrides`` replace or add further bindings.
+    The arguments are those of build_audit_pipeline.
     """
-    injector = create_injector(
-        settings or make_settings(), JudgeOverride(judge), *overrides
+    return AuditCommandApp(
+        command, build_audit_pipeline(judge, settings, overrides=overrides)
     )
-    return AuditCommandApp(command, injector.get(AuditPipeline), injector.get(Auditor))
 
 
 def build_target_scanner() -> TargetScanner:

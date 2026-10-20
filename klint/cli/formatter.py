@@ -41,12 +41,14 @@ class AuditProgressReporter:
     current directory.
     """
 
-    def __init__(self, total: int, enabled: bool = True) -> None:
-        self._total = max(total, 1)
+    def __init__(self, enabled: bool = True) -> None:
+        self._total = 1
         self._completed = 0
         self._enabled = enabled and sys.stderr.isatty()
 
-    def start(self) -> None:
+    def start(self, total: int) -> None:
+        """Show an empty bar for ``total`` units."""
+        self._total = max(total, 1)
         if not self._enabled:
             return
         self._render(f"Initializing model & auditing {self._total} units...")
@@ -113,11 +115,6 @@ def _confidence_bar(confidence: float | None, width: int = 10) -> str:
     return f"{color}{bar}{_ANSI.RESET} {_ANSI.BOLD}{pct}{_ANSI.RESET}"
 
 
-def _sort_key(finding: AuditFinding) -> tuple:
-    confidence = finding.confidence if finding.confidence is not None else -1.0
-    return (finding.choice.priority, -confidence, finding.rule_id)
-
-
 def format_audit_report(
     findings: Sequence[AuditFinding],
     scanned_file_count: int,
@@ -149,7 +146,7 @@ def format_audit_report(
         lines.append(
             f"\n{_ANSI.BOLD}Target:{_ANSI.RESET} {_ANSI.CYAN}{unit_id}{_ANSI.RESET}"
         )
-        for finding in sorted(unit_findings, key=_sort_key):
+        for finding in unit_findings:
             line_range = finding.location.line_range if finding.location else None
 
             loc_suffix = ""

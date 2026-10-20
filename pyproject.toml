@@ -86,33 +86,34 @@ ignore = [
 [tool.mypy]
 python_version = "3.11"
 files = ["klint", "tests"]
-# Every function must be fully annotated.
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-warn_redundant_casts = true
+# klint/ and tests/ are both held to everything `mypy --strict` turns on.
+strict = true
 warn_unused_configs = true
 
-# tests/ is held to everything `mypy --strict` turns on. `strict` cannot be
-# limited to one package, so its flags are listed: the per-package ones here,
-# the rest in the main section.
+# klint/ also may not write out `Any`, so that what crosses a boundary has a
+# type. The modules after this one are the places allowed to.
 [[tool.mypy.overrides]]
-module = "tests.*"
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-warn_unused_ignores = true
-warn_return_any = true
-implicit_reexport = false
-strict_equality = true
-extra_checks = true
+module = "klint.*"
+disallow_any_explicit = true
+
+# Untyped data: unit metadata and the dictionary form of a finding.
+[[tool.mypy.overrides]]
+module = [
+    "klint.core.models.report",
+    "klint.core.models.unit",
+    "klint.catalog.common.units.file",
+    "klint.catalog.code.common.units.directory",
+    "klint.catalog.code.common.units.file_metadata",
+]
+disallow_any_explicit = false
 
 # The local model runtime is optional and may be absent where mypy runs;
-# when it is, these imports are treated as untyped.
+# when it is, these imports are treated as untyped. huggingface_hub names
+# what it re-exports only by importing it.
 [[tool.mypy.overrides]]
 module = ["torch.*", "kev.*", "huggingface_hub.*"]
 ignore_missing_imports = true
+implicit_reexport = true
 
 # Checked with `uv run lint-imports`. A layer may import from the layers listed
 # below it, never from one above. klint/resources holds data only.
