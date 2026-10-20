@@ -1,12 +1,14 @@
 """Binds what klint's constructors cannot state themselves.
 
 Each class asks for what it needs with @inject. What is left here is what
-its signature cannot express: the settings, what is chosen from them, and
-the suites an audit draws on. Each suite binds what it needs itself.
+its signature cannot express: the settings and what is chosen from them.
+The suites an audit draws on are added by the caller; each one binds what
+it needs itself.
 """
 
 from collections.abc import Callable, Mapping
 from dataclasses import replace
+from pathlib import Path
 from typing import NewType, assert_never
 
 from injector import Binder, Injector, Module, provider, singleton
@@ -14,8 +16,6 @@ from injector import Binder, Injector, Module, provider, singleton
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
-from klint.catalog import BuiltInSuitesModule
-from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
@@ -38,16 +38,25 @@ Override = Module | Callable[[Binder], None]
 
 
 class KlintModule(Module):
-    """Binds everything an audit needs that one AppSettings decides."""
+    """Binds everything an audit needs that one AppSettings decides.
 
-    def __init__(self, settings: AppSettings) -> None:
+    kind_id_to_rule_pack_override names, for a kind of audit, one file that
+    replaces every built-in pack, the fallback ones too, so that its rules
+    are asked about every unit of that kind.
+    """
+
+    def __init__(
+        self,
+        settings: AppSettings,
+        kind_id_to_rule_pack_override: Mapping[str, Path],
+    ) -> None:
         self._settings = settings
+        self._kind_id_to_rule_pack_override = dict(kind_id_to_rule_pack_override)
 
     def configure(self, binder: Binder) -> None:
         binder.bind(AppSettings, to=self._settings)
         # The suites an audit can draw on; each one adds itself.
         binder.multibind(list[BaseSuite], to=[])
-        binder.install(BuiltInSuitesModule())
 
     @singleton
     @provider
@@ -117,17 +126,12 @@ class KlintModule(Module):
         registry: UnitRegistry,
         file_extension_to_language: FileExtensionToLanguage,
     ) -> AuditKindRegistry:
-        kind_id_to_rule_pack_override = {
-            FILE_CONTENTS_KIND_ID: settings.file_contents_rule_pack_override,
-            PROJECT_STRUCTURE_KIND_ID: settings.project_structure_rule_pack_override,
-        }
-
         def apply_rule_pack_override(audit_kind: AuditKind) -> AuditKind:
-            rule_pack_override = kind_id_to_rule_pack_override.get(audit_kind.kind_id)
+            rule_pack_override = self._kind_id_to_rule_pack_override.get(
+                audit_kind.kind_id
+            )
             if rule_pack_override is None:
                 return audit_kind
-            # The file replaces every built-in pack, the fallback ones too, so
-            # its rules are asked about every file.
             return replace(
                 audit_kind,
                 rule_loader=JsonRuleLoader(
@@ -148,6 +152,16 @@ class KlintModule(Module):
         )
 
 
-def create_injector(settings: AppSettings, *overrides: Override) -> Injector:
-    """Return an injector for ``settings``; overrides replace individual bindings."""
-    return Injector([KlintModule(settings), *overrides])
+def create_injector(
+    settings: AppSettings,
+    *overrides: Override,
+    kind_id_to_rule_pack_override: Mapping[str, Path] | None = None,
+) -> Injector:
+    """Return an injector for ``settings``; overrides add or replace bindings.
+
+    No suite is added: an override adds each one the audit draws on.
+    kind_id_to_rule_pack_override is as KlintModule takes it.
+    """
+    return Injector(
+        [KlintModule(settings, kind_id_to_rule_pack_override or {}), *overrides]
+    )

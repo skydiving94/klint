@@ -13,13 +13,13 @@ from typing import TextIO
 
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
-from klint.app.wiring import create_injector
 from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
     TerminalScanProgressListener,
     format_audit_report,
 )
+from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.klint_warning import KlintWarning
 
@@ -244,7 +244,7 @@ async def run_command_from_shell(command: AuditCommand) -> ExitCode:
             settings = await asyncio.to_thread(
                 AppSettings.from_env, arguments.target, arguments.rules_source
             )
-            injector = create_injector(settings)
+            injector = create_command_injector(settings)
             audit_pipeline = injector.get(AuditPipeline)
     except (OSError, ValueError) as error:
         # The command cannot be set up, for example a config or data file is

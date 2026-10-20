@@ -9,7 +9,7 @@ from typing import Any
 from klint.app.judge_mode import JudgeMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline
 from klint.app.settings import AppSettings
-from klint.app.wiring import Override, create_injector
+from klint.app.wiring import Override
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
@@ -20,6 +20,7 @@ from klint.catalog.common.file_traits_identifiers.extension_identifier import (
 )
 from klint.catalog.common.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
+from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.question_type import QuestionType
@@ -49,7 +50,7 @@ DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
 
 def build_unit_registry() -> UnitRegistry:
     """Return a registry holding the unit types of every built-in suite."""
-    return create_injector(make_settings()).get(UnitRegistry)
+    return create_command_injector(make_settings()).get(UnitRegistry)
 
 
 # The four answers of the default scale, for building and checking findings.
@@ -130,7 +131,7 @@ def build_audit_pipeline(
     ``judge`` stands in for the model, and ``settings`` default to those of
     make_settings. ``overrides`` replace or add further bindings.
     """
-    injector = create_injector(
+    injector = create_command_injector(
         settings or make_settings(), JudgeOverride(judge), *overrides
     )
     return injector.get(AuditPipeline)
@@ -164,7 +165,7 @@ def build_target_scanner() -> TargetScanner:
 
 def build_project_extractor() -> RecursiveProjectExtractor:
     """Return klint's project extractor, built the way the commands build it."""
-    return create_injector(make_settings()).get(RecursiveProjectExtractor)
+    return create_command_injector(make_settings()).get(RecursiveProjectExtractor)
 
 
 def extract_project(target: Path) -> AuditableDirectoryUnit:
