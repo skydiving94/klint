@@ -530,7 +530,7 @@ def test_problem_in_one_rule_is_printed_as_a_warning_and_the_audit_goes_on(
     assert "unknown languages ['pyhton']" in warning_line
 
 
-def test_file_the_judge_fails_on_is_skipped(
+def test_file_the_judge_server_fails_on_is_skipped_and_stops_the_run(
     tmp_path: Path, capsys: Capture, system_one_server: StubSystemOneServer
 ) -> None:
     target = tmp_path / "a.py"
@@ -541,9 +541,13 @@ def test_file_the_judge_fails_on_is_skipped(
     exit_code = _run(_file_app(judge), target, "--json")
 
     captured = capsys.readouterr()
-    assert exit_code == ExitCode.NO_PROBLEMS
-    assert json.loads(captured.out) == {"examined_files": [], "findings": []}
-    assert f"Skipping {target}: HTTP Error 503" in captured.err
+    # The only file could not be audited, so nothing was checked.
+    assert exit_code == ExitCode.RUN_ERROR
+    assert captured.out == ""
+    assert captured.err.splitlines() == [
+        f"[klint] Skipping {target}: HTTP Error 503: Service Unavailable",
+        "[klint] Error: None of the 1 unit(s) to audit could be audited",
+    ]
 
 
 def test_file_the_judge_fails_on_is_left_out_while_the_others_are_audited(
