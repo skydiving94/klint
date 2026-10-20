@@ -107,11 +107,13 @@ def _pick_answer_style(answer: AnswerChoice) -> str:
     return _NON_PROBLEM_SORT_RANK_TO_STYLE.get(answer.sort_rank, _ANSI.DIM)
 
 
-def _badge(answer: AnswerChoice) -> str:
+def _format_badge(answer: AnswerChoice) -> str:
     return f"{_pick_answer_style(answer)}[{answer.label.upper()}]{_ANSI.RESET}"
 
 
-def _confidence_bar(confidence: float | None, is_problem: bool, width: int = 10) -> str:
+def _format_confidence_bar(
+    confidence: float | None, is_problem: bool, width: int = 10
+) -> str:
     """Return the bar of ``confidence``; coloured by it for a problem, else dim."""
     if confidence is None:
         return f"{_ANSI.DIM}n/a{_ANSI.RESET}"
@@ -168,10 +170,10 @@ def format_audit_report(
                 )
 
             lines.append(
-                f"  {_badge(finding.answer)} "
+                f"  {_format_badge(finding.answer)} "
                 f"{_ANSI.BOLD}{finding.rule_id}{_ANSI.RESET}{loc_suffix}  "
                 "Confidence: "
-                f"{_confidence_bar(finding.confidence, finding.is_problem())}"
+                f"{_format_confidence_bar(finding.confidence, finding.is_problem())}"
             )
             if finding.question:
                 lines.append(f"      {_ANSI.DIM}\u21b3 {finding.question}{_ANSI.RESET}")
