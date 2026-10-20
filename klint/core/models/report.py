@@ -75,38 +75,25 @@ class AuditReport:
         """Return the IDs of the units audited without error, in recorded order."""
         return list(self._audited_unit_ids)
 
-    def get_findings(
-        self, fails_only: bool = True, min_confidence: float = 0.0
+    def list_findings(self) -> list[AuditFinding]:
+        """Return every finding, in recorded order."""
+        return list(self._findings)
+
+    def select_findings(
+        self,
+        *,
+        should_include_non_problems: bool = False,
+        min_confidence: float = 0.0,
     ) -> list[AuditFinding]:
-        """Return the selected findings, unit by unit, most important first.
+        """Return the findings a report shows, in recorded order.
 
-        The units keep the order in which their findings were recorded.
+        Only problems are selected unless ``should_include_non_problems``,
+        and only those with at least ``min_confidence``; a finding with no
+        confidence is always kept.
         """
-        unit_id_to_rank = {
-            unit_id: rank
-            for rank, unit_id in enumerate(
-                dict.fromkeys(finding.unit_id for finding in self._findings)
-            )
-        }
-        selected = [
-            f
-            for f in self._findings
-            if (not fails_only or f.is_problem())
-            and f.does_meet_confidence(min_confidence)
-        ]
-        selected.sort(
-            key=lambda f: (
-                unit_id_to_rank[f.unit_id],
-                f.answer.sort_rank,
-                -(f.confidence if f.confidence is not None else -1.0),
-                f.rule_id,
-            )
-        )
-        return selected
-
-    def get_issues(
-        self, fails_only: bool = True, min_confidence: float = 0.0
-    ) -> list[dict[str, JsonValue]]:
         return [
-            f.convert_to_dict() for f in self.get_findings(fails_only, min_confidence)
+            finding
+            for finding in self._findings
+            if (should_include_non_problems or finding.is_problem())
+            and finding.does_meet_confidence(min_confidence)
         ]

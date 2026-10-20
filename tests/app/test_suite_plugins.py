@@ -89,11 +89,15 @@ def test_two_kinds_with_different_scales_run_in_one_process(
 
     code_labels = {
         finding.answer.label
-        for finding in code_outcome.report.get_findings(fails_only=False)
+        for finding in code_outcome.report.select_findings(
+            should_include_non_problems=True
+        )
     }
     notes_labels = {
         finding.answer.label
-        for finding in notes_outcome.report.get_findings(fails_only=False)
+        for finding in notes_outcome.report.select_findings(
+            should_include_non_problems=True
+        )
     }
     assert (code_labels, notes_labels) == ({"Fail"}, {"Polite"})
     code_criteria = {
@@ -111,8 +115,8 @@ def test_two_kinds_with_different_scales_run_in_one_process(
     assert code_criteria == {"pass", "fail", "irrelevant", "lack_of_evidence"}
     assert notes_criteria == {"polite", "rude"}
     # Only a problem on the kind's own scale counts as a failure.
-    assert code_outcome.report.get_findings()
-    assert not notes_outcome.report.get_findings()
+    assert code_outcome.report.select_findings()
+    assert not notes_outcome.report.select_findings()
 
 
 def test_two_suites_offering_one_kind_id_stop_the_run_from_being_built(
