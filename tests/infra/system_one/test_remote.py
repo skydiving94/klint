@@ -38,7 +38,7 @@ def test_request_is_posted_to_the_systemone_endpoint_in_its_format(
     assert received.headers["Content-Type"] == "application/json"
     assert received.headers["Authorization"] == "Bearer secret"
     # The keys and values System One has always been sent.
-    criteria = PRACTICE_SCALE.criteria_payload()
+    criteria = PRACTICE_SCALE.map_choice_key_to_criterion()
     assert received.body == {
         "model": "kev-latest",
         "state": "x = 1\n",

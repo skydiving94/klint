@@ -90,9 +90,9 @@ def test_all_flag_reports_every_judgment(
     app = _file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
     _run(app, target, "--json")
-    failed = [(i["rule_id"], i["judgment"]) for i in _json_output(capsys)["issues"]]
+    failed = [(i["rule_id"], i["answer"]) for i in _json_output(capsys)["findings"]]
     _run(app, target, "--json", "--all")
-    judged = [(i["rule_id"], i["judgment"]) for i in _json_output(capsys)["issues"]]
+    judged = [(i["rule_id"], i["answer"]) for i in _json_output(capsys)["findings"]]
 
     assert failed == [("b_rule", "Fail")]
     # Every rule that was asked is reported, and only the one failed.
@@ -110,8 +110,8 @@ def test_min_confidence_hides_low_confidence_findings(
     _run(app, target, "--json", "--min-confidence", "0.3")
     below_confidence = _json_output(capsys)
 
-    assert above_confidence == {"examined_files": [str(target)], "issues": []}
-    assert below_confidence["issues"]
+    assert above_confidence == {"examined_files": [str(target)], "findings": []}
+    assert below_confidence["findings"]
 
 
 def test_pack_for_some_languages_is_asked_only_about_files_in_them(
@@ -352,7 +352,7 @@ def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
     exit_code = _run(_file_app(judge), named_pipe, "--json")
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert _json_output(capsys) == {"examined_files": [], "issues": []}
+    assert _json_output(capsys) == {"examined_files": [], "findings": []}
     assert judge.requests == []
 
 
@@ -382,7 +382,7 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
 
     _run(app, target, "--json", "--rules", custom)
 
-    assert [i["rule_id"] for i in _json_output(capsys)["issues"]] == ["house_rule"]
+    assert [i["rule_id"] for i in _json_output(capsys)["findings"]] == ["house_rule"]
     # The rules of the packs are still asked.
     assert judge.asked_rule_ids() == [["house_rule", "pack_rule"]]
 
@@ -407,7 +407,7 @@ def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
         question_id="house_rule",
         question_type=QuestionType.CHOICE,
         question=FILE_RULE["instructions"],
-        choice_key_to_criterion=PRACTICE_SCALE.criteria_payload(),
+        choice_key_to_criterion=PRACTICE_SCALE.map_choice_key_to_criterion(),
     )
 
 
@@ -422,7 +422,7 @@ def test_rule_the_judge_does_not_answer_is_left_out_of_the_report(
 
     _run(_file_app(judge), target, "--json", "--all", "--rules", custom)
 
-    reported_rule_ids = {issue["rule_id"] for issue in _json_output(capsys)["issues"]}
+    reported_rule_ids = {issue["rule_id"] for issue in _json_output(capsys)["findings"]}
     assert "answered" in reported_rule_ids
     assert "unanswered" not in reported_rule_ids
 
@@ -542,7 +542,7 @@ def test_file_the_judge_fails_on_is_skipped(
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert json.loads(captured.out) == {"examined_files": [], "issues": []}
+    assert json.loads(captured.out) == {"examined_files": [], "findings": []}
     assert f"Skipping {target}: HTTP Error 503" in captured.err
 
 
@@ -561,7 +561,7 @@ def test_file_the_judge_fails_on_is_left_out_while_the_others_are_audited(
     assert exit_code == ExitCode.PROBLEMS_FOUND
     assert output["examined_files"] == audited
     # Findings come out one file at a time, in the order of the files.
-    reported_unit_ids = [issue["unit_id"] for issue in output["issues"]]
+    reported_unit_ids = [issue["unit_id"] for issue in output["findings"]]
     assert list(dict.fromkeys(reported_unit_ids)) == audited
     assert f"Skipping {tmp_path / 'b.py'}: judge is down" in captured.err
 

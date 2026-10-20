@@ -15,7 +15,8 @@ class AuditKind:
     kind_id names the kind in a request. extractor turns the scanned target
     into units, and rule_loader loads the rules asked about them. The judge
     answers each rule on answer_scale. A scan for this kind leaves out
-    ignored_names.
+    ignored_names. ranked_tags are the rule tags whose findings a report
+    lists first, most important first.
     """
 
     kind_id: str
@@ -23,3 +24,4 @@ class AuditKind:
     rule_loader: BaseRuleLoader
     answer_scale: AnswerScale
     ignored_names: IgnoredNames
+    ranked_tags: tuple[str, ...] = ()

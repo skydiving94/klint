@@ -8,6 +8,7 @@ from injector import inject
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.pipeline.audit_preparer import AuditPreparer
 from klint.app.pipeline.auditing import UnitAuditing
+from klint.app.pipeline.ranking import FindingRanking
 from klint.app.pipeline.roll_up import FindingRollUp
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
@@ -37,7 +38,8 @@ class AuditRequest:
 class AuditOutcome:
     """What one audit run gives back.
 
-    report holds the findings and the units audited without error.
+    report holds the units audited without error, and the findings in
+    report order.
     scanned_file_count is the number of files the scan recorded.
     selected_unit_ids lists, in audit order, every unit at least one rule
     applies to; a unit listed here and missing from the report is one whose
@@ -53,8 +55,8 @@ class AuditPipeline:
     """Runs an audit end to end, stage by stage.
 
     The kind of audit the request names is looked up first. The units are
-    then acquired and their rules selected, the units audited, and the
-    findings rolled up.
+    then acquired and their rules selected, the units audited, the findings
+    rolled up, and last ranked in report order.
     """
 
     @inject
@@ -64,11 +66,13 @@ class AuditPipeline:
         audit_preparer: AuditPreparer,
         unit_auditing: UnitAuditing,
         finding_roll_up: FindingRollUp,
+        finding_ranking: FindingRanking,
     ) -> None:
         self._audit_kind_registry = audit_kind_registry
         self._audit_preparer = audit_preparer
         self._unit_auditing = unit_auditing
         self._finding_roll_up = finding_roll_up
+        self._finding_ranking = finding_ranking
 
     async def run_audit(self, request: AuditRequest) -> AuditOutcome:
         """Audit what ``request`` names and return the outcome.
@@ -87,8 +91,9 @@ class AuditPipeline:
         report = await self._unit_auditing.audit_units(
             portfolio, audit_kind, request.audit_progress_listener
         )
+        report = self._finding_roll_up.roll_up(report)
         return AuditOutcome(
-            report=self._finding_roll_up.roll_up(report),
+            report=self._finding_ranking.rank_findings(report, audit_kind),
             scanned_file_count=portfolio.scanned_file_count,
             selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
         )

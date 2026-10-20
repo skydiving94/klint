@@ -210,15 +210,17 @@ class AuditCommandApp:
         progress.finish()
 
         report = outcome.report
-        findings = report.get_findings(
-            fails_only=not arguments.should_show_all,
+        findings = report.select_findings(
+            should_include_non_problems=arguments.should_show_all,
             min_confidence=arguments.min_confidence,
         )
         if arguments.should_print_json:
-            issues = [finding.to_dict() for finding in findings]
             print(
                 json.dumps(
-                    {command.json_key: report.audited_unit_ids(), "issues": issues},
+                    {
+                        command.json_key: report.audited_unit_ids(),
+                        "findings": [finding.convert_to_dict() for finding in findings],
+                    },
                     indent=2,
                 )
             )
@@ -230,9 +232,7 @@ class AuditCommandApp:
                     audited_unit_count=len(outcome.selected_unit_ids),
                 )
             )
-        failures = report.get_findings(
-            fails_only=True, min_confidence=arguments.min_confidence
-        )
+        failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS
 
 

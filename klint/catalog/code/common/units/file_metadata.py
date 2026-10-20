@@ -1,14 +1,15 @@
-from dataclasses import asdict, dataclass, field
-from typing import Any, ClassVar
+from dataclasses import dataclass, field
+from typing import ClassVar
 
 from klint.core.models.location import Location
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit import AuditableUnit, UnitContext
 
 
 @dataclass(frozen=True)
-class FileMetadataPayload:
+class FileMetadataContext(UnitContext):
+    """What was read from a file without judging it; see AuditableFileMetadataUnit."""
+
     file_name: str = ""
-    file_path: str = ""
     line_count: int | None = 0
     imports: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
@@ -57,10 +58,9 @@ class AuditableFileMetadataUnit(AuditableUnit):
     def get_location(self) -> Location | None:
         return Location(source=self.file_path or self.unit_id)
 
-    def get_metadata(self) -> dict[str, Any]:
-        payload = FileMetadataPayload(
+    def get_context(self) -> FileMetadataContext:
+        return FileMetadataContext(
             file_name=self.file_name,
-            file_path=self.file_path,
             line_count=self.line_count,
             imports=list(self.imports),
             exports=list(self.exports),
@@ -68,4 +68,3 @@ class AuditableFileMetadataUnit(AuditableUnit):
             functions=list(self.functions),
             is_unparseable=self.is_unparseable,
         )
-        return asdict(payload)

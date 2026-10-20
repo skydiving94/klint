@@ -54,10 +54,10 @@ def build_unit_registry() -> UnitRegistry:
 
 
 # The four answers of the default scale, for building and checking findings.
-PASS = PRACTICE_SCALE.choice("pass")
-FAIL = PRACTICE_SCALE.choice("fail")
-IRRELEVANT = PRACTICE_SCALE.choice("irrelevant")
-LACK_OF_EVIDENCE = PRACTICE_SCALE.choice("lack_of_evidence")
+PASS = PRACTICE_SCALE.find_choice("pass")
+FAIL = PRACTICE_SCALE.find_choice("fail")
+IRRELEVANT = PRACTICE_SCALE.find_choice("irrelevant")
+LACK_OF_EVIDENCE = PRACTICE_SCALE.find_choice("lack_of_evidence")
 
 
 def build_judge_request(subject: str, *question_ids: str) -> JudgeRequest:
@@ -73,7 +73,7 @@ def build_judge_request(subject: str, *question_ids: str) -> JudgeRequest:
                 question_id=question_id,
                 question_type=QuestionType.CHOICE,
                 question=f"Is {question_id} done?",
-                choice_key_to_criterion=PRACTICE_SCALE.criteria_payload(),
+                choice_key_to_criterion=PRACTICE_SCALE.map_choice_key_to_criterion(),
             )
             for question_id in question_ids
         ),

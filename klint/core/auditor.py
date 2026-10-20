@@ -95,12 +95,14 @@ class Auditor:
                 AuditFinding(
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
-                    choice=answer_scale.choice(answer.choice_key),
-                    instructions=rule.instructions,
+                    answer=answer_scale.find_choice(answer.choice_key),
+                    question=rule.instructions,
                     confidence=answer.confidence,
-                    probabilities=answer.choice_key_to_probability,
+                    choice_key_to_probability=answer.choice_key_to_probability,
+                    tags=tuple(rule.tags),
                     location=unit.get_location(),
-                    metadata=unit.get_metadata(),
+                    evidence_location=unit.get_evidence_location(),
+                    context=unit.get_context(),
                 )
             )
         return findings
@@ -110,7 +112,7 @@ def _build_request(
     unit: AuditableUnit, rules: Sequence[AuditRule], answer_scale: AnswerScale
 ) -> JudgeRequest:
     """Return the request that asks each rule about ``unit``, by rule id."""
-    choice_key_to_criterion = answer_scale.criteria_payload()
+    choice_key_to_criterion = answer_scale.map_choice_key_to_criterion()
     return JudgeRequest(
         subject=unit.get_content(),
         questions=tuple(

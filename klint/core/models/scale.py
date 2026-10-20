@@ -4,20 +4,20 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Choice:
+class AnswerChoice:
     """One possible answer.
 
     key is the name exchanged with the judge, label is what reports show, and
-    criterion tells the judge when to pick it. is_finding marks an answer
-    that counts as a problem; priority orders answers in a report, lowest
-    first.
+    criterion tells the judge when to pick it. is_problem marks an answer
+    that counts as a problem. sort_rank orders answers in a report, lowest
+    first; a report may also style an answer by it.
     """
 
     key: str
     label: str
     criterion: str
-    is_finding: bool = False
-    priority: int = 0
+    is_problem: bool = False
+    sort_rank: int = 0
 
 
 @dataclass(frozen=True)
@@ -25,13 +25,13 @@ class AnswerScale:
     """A named, ordered set of choices."""
 
     name: str
-    choices: tuple[Choice, ...]
+    choices: tuple[AnswerChoice, ...]
 
-    def criteria_payload(self) -> dict[str, str]:
+    def map_choice_key_to_criterion(self) -> dict[str, str]:
         """Return each choice's criterion keyed by its key, in scale order."""
         return {choice.key: choice.criterion for choice in self.choices}
 
-    def choice(self, key: str) -> Choice:
+    def find_choice(self, key: str) -> AnswerChoice:
         """Return the choice for ``key``, ignoring case; raise KeyError if unknown."""
         wanted = key.lower()
         for choice in self.choices:
