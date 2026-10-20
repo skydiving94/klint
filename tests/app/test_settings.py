@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
 from klint.core.klint_warning import KlintWarning
 from tests.support.builders import write_json, write_text
@@ -36,7 +37,7 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
 
     assert settings == AppSettings(
         model_name="jaredpalmer/kev-4b",
-        kev_mode="local",
+        kev_mode=JudgeMode.LOCAL,
         kev_base_url="http://127.0.0.1:8009",
         kev_api_key=None,
         built_in_rule_packs=BUILT_IN_RULE_PACKS,
@@ -257,3 +258,34 @@ def test_fallback_rule_pack_that_is_not_a_file_is_left_out_with_a_warning(
         settings = AppSettings.from_env(project, None, _dotenv(tmp_path))
 
     assert settings.fallback_rule_packs == (kept,)
+
+
+@pytest.mark.parametrize(
+    ("raw_mode", "expected"),
+    [
+        ("local", JudgeMode.LOCAL),
+        ("remote", JudgeMode.REMOTE),
+        ("Remote", JudgeMode.REMOTE),
+    ],
+)
+def test_mode_is_read_as_a_judge_mode_in_any_case(
+    shell_env: dict[str, str], tmp_path: Path, raw_mode: str, expected: JudgeMode
+) -> None:
+    shell_env["KEV_MODE"] = raw_mode
+
+    settings = AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))
+
+    assert settings.kev_mode is expected
+
+
+def test_unknown_mode_stops_with_an_error_listing_the_valid_values(
+    shell_env: dict[str, str], tmp_path: Path
+) -> None:
+    shell_env["KEV_MODE"] = "locl"
+
+    with pytest.raises(
+        ValueError,
+        match=r"KEV_MODE 'locl'.* is not a judge mode; valid values: "
+        r"\['local', 'remote'\]",
+    ):
+        AppSettings.from_env(_project(tmp_path), None, _dotenv(tmp_path))

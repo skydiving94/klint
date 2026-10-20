@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
 
+from klint.app.judge_mode import JudgeMode
 from klint.core.klint_warning import KlintWarning
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
-_DEFAULT_KEV_MODE = "local"
 # Built-in rule packs, relative to klint/resources/catalog/ and merged in this
 # order. Each pack states in its header the files it loads for.
 _BUILT_IN_RULE_PACKS = (
@@ -158,6 +158,20 @@ def _load_klint_dotenv(dotenv_path: Path | None = None) -> None:
         os.environ.setdefault(key, value)
 
 
+def _read_judge_mode(raw_mode: str) -> JudgeMode:
+    """Return the judge mode ``raw_mode`` names, in any case.
+
+    Raises ValueError listing the valid values when it names none.
+    """
+    try:
+        return JudgeMode(raw_mode.lower())
+    except ValueError:
+        raise ValueError(
+            f"KEV_MODE {raw_mode!r} is not a judge mode; valid values: "
+            f"{[mode.value for mode in JudgeMode]}"
+        ) from None
+
+
 def _locate_built_in_resource(relative_path: str) -> Path:
     """Locate a built-in data file inside the installed package."""
     catalog = resources.files("klint.resources") / "catalog"
@@ -192,7 +206,7 @@ def _resolve_resource_path(raw_path: str | Path) -> Path:
 @dataclass(frozen=True)
 class AppSettings:
     model_name: str
-    kev_mode: str = _DEFAULT_KEV_MODE
+    kev_mode: JudgeMode = JudgeMode.LOCAL
     kev_base_url: str = "http://127.0.0.1:8009"
     kev_api_key: str | None = None
     # The packs chosen by the traits of each file, and the packs a file whose
@@ -248,9 +262,10 @@ class AppSettings:
         # packs for its command.
         rules_override = _get_setting("KEV_DEFAULT_RULES_PATH")
         project_rules_override = _get_setting("KEV_DEFAULT_PROJECT_RULES_PATH")
+        raw_kev_mode = _get_setting("KEV_MODE")
         kev_mode = (
-            _get_setting("KEV_MODE", _DEFAULT_KEV_MODE) or _DEFAULT_KEV_MODE
-        ).lower()
+            JudgeMode.LOCAL if raw_kev_mode is None else _read_judge_mode(raw_kev_mode)
+        )
         kev_base_url = (
             _get_setting("KEV_BASE_URL", "http://127.0.0.1:8009")
             or "http://127.0.0.1:8009"

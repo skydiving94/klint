@@ -176,3 +176,22 @@ def test_command_line_that_cannot_be_parsed_exits_with_status_2(
         cli_main()
 
     assert stopped.value.code == ExitCode.RUN_ERROR
+
+
+@pytest.mark.parametrize("cli_main", [basic_audit.cli_main, project_audit.cli_main])
+def test_unknown_mode_stops_the_command_before_any_judge_is_built(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    shell_env: dict[str, str],
+    capsys: pytest.CaptureFixture[str],
+    cli_main: Callable[[], int],
+) -> None:
+    shell_env["KEV_MODE"] = "locl"
+    monkeypatch.setattr(sys, "argv", ["klint", str(tmp_path)])
+
+    exit_code = cli_main()
+
+    (error_line,) = capsys.readouterr().err.splitlines()
+    assert exit_code == ExitCode.RUN_ERROR
+    assert "KEV_MODE 'locl'" in error_line
+    assert "valid values: ['local', 'remote']" in error_line

@@ -7,12 +7,13 @@ which implementation stands for each language.
 
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import NewType
+from typing import NewType, assert_never
 
 from injector import Binder, Injector, Module, multiprovider, provider, singleton
 
 from klint import catalog
 from klint.app.audit_mode import AuditMode
+from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
 from klint.catalog.code import python as python_suite
 from klint.catalog.code.common.extractors.directory_factory import (
@@ -93,15 +94,19 @@ class KlintModule(Module):
     @provider
     def provide_judge(self, settings: AppSettings) -> BaseJudge:
         # A single binding, so that the remote mode never loads the model.
-        if settings.kev_mode == "local":
-            from klint.infra.system_one.local import LocalKevJudge
+        match settings.kev_mode:
+            case JudgeMode.LOCAL:
+                from klint.infra.system_one.local import LocalKevJudge
 
-            return LocalKevJudge(checkpoint=settings.model_name)
-        return RemoteSystemOneJudge(
-            model_name=settings.model_name,
-            base_url=settings.kev_base_url,
-            api_key=settings.kev_api_key,
-        )
+                return LocalKevJudge(checkpoint=settings.model_name)
+            case JudgeMode.REMOTE:
+                return RemoteSystemOneJudge(
+                    model_name=settings.model_name,
+                    base_url=settings.kev_base_url,
+                    api_key=settings.kev_api_key,
+                )
+            case _:
+                assert_never(settings.kev_mode)
 
     @singleton
     @provider
