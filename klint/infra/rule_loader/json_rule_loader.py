@@ -24,6 +24,8 @@ class JsonRuleLoader(BaseRuleLoader):
     header matches its traits; a pack without a header matches every such
     file. A file whose language is not identified is asked the fallback
     packs instead. A rule inherits its pack's languages and may narrow them.
+    The rules of project_rule_packs, a project's own, merge over the chosen
+    packs for every file, and custom rules merge over them all.
     Every pack file is read when the first load needs its header, but the
     problems in its rules are reported only once the pack is chosen.
 
@@ -40,9 +42,11 @@ class JsonRuleLoader(BaseRuleLoader):
         fallback_rule_packs: Sequence[Path],
         unit_registry: UnitRegistry,
         known_languages: Collection[str],
+        project_rule_packs: Sequence[Path] = (),
     ) -> None:
         self._rule_packs = list(rule_packs)
         self._fallback_rule_packs = list(fallback_rule_packs)
+        self._project_rule_packs = list(project_rule_packs)
         self._unit_registry = unit_registry
         self._known_languages = {language.lower() for language in known_languages}
         # Each file is read and checked once, however many loads use it.
@@ -62,10 +66,14 @@ class JsonRuleLoader(BaseRuleLoader):
     def _load_rules_sync(
         self, traits: FileTraits, custom_path: Path | None
     ) -> list[AuditRule]:
-        """Merge the chosen packs in order, then the custom rules, by rule ID."""
+        """Merge the chosen packs, the project's, then the custom rules, by rule ID."""
         rules: dict[str, AuditRule] = {}
         for pack in self._choose_packs(traits):
             rules.update(self._load_pack_rules(pack))
+        for path in self._project_rule_packs:
+            project_pack = self._read_pack(path)
+            if project_pack is not None:
+                rules.update(self._load_pack_rules(project_pack))
         if custom_path is not None:
             rules.update(self._load_pack_rules(self._read_custom_pack(custom_path)))
         return list(rules.values())

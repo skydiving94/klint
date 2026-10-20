@@ -8,6 +8,7 @@ from typing import Any
 
 from klint import catalog
 from klint.app.audit_pipeline import AuditPipeline
+from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override, create_injector
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
@@ -97,7 +98,7 @@ def make_settings(
     fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     file_contents_rule_pack_override: Path | None = None,
     project_structure_rule_pack_override: Path | None = None,
-    kev_mode: str = "remote",
+    kev_mode: JudgeMode = JudgeMode.REMOTE,
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
     """Return settings that point at the given rule packs and data files.

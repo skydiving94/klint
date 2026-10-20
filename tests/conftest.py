@@ -61,8 +61,8 @@ def system_one_server(
 def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
     """Give the test a private environment with no KEV_* variables set.
 
-    Settings loading writes into ``os.environ``, so each test gets its own
-    copy. The working directory moves to an empty folder so that no stray
+    The settings a test sees then do not depend on the shell it runs from.
+    The working directory moves to an empty folder so that no stray
     klint.json is discovered there.
     """
     env = {k: v for k, v in os.environ.items() if not k.startswith("KEV_")}

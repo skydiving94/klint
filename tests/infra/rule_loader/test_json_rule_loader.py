@@ -334,18 +334,62 @@ def test_unknown_rule_field_is_ignored_with_a_warning(tmp_path: Path) -> None:
     assert rules["typo"].languages == []
 
 
-def test_settings_beside_flat_rules_are_not_taken_for_rules(tmp_path: Path) -> None:
+def test_keys_beside_a_rules_block_are_not_rules(tmp_path: Path) -> None:
     pack = write_json(
         tmp_path / "pack.json",
         {
             "env": {"KEV_MODE": "local"},
             "fallback_rule_packs": ["docs.json"],
-            "a": FILE_RULE,
+            "rules": {"a": FILE_RULE},
         },
     )
 
     # No warning either: an unexpected one fails the test.
     assert list(_load(_loader([pack]))) == ["a"]
+
+
+def test_every_key_of_a_flat_file_but_its_header_is_a_rule(tmp_path: Path) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        {"applies_to": {}, "env": {"KEV_MODE": "local"}, "a": FILE_RULE},
+    )
+
+    with pytest.warns(KlintWarning, match="Rule 'env' .* is skipped"):
+        assert list(_load(_loader([pack]))) == ["a"]
+
+
+def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_them(
+    tmp_path: Path,
+) -> None:
+    pack = write_json(
+        tmp_path / "pack.json",
+        _pack({"languages": ["python"]}, {"shared": FILE_RULE, "pack_only": FILE_RULE}),
+    )
+    project = write_json(
+        tmp_path / "klint.json",
+        {
+            "env": {"KEV_MODE": "local"},
+            "rules": {
+                "shared": {**FILE_RULE, "instructions": "From the project?"},
+                "project_only": FILE_RULE,
+            },
+        },
+    )
+    custom = write_json(
+        tmp_path / "custom.json",
+        {"project_only": {**FILE_RULE, "instructions": "From --rules?"}},
+    )
+    loader = JsonRuleLoader([pack], [], UNIT_REGISTRY, TEST_PACK_LANGUAGES, [project])
+
+    python_rules = _load(loader, PYTHON, custom)
+    java_rules = _load(loader, JAVA)
+
+    assert {rule_id: rule.instructions for rule_id, rule in python_rules.items()} == {
+        "shared": "From the project?",
+        "pack_only": FILE_RULE["instructions"],
+        "project_only": "From --rules?",
+    }
+    assert list(java_rules) == ["shared", "project_only"]
 
 
 @pytest.mark.parametrize(

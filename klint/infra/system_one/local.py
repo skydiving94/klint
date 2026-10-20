@@ -24,7 +24,7 @@ disable_progress_bars()
 
 
 class LocalKevJudge(BaseJudge):
-    def __init__(self, checkpoint: str = "jaredpalmer/kev-0.8b") -> None:
+    def __init__(self, checkpoint: str) -> None:
         self._checkpoint = checkpoint
         self._server: Server | None = None
         self._lock = asyncio.Lock()
