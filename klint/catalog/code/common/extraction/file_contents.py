@@ -1,5 +1,7 @@
 """Extracts what a file contents audit goes through: the units of each file."""
 
+import asyncio
+
 from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.catalog.common.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
@@ -33,6 +35,8 @@ class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):
     ) -> list[AuditableUnit]:
         """Return the units of one file; none when it cannot be extracted."""
         with leave_out_file_on_failure(scanned_file.path):
-            dispatch = self._delegator.dispatch_file(scanned_file)
+            dispatch = await asyncio.to_thread(
+                self._delegator.dispatch_file, scanned_file
+            )
             return await dispatch.extractor.extract(dispatch.dispatched_file)
         return []
