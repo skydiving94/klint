@@ -227,3 +227,22 @@ def test_an_unknown_field_is_ignored_with_a_warning() -> None:
 
     assert APP_PACKAGE_POINTER in str(record[0].message)
     assert len(units) == len(extract_summary_units(GREETING_DOCUMENT))
+
+
+def test_packages_nested_too_deeply_to_read_are_refused() -> None:
+    document = copy_greeting_document()
+    package = document["root_package"]
+    path = "d"
+    for _ in range(3_000):
+        nested = {
+            "path": path,
+            "summary": "A level.",
+            "packages": [],
+            "files": [],
+        }
+        package["packages"] = [nested]
+        package = nested
+        path = f"{path}/d"
+
+    with pytest.raises(ValueError, match="nested too deeply to read"):
+        extract_summary_units(document)

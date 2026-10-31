@@ -38,99 +38,6 @@ _HUNK_FIELD_NAMES = frozenset(
 )
 
 
-class _DocumentReader:
-    """Reads one document into its typed model."""
-
-    def read_document(self, raw_document: JsonValue) -> ChangeSummaryDocument:
-        document = _read_object(raw_document, "#", _DOCUMENT_FIELD_NAMES)
-        schema_version = _read_count(document, "schema_version", "#")
-        if schema_version != SUPPORTED_SCHEMA_VERSION:
-            raise _build_error(
-                "#/schema_version",
-                f"is {schema_version}; klint reads schema_version "
-                f"{SUPPORTED_SCHEMA_VERSION} only",
-            )
-        return ChangeSummaryDocument(
-            schema_version=schema_version,
-            diff_command=_read_text(document, "diff_command", "#"),
-            root_package=self._read_package(
-                _read_field(document, "root_package", "#"), "#/root_package", None
-            ),
-        )
-
-    def _read_package(
-        self, raw_package: JsonValue, pointer: str, parent_path: str | None
-    ) -> PackageSummary:
-        package = _read_object(raw_package, pointer, _PACKAGE_FIELD_NAMES)
-        path = _read_text(package, "path", pointer).rstrip("/") or ROOT_PACKAGE_PATH
-        if parent_path is None and path != ROOT_PACKAGE_PATH:
-            raise _build_error(
-                f"{pointer}/path",
-                f"is '{path}'; the root package is '{ROOT_PACKAGE_PATH}', the "
-                "directory the change is in",
-            )
-        if parent_path is not None and not _is_strictly_inside(path, parent_path):
-            raise _build_error(
-                f"{pointer}/path",
-                f"is '{path}', which is not inside its package '{parent_path}'",
-            )
-        return PackageSummary(
-            path=path,
-            summary=_read_text(package, "summary", pointer),
-            packages=tuple(
-                self._read_package(raw, item_pointer, path)
-                for raw, item_pointer in _list_items(package, "packages", pointer)
-            ),
-            files=tuple(
-                self._read_file(raw, item_pointer, path)
-                for raw, item_pointer in _list_items(package, "files", pointer)
-            ),
-            pointer=pointer,
-        )
-
-    def _read_file(
-        self, raw_file: JsonValue, pointer: str, package_path: str
-    ) -> FileSummary:
-        file = _read_object(raw_file, pointer, _FILE_FIELD_NAMES)
-        path = _read_text(file, "path", pointer)
-        if not _is_strictly_inside(path, package_path):
-            raise _build_error(
-                f"{pointer}/path",
-                f"is '{path}', which is not inside its package '{package_path}'",
-            )
-        change_kind = _read_change_kind(file, pointer)
-        return FileSummary(
-            path=path,
-            old_path=_read_old_path(file, pointer, change_kind),
-            change_kind=change_kind,
-            summary=_read_text(file, "summary", pointer),
-            hunks=tuple(
-                self._read_hunk(raw, item_pointer)
-                for raw, item_pointer in _list_items(file, "hunks", pointer)
-            ),
-            pointer=pointer,
-        )
-
-    def _read_hunk(self, raw_hunk: JsonValue, pointer: str) -> HunkSummary:
-        hunk = _read_object(raw_hunk, pointer, _HUNK_FIELD_NAMES)
-        hunk_id = _read_text(hunk, "hunk_id", pointer)
-        old_line_count = _read_count(hunk, "old_line_count", pointer)
-        new_line_count = _read_count(hunk, "new_line_count", pointer)
-        if old_line_count == 0 and new_line_count == 0:
-            raise _build_error(pointer, "removes no line and adds none")
-        return HunkSummary(
-            hunk_id=hunk_id,
-            old_start=_read_count(hunk, "old_start", pointer),
-            old_line_count=old_line_count,
-            new_start=_read_count(hunk, "new_start", pointer),
-            new_line_count=new_line_count,
-            removed_lines=_read_lines(hunk, "removed_lines", pointer, old_line_count),
-            added_lines=_read_lines(hunk, "added_lines", pointer, new_line_count),
-            summary=_read_text(hunk, "summary", pointer),
-            pointer=pointer,
-        )
-
-
 def read_change_summary_document(raw_document: JsonValue) -> ChangeSummaryDocument:
     """Return the typed document that ``raw_document``, parsed JSON, holds.
 
@@ -139,7 +46,98 @@ def read_change_summary_document(raw_document: JsonValue) -> ChangeSummaryDocume
     hunk's lines do not match its line counts, or a file or package is not
     inside its package. An unknown field is reported as a KlintWarning and ignored.
     """
-    return _DocumentReader().read_document(raw_document)
+    return _read_document(raw_document)
+
+
+def _read_document(raw_document: JsonValue) -> ChangeSummaryDocument:
+    document = _read_object(raw_document, "#", _DOCUMENT_FIELD_NAMES)
+    schema_version = _read_count(document, "schema_version", "#")
+    if schema_version != SUPPORTED_SCHEMA_VERSION:
+        raise _build_error(
+            "#/schema_version",
+            f"is {schema_version}; klint reads schema_version "
+            f"{SUPPORTED_SCHEMA_VERSION} only",
+        )
+    return ChangeSummaryDocument(
+        schema_version=schema_version,
+        diff_command=_read_text(document, "diff_command", "#"),
+        root_package=_read_package(
+            _read_field(document, "root_package", "#"), "#/root_package", None
+        ),
+    )
+
+
+def _read_package(
+    raw_package: JsonValue, pointer: str, parent_path: str | None
+) -> PackageSummary:
+    package = _read_object(raw_package, pointer, _PACKAGE_FIELD_NAMES)
+    path = _read_text(package, "path", pointer).rstrip("/") or ROOT_PACKAGE_PATH
+    if parent_path is None and path != ROOT_PACKAGE_PATH:
+        raise _build_error(
+            f"{pointer}/path",
+            f"is '{path}'; the root package is '{ROOT_PACKAGE_PATH}', the "
+            "directory the change is in",
+        )
+    if parent_path is not None and not _is_strictly_inside(path, parent_path):
+        raise _build_error(
+            f"{pointer}/path",
+            f"is '{path}', which is not inside its package '{parent_path}'",
+        )
+    return PackageSummary(
+        path=path,
+        summary=_read_text(package, "summary", pointer),
+        packages=tuple(
+            _read_package(raw, item_pointer, path)
+            for raw, item_pointer in _list_items(package, "packages", pointer)
+        ),
+        files=tuple(
+            _read_file(raw, item_pointer, path)
+            for raw, item_pointer in _list_items(package, "files", pointer)
+        ),
+        pointer=pointer,
+    )
+
+
+def _read_file(raw_file: JsonValue, pointer: str, package_path: str) -> FileSummary:
+    file = _read_object(raw_file, pointer, _FILE_FIELD_NAMES)
+    path = _read_text(file, "path", pointer)
+    if not _is_strictly_inside(path, package_path):
+        raise _build_error(
+            f"{pointer}/path",
+            f"is '{path}', which is not inside its package '{package_path}'",
+        )
+    change_kind = _read_change_kind(file, pointer)
+    return FileSummary(
+        path=path,
+        old_path=_read_old_path(file, pointer, change_kind),
+        change_kind=change_kind,
+        summary=_read_text(file, "summary", pointer),
+        hunks=tuple(
+            _read_hunk(raw, item_pointer)
+            for raw, item_pointer in _list_items(file, "hunks", pointer)
+        ),
+        pointer=pointer,
+    )
+
+
+def _read_hunk(raw_hunk: JsonValue, pointer: str) -> HunkSummary:
+    hunk = _read_object(raw_hunk, pointer, _HUNK_FIELD_NAMES)
+    hunk_id = _read_text(hunk, "hunk_id", pointer)
+    old_line_count = _read_count(hunk, "old_line_count", pointer)
+    new_line_count = _read_count(hunk, "new_line_count", pointer)
+    if old_line_count == 0 and new_line_count == 0:
+        raise _build_error(pointer, "removes no line and adds none")
+    return HunkSummary(
+        hunk_id=hunk_id,
+        old_start=_read_count(hunk, "old_start", pointer),
+        old_line_count=old_line_count,
+        new_start=_read_count(hunk, "new_start", pointer),
+        new_line_count=new_line_count,
+        removed_lines=_read_lines(hunk, "removed_lines", pointer, old_line_count),
+        added_lines=_read_lines(hunk, "added_lines", pointer, new_line_count),
+        summary=_read_text(hunk, "summary", pointer),
+        pointer=pointer,
+    )
 
 
 def _build_error(pointer: str, problem: str) -> ValueError:

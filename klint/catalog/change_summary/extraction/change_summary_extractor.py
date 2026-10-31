@@ -28,12 +28,18 @@ class ChangeSummaryExtractor(BaseUnitExtractor[JsonValue]):
 
         Each unit comes before the units nested inside it, in document
         order: a package's packages, then its files. Raises ValueError when
-        the document is not a change-summary document, or two of its
-        summaries would have the same unit ID.
+        the document is not a change-summary document, its packages are
+        nested too deeply to read, or two of its summaries would have the
+        same unit ID.
         """
-        document = read_change_summary_document(audit_input)
-        root_unit = _build_package_unit(document.root_package)
-        units = _list_unit_and_nested(root_unit)
+        try:
+            document = read_change_summary_document(audit_input)
+            units = _list_unit_and_nested(_build_package_unit(document.root_package))
+        except RecursionError as error:
+            raise ValueError(
+                "Change-summary document: #/root_package holds packages nested "
+                "too deeply to read"
+            ) from error
         _check_unit_ids_differ(units)
         return units
 
