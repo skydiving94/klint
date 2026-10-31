@@ -28,19 +28,25 @@ class JsonDocumentSource(BaseAuditSource[JsonValue]):
         """Return the parsed document.
 
         Raises OSError when the file cannot be read, and ValueError when the
-        content is not valid JSON.
+        content is not valid JSON or is nested too deeply to parse.
         """
         match self._audit_input:
             case DiskPathInput(path=path):
                 content = await asyncio.to_thread(path.read_bytes)
                 self._scanned_file_count = 1
-                where = f"File '{path}'"
+                content_description = f"File '{path}'"
             case InMemoryBytesInput(content=content):
-                where = "The content in memory"
+                content_description = "The content in memory"
         try:
             document: JsonValue = json.loads(content)
         except ValueError as error:
-            raise ValueError(f"{where} is not valid JSON: {error}") from error
+            raise ValueError(
+                f"{content_description} is not valid JSON: {error}"
+            ) from error
+        except RecursionError as error:
+            raise ValueError(
+                f"{content_description} is nested too deeply to parse"
+            ) from error
         return document
 
     def count_scanned_files(self) -> int:

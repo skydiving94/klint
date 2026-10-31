@@ -100,6 +100,19 @@ def test_content_that_is_not_json_is_refused_before_the_judge_is_asked(
     assert judge.requests == []
 
 
+def test_content_nested_too_deeply_is_refused_as_unusable(
+    fake_judge: type[FakeJudge],
+) -> None:
+    depth = 100_000
+    content = b"[" * depth + b"]" * depth
+
+    with pytest.raises(ValueError, match="nested too deeply to parse"):
+        _run_audit(
+            fake_judge(),
+            InMemoryBytesInput(content=content, media_type="application/json"),
+        )
+
+
 def test_file_that_is_not_json_is_refused_with_its_path(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
