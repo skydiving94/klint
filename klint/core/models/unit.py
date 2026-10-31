@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from klint.core.models.location import Location
+from klint.core.models.unit_traits import UnitTraits
 
 
 @dataclass(frozen=True)
@@ -25,15 +26,19 @@ class AuditableUnit(ABC):
     use in target_unit_types. A unit class becomes known to an audit when
     its suite adds it to the UnitRegistry.
 
-    language is the language this unit's content is written in, programming
-    or natural (for example "python" or "english"). It is None when unknown
-    or when the content has no language, such as an image.
+    traits are what is known about the unit from the outside, such as the
+    language its content is written in; rules can be limited by them.
     """
 
     unit_id: str
-    language: str | None = field(default=None, kw_only=True)
+    traits: UnitTraits = field(default_factory=UnitTraits, kw_only=True)
 
     unit_type: ClassVar[str]
+
+    @property
+    def language(self) -> str | None:
+        """Return the language of this unit's content; None when it has none."""
+        return self.traits.language
 
     @abstractmethod
     def get_content(self) -> str:

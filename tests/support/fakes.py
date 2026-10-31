@@ -1,11 +1,13 @@
-"""Test doubles that stand in for the model."""
+"""Test doubles that stand in for the model and for rule sources."""
 
 import asyncio
 
 from injector import Module, provider, singleton
 
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.rule_pack import RulePackSpec
 
 
 class FakeJudge(BaseJudge):
@@ -108,3 +110,13 @@ class JudgeOverride(Module):
     @provider
     def provide_judge(self) -> BaseJudge:
         return self._judge
+
+
+class InMemoryRuleSource(BaseRuleSource):
+    """Holds rule packs built in test code; no file is read."""
+
+    def __init__(self, *packs: RulePackSpec) -> None:
+        self._packs = list(packs)
+
+    def read_rule_packs(self) -> list[RulePackSpec]:
+        return list(self._packs)

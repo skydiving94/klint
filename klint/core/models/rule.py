@@ -25,7 +25,8 @@ class AuditRule:
             return False
         if not self.languages:
             return True
-        if unit.language is None:
+        language = unit.traits.language
+        if language is None:
             return False
         allowed = {language.lower() for language in self.languages}
-        return unit.language.lower() in allowed
+        return language.lower() in allowed

@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 
 
 @dataclass
@@ -18,7 +18,7 @@ class ScannedFile:
     """
 
     path: Path
-    traits: FileTraits
+    traits: UnitTraits
     parent: ScannedDirectory | None = field(default=None, compare=False, repr=False)
 
 

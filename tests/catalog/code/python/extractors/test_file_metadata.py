@@ -8,10 +8,10 @@ from klint.catalog.code.python.extractors.file_metadata import (
     PythonFileMetadataExtractor,
 )
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
-PYTHON = FileTraits(language="python")
+PYTHON = UnitTraits(language="python")
 
 MODULE_SOURCE = """\
 import os

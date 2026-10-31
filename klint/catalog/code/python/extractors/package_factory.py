@@ -7,6 +7,7 @@ from klint.catalog.code.common.extractors.directory_factory import (
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.core.models.unit_traits import UnitTraits
 
 
 class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
@@ -21,7 +22,7 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
     ) -> AuditableDirectoryUnit:
         return AuditablePythonPackageUnit(
             unit_id=str(directory_path),
-            language=language,
+            traits=UnitTraits(language=language),
             directory_path=str(directory_path),
             files=files,
             subdirectories=subdirectories,

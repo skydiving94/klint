@@ -6,6 +6,7 @@ from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
+from klint.core.models.unit_traits import UnitTraits
 
 
 def _rule(
@@ -21,7 +22,7 @@ def _rule(
 
 
 def _file(language: str | None) -> AuditableFileUnit:
-    return AuditableFileUnit(unit_id="a", language=language)
+    return AuditableFileUnit(unit_id="a", traits=UnitTraits(language=language))
 
 
 def test_new_rule_has_no_languages_or_tags() -> None:
@@ -59,7 +60,9 @@ def test_language_names_are_compared_without_regard_to_case(
 
 
 def test_unit_type_is_checked_before_language() -> None:
-    directory = AuditablePythonPackageUnit(unit_id="d", language="python")
+    directory = AuditablePythonPackageUnit(
+        unit_id="d", traits=UnitTraits(language="python")
+    )
     assert not _rule(languages=["python"]).is_applicable_to(directory)
 
 
