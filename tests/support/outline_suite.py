@@ -99,11 +99,18 @@ def _yield_section_and_nested(
     return nested
 
 
-class SummarizedSectionRenderer(BaseUnitRenderer):
-    """Writes a section's text, then one line per finding on its subsections."""
+class OutlineSectionRenderer(BaseUnitRenderer):
+    """Shows the judge the text of a section."""
 
     def render_subject(self, render_input: RenderInput) -> str:
-        lines = [render_input.unit.get_content()]
+        return render_input.get_unit_as(OutlineSectionUnit).text
+
+
+class SummarizedSectionRenderer(BaseUnitRenderer):
+    """Shows a section's text, then one line per finding on its subsections."""
+
+    def render_subject(self, render_input: RenderInput) -> str:
+        lines = [render_input.get_unit_as(OutlineSectionUnit).text]
         lines.extend(
             f"{finding.unit_id}: {finding.rule_id} = {finding.answer.key}"
             for finding in render_input.child_findings
@@ -124,6 +131,7 @@ class OutlineSuite(BaseSuite):
             rule_loader=FixedRuleLoader([CLEAR_SECTION_RULE]),
             answer_scale=PRACTICE_SCALE,
             audit_order=AuditOrder.CHILDREN_FIRST,
+            unit_class_to_renderer={OutlineSectionUnit: OutlineSectionRenderer()},
         )
         return [
             outline_kind,
