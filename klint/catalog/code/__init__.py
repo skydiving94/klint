@@ -25,6 +25,7 @@ from klint.catalog.code.python.extractors.file_metadata import (
 from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
+from klint.catalog.code.python.renderers.package import PythonPackageRenderer
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.catalog.common.renderers.whole_file import WholeFileRenderer
 from klint.catalog.common.sources.directory_tree_source import (
@@ -39,7 +40,6 @@ from klint.core.models.audit_input import AuditInputKind
 from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.scanned_tree import ScannedFile
 from klint.core.registry import UnitRegistry
-from klint.core.unit_content_renderer import UnitContentRenderer
 
 # The kinds of audit this suite offers: each file's contents, and the
 # structure of a project's directories.
@@ -93,7 +93,7 @@ class CodeSuite(BaseSuite):
                 unit_class_to_renderer={
                     AuditableFileMetadataUnit: FileMetadataRenderer(),
                     AuditableDirectoryUnit: DirectoryRenderer(),
-                    AuditablePythonPackageUnit: UnitContentRenderer(),
+                    AuditablePythonPackageUnit: PythonPackageRenderer(),
                 },
             ),
         ]

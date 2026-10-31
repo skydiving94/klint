@@ -43,12 +43,6 @@ class AuditableDirectoryUnit(AuditableUnit):
             return self.directory_name
         return self.directory_path
 
-    def get_all_imports(self) -> set[str]:
-        own = {imp for f in self.files for imp in f.imports}
-        for sub in self.subdirectories:
-            own.update(sub.get_all_imports())
-        return own
-
     def _render_tree(self, indent: int = 0) -> str:
         prefix = "  " * indent
         lines = [f"{prefix}Directory: {self.display_path}"]
