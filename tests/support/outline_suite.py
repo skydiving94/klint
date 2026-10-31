@@ -4,19 +4,23 @@ A section is {"id": "<section id>", "text": "<text>", "sections": [...]}; the
 document is the outermost section.
 """
 
+import asyncio
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import ClassVar
 
 from injector import Binder
 
+from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.catalog.common.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import AuditInputKind
+from klint.core.models.audit_input import AuditInputKind, InMemoryBytesInput
 from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.audit_order import AuditOrder
 from klint.core.models.json_value import JsonValue
@@ -24,6 +28,7 @@ from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit import AuditableUnit
 from klint.core.registry import UnitRegistry
+from tests.support.builders import build_audit_pipeline
 from tests.support.notes_suite import FixedRuleLoader
 
 OUTLINE_KIND_ID = "outline"
@@ -101,3 +106,45 @@ class OutlineSuite(BaseSuite):
 
 def add_the_outline_suite(binder: Binder) -> None:
     binder.multibind(list[BaseSuite], to=[OutlineSuite])
+
+
+# A three-level outline: the book, its chapters, and their sections.
+OUTLINE = {
+    "id": "book",
+    "text": "The book.",
+    "sections": [
+        {
+            "id": "chapter 1",
+            "text": "Chapter 1.",
+            "sections": [
+                {"id": "section 1.1", "text": "Section 1.1."},
+                {"id": "section 1.2", "text": "Section 1.2."},
+            ],
+        },
+        {
+            "id": "chapter 2",
+            "text": "Chapter 2.",
+            "sections": [{"id": "section 2.1", "text": "Section 2.1."}],
+        },
+    ],
+}
+SUBJECT_TO_PARENT_SUBJECT = {
+    "Chapter 1.": "The book.",
+    "Chapter 2.": "The book.",
+    "Section 1.1.": "Chapter 1.",
+    "Section 1.2.": "Chapter 1.",
+    "Section 2.1.": "Chapter 2.",
+}
+
+
+def run_outline_audit(judge: BaseJudge, min_confidence: float = 0.0) -> AuditOutcome:
+    """Audit the three-level outline, held in memory, with the outline suite."""
+    pipeline = build_audit_pipeline(judge, overrides=[add_the_outline_suite])
+    request = AuditRequest(
+        audit_input=InMemoryBytesInput(
+            content=json.dumps(OUTLINE).encode(), media_type="application/json"
+        ),
+        audit_kind_id=OUTLINE_KIND_ID,
+        min_confidence=min_confidence,
+    )
+    return asyncio.run(pipeline.run_audit(request))

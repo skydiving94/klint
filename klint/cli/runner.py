@@ -203,6 +203,7 @@ class AuditCommandApp:
                     path=arguments.rules_source.resolve(), is_required=True
                 )
             ),
+            min_confidence=arguments.min_confidence,
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress
             ),
