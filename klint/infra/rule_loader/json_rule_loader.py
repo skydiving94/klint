@@ -5,8 +5,8 @@ from pathlib import Path
 
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.file_traits import FileTraits
 from klint.core.models.rule import AuditRule
+from klint.core.models.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
 from klint.infra.rule_loader.rule_pack_reader import (
     HEADER_KEY,
@@ -55,7 +55,7 @@ class JsonRuleLoader(BaseRuleLoader):
         self._lock = asyncio.Lock()
 
     async def load_rules(
-        self, traits: FileTraits, custom_rules_source: str | Path | None = None
+        self, traits: UnitTraits, custom_rules_source: str | Path | None = None
     ) -> list[AuditRule]:
         custom_path = (
             None if custom_rules_source is None else Path(custom_rules_source).resolve()
@@ -64,7 +64,7 @@ class JsonRuleLoader(BaseRuleLoader):
             return await asyncio.to_thread(self._load_rules_sync, traits, custom_path)
 
     def _load_rules_sync(
-        self, traits: FileTraits, custom_path: Path | None
+        self, traits: UnitTraits, custom_path: Path | None
     ) -> list[AuditRule]:
         """Merge the chosen packs, the project's, then the custom rules, by rule ID."""
         rules: dict[str, AuditRule] = {}
@@ -78,7 +78,7 @@ class JsonRuleLoader(BaseRuleLoader):
             rules.update(self._load_pack_rules(self._read_custom_pack(custom_path)))
         return list(rules.values())
 
-    def _choose_packs(self, traits: FileTraits) -> Iterator[RulePackSpec]:
+    def _choose_packs(self, traits: UnitTraits) -> Iterator[RulePackSpec]:
         if traits.language is None:
             for path in self._fallback_rule_packs:
                 pack = self._read_pack(path)

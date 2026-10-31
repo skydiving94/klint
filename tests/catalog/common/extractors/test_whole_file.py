@@ -7,15 +7,15 @@ import pytest
 
 from klint.catalog.common.extractors.whole_file import WholeFileExtractor
 from klint.catalog.common.units.file import AuditableFileUnit
-from klint.core.models.file_traits import FileTraits
 from klint.core.models.location import Location
 from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit import AuditableUnit, UnitContext
+from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 
 def _extract(path: Path, language: str | None = None) -> list[AuditableUnit]:
-    scanned_file = ScannedFile(path=path, traits=FileTraits(language=language))
+    scanned_file = ScannedFile(path=path, traits=UnitTraits(language=language))
     return asyncio.run(WholeFileExtractor().extract(scanned_file))
 
 

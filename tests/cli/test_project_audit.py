@@ -21,7 +21,7 @@ from klint.cli.exit_code import ExitCode
 from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
 from klint.core.interfaces.judge import BaseJudge
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -146,7 +146,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
 class PythonExtractorBrokenOnB(PythonFileMetadataExtractor):
     """Fails on b.py, for a reason other than reading it; reads the rest as usual."""
 
-    def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
+    def extract_file(self, path: Path, traits: UnitTraits) -> AuditableFileMetadataUnit:
         if path.name == "b.py":
             raise RuntimeError("the extractor is broken on b.py")
         return super().extract_file(path, traits)

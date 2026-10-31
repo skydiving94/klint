@@ -4,9 +4,9 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from klint.core.models.audit_kind import AuditKind
-from klint.core.models.file_traits import FileTraits
 from klint.core.models.rule_set import RuleSet
 from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit_traits import UnitTraits
 
 
 class RuleSelection:
@@ -26,9 +26,9 @@ class RuleSelection:
         the rules are still loaded once, so that such a file stops the audit
         whatever the input holds.
         """
-        traits_of_units = list(
-            dict.fromkeys(FileTraits(language=unit.language) for unit in units)
-        ) or [FileTraits()]
+        traits_of_units = list(dict.fromkeys(unit.traits for unit in units)) or [
+            UnitTraits()
+        ]
         return RuleSet(
             {
                 traits: await audit_kind.rule_loader.load_rules(

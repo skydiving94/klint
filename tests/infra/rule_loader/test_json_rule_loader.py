@@ -9,9 +9,9 @@ from typing import Any
 import pytest
 
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.file_traits import FileTraits
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
+from klint.core.models.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
 from klint.infra.rule_loader.json_rule_loader import JsonRuleLoader
 from tests.support.builders import (
@@ -29,10 +29,10 @@ from tests.support.paths import (
     REACT_RULE_PACK,
 )
 
-PYTHON = FileTraits(language="python")
-TYPESCRIPT = FileTraits(language="typescript")
-JAVA = FileTraits(language="java")
-UNIDENTIFIED = FileTraits(language=None)
+PYTHON = UnitTraits(language="python")
+TYPESCRIPT = UnitTraits(language="typescript")
+JAVA = UnitTraits(language="java")
+UNIDENTIFIED = UnitTraits(language=None)
 # The languages a file can be identified as, for the packs written here.
 TEST_PACK_LANGUAGES = frozenset({"python", "typescript", "javascript", "java", "go"})
 
@@ -52,7 +52,7 @@ def _built_in_loader() -> JsonRuleLoader:
 
 
 def _load(
-    loader: JsonRuleLoader, traits: FileTraits = PYTHON, custom: Path | None = None
+    loader: JsonRuleLoader, traits: UnitTraits = PYTHON, custom: Path | None = None
 ) -> dict[str, AuditRule]:
     rules = asyncio.run(loader.load_rules(traits, custom))
     return {rule.rule_id: rule for rule in rules}
@@ -273,7 +273,7 @@ def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
 
 @pytest.mark.parametrize("traits", [PYTHON, UNIDENTIFIED])
 def test_custom_rules_merge_whatever_the_traits(
-    tmp_path: Path, traits: FileTraits
+    tmp_path: Path, traits: UnitTraits
 ) -> None:
     pack = write_json(tmp_path / "pack.json", {"for_code": FILE_RULE})
     fallback = write_json(tmp_path / "fallback.json", {"for_prose": FILE_RULE})

@@ -2,9 +2,9 @@
 
 from collections.abc import Mapping, Sequence
 
-from klint.core.models.file_traits import FileTraits
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit_traits import UnitTraits
 
 
 class RuleSet:
@@ -16,7 +16,7 @@ class RuleSet:
     """
 
     def __init__(
-        self, traits_to_rules: Mapping[FileTraits, Sequence[AuditRule]]
+        self, traits_to_rules: Mapping[UnitTraits, Sequence[AuditRule]]
     ) -> None:
         self._traits_to_rules = {
             traits: tuple(rules) for traits, rules in traits_to_rules.items()
@@ -24,5 +24,5 @@ class RuleSet:
 
     def select_rules_for(self, unit: AuditableUnit) -> list[AuditRule]:
         """Return the rules to ask about ``unit``, in load order; may be none."""
-        rules = self._traits_to_rules.get(FileTraits(language=unit.language), ())
+        rules = self._traits_to_rules.get(unit.traits, ())
         return [rule for rule in rules if rule.is_applicable_to(unit)]

@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 
 
 class ExtensionFileTraitsIdentifier(BaseFileTraitsIdentifier):
@@ -18,6 +18,6 @@ class ExtensionFileTraitsIdentifier(BaseFileTraitsIdentifier):
             for extension, language in file_extension_to_language.items()
         }
 
-    def identify(self, path: str | Path) -> FileTraits:
+    def identify(self, path: str | Path) -> UnitTraits:
         extension = Path(path).suffix.lower()
-        return FileTraits(language=self._file_extension_to_language.get(extension))
+        return UnitTraits(language=self._file_extension_to_language.get(extension))

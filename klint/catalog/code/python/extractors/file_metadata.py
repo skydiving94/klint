@@ -6,7 +6,7 @@ from klint.catalog.code.common.extractors.file_metadata_base import (
 )
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.core.klint_warning import warn_about_unparseable_file
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
@@ -16,7 +16,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
     keeps only its line count.
     """
 
-    def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
+    def extract_file(self, path: Path, traits: UnitTraits) -> AuditableFileMetadataUnit:
         source = path.read_text(encoding="utf-8", errors="replace")
         line_count = len(source.splitlines())
         imports: list[str] = []
@@ -69,7 +69,7 @@ class PythonFileMetadataExtractor(BaseFileMetadataExtractor):
 
         return AuditableFileMetadataUnit(
             unit_id=str(path),
-            language=traits.language,
+            traits=traits,
             file_name=path.name,
             file_path=str(path),
             line_count=line_count,

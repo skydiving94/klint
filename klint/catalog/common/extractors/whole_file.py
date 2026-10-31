@@ -25,7 +25,7 @@ class WholeFileExtractor(BaseUnitExtractor[ScannedFile]):
         return [
             AuditableFileUnit(
                 unit_id=str(path),
-                language=scanned_file.traits.language,
+                traits=scanned_file.traits,
                 content=content,
                 file_path=str(path),
                 start_line=1,
