@@ -523,13 +523,18 @@ def test_missing_pack_is_skipped_among_several(tmp_path: Path) -> None:
     assert list(rules) == ["a"]
 
 
-def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
+def test_languages_tags_and_unit_tags_are_read_from_a_rule(tmp_path: Path) -> None:
     pack = write_json(
         tmp_path / "pack.json",
         {
-            "scoped": {**FILE_RULE, "languages": ["python"], "tags": ["security"]},
+            "scoped": {
+                **FILE_RULE,
+                "languages": ["python"],
+                "tags": ["security"],
+                "unit_tags": ["backend"],
+            },
             "plain": FILE_RULE,
-            "empty": {**FILE_RULE, "languages": [], "tags": []},
+            "empty": {**FILE_RULE, "languages": [], "tags": [], "unit_tags": []},
         },
     )
 
@@ -537,12 +542,17 @@ def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
 
     assert rules["scoped"].languages == ["python"]
     assert rules["scoped"].tags == ["security"]
-    assert (rules["plain"].languages, rules["plain"].tags) == ([], [])
-    assert (rules["empty"].languages, rules["empty"].tags) == ([], [])
+    assert rules["scoped"].unit_tags == ["backend"]
+    for plain_rule in (rules["plain"], rules["empty"]):
+        assert (plain_rule.languages, plain_rule.tags, plain_rule.unit_tags) == (
+            [],
+            [],
+            [],
+        )
     assert rules["plain"].target_unit_types == ["file"]
 
 
-@pytest.mark.parametrize("field_name", ["languages", "tags"])
+@pytest.mark.parametrize("field_name", ["languages", "tags", "unit_tags"])
 @pytest.mark.parametrize("bad_value", ["python", ["python", 3], {"a": 1}, None])
 def test_malformed_languages_or_tags_are_rejected(
     tmp_path: Path, field_name: str, bad_value: object
@@ -585,3 +595,21 @@ def test_rule_loading_only_accepts_registered_unit_types(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="unknown target_unit_types"):
         asyncio.run(loader.load_rules(PYTHON))
+
+
+def test_built_in_backend_and_react_rules_are_limited_to_their_side() -> None:
+    loader = _built_in_loader()
+    backend_rule_ids = _rule_ids_in(BUILT_IN_RULE_PACKS[0])
+    react_rule_ids = _rule_ids_in(REACT_RULE_PACK)
+
+    rules = {**_load(loader, PYTHON), **_load(loader, TYPESCRIPT)}
+
+    assert backend_rule_ids
+    assert react_rule_ids
+    for rule_id, rule in rules.items():
+        if rule_id in backend_rule_ids:
+            assert rule.unit_tags == ["backend"], rule_id
+        elif rule_id in react_rule_ids:
+            assert rule.unit_tags == ["frontend"], rule_id
+        else:
+            assert rule.unit_tags == [], rule_id

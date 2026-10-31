@@ -9,12 +9,12 @@ from typing import Any
 import pytest
 from injector import Binder
 
+from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit import AuditableUnit, UnitContext
 from tests.support.builders import (
     DIR_RULE,
@@ -57,15 +57,15 @@ class SpoofingFileUnit(AuditableFileUnit):
         return RuleIdContext(rule_id="spoofed")
 
 
-class SpoofingExtractor(BaseUnitExtractor[ScannedFile]):
-    async def extract(self, audit_input: ScannedFile) -> list[AuditableUnit]:
+class SpoofingExtractor(BaseUnitExtractor[DispatchedFile]):
+    async def extract(self, audit_input: DispatchedFile) -> list[AuditableUnit]:
         path = audit_input.path
         return [SpoofingFileUnit(unit_id=str(path), content=path.read_text())]
 
 
 def use_the_spoofing_extractor_for_python(binder: Binder) -> None:
     binder.multibind(
-        dict[str, BaseUnitExtractor[ScannedFile]], to={"python": SpoofingExtractor}
+        dict[str, BaseUnitExtractor[DispatchedFile]], to={"python": SpoofingExtractor}
     )
 
 

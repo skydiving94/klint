@@ -11,6 +11,7 @@ from klint.app.project_config import (
     read_project_config,
     warn_about_settings_in_rules_file,
 )
+from klint.core.models.file_traits_override import FileTraitsOverride
 
 # The model and the server address the judge uses unless a setting names others.
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
@@ -32,6 +33,9 @@ _BUILT_IN_FALLBACK_RULE_PACKS = (
 # The built-in list of languages and their file extensions, relative to
 # klint/resources/catalog/.
 _BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = "code/common/language_to_file_extensions.json"
+# The built-in tables that tell which side of a project a file belongs to,
+# relative to klint/resources/catalog/.
+_BUILT_IN_TAG_DETECTION = "code/common/tag_detection.json"
 
 
 @dataclass(frozen=True)
@@ -107,6 +111,11 @@ def _locate_built_in_language_to_file_extensions() -> Path:
     return _locate_built_in_resource(_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS)
 
 
+def _locate_built_in_tag_detection() -> Path:
+    """Locate the built-in tag detection tables."""
+    return _locate_built_in_resource(_BUILT_IN_TAG_DETECTION)
+
+
 def _resolve_setting_path(setting: _SettingValue | None) -> Path | None:
     """Return the path ``setting`` names; a relative one is taken from its source."""
     if setting is None:
@@ -140,6 +149,11 @@ class AppSettings:
     language_to_file_extensions_path: Path = field(
         default_factory=_locate_built_in_language_to_file_extensions
     )
+    # The file of tables that tell which side of a project a file belongs to.
+    tag_detection_path: Path = field(default_factory=_locate_built_in_tag_detection)
+    # What the project's klint.json says about some files, over what is
+    # detected; the first entry whose glob matches a file decides.
+    file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
 
     @classmethod
     def from_env(
@@ -208,5 +222,8 @@ class AppSettings:
             discovered_config_path=config_path,
             project_rule_packs=(
                 (config.path,) if config is not None and config.does_hold_rules else ()
+            ),
+            file_traits_overrides=(
+                () if config is None else config.file_traits_overrides
             ),
         )

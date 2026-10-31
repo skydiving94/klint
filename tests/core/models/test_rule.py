@@ -1,4 +1,4 @@
-"""Which units a rule applies to: unit type first, then language."""
+"""Which units a rule applies to: unit type first, then language and unit tags."""
 
 import pytest
 
@@ -10,7 +10,9 @@ from klint.core.models.unit_traits import UnitTraits
 
 
 def _rule(
-    languages: list[str] | None = None, tags: list[str] | None = None
+    languages: list[str] | None = None,
+    tags: list[str] | None = None,
+    unit_tags: list[str] | None = None,
 ) -> AuditRule:
     return AuditRule(
         rule_id="r",
@@ -18,11 +20,16 @@ def _rule(
         instructions="?",
         languages=languages or [],
         tags=tags or [],
+        unit_tags=unit_tags or [],
     )
 
 
-def _file(language: str | None) -> AuditableFileUnit:
-    return AuditableFileUnit(unit_id="a", traits=UnitTraits(language=language))
+def _file(
+    language: str | None, unit_tags: frozenset[str] = frozenset()
+) -> AuditableFileUnit:
+    return AuditableFileUnit(
+        unit_id="a", traits=UnitTraits(language=language, tags=unit_tags)
+    )
 
 
 def test_new_rule_has_no_languages_or_tags() -> None:
@@ -79,3 +86,38 @@ def test_rule_applies_only_to_its_target_unit_types() -> None:
     dir_rule = AuditRule("r", QuestionType.CHOICE, "?", ["project_directory"])
     assert file_rule.is_applicable_to(unit)
     assert not dir_rule.is_applicable_to(unit)
+
+
+@pytest.mark.parametrize(
+    "unit_tags",
+    [frozenset({"backend"}), frozenset({"backend", "frontend"}), frozenset()],
+)
+def test_rule_limited_to_unit_tags_applies_to_a_unit_with_any_or_none(
+    unit_tags: frozenset[str],
+) -> None:
+    assert _rule(unit_tags=["backend", "cli"]).is_applicable_to(
+        _file("python", unit_tags)
+    )
+
+
+def test_rule_limited_to_unit_tags_does_not_apply_to_a_unit_with_others() -> None:
+    assert not _rule(unit_tags=["backend"]).is_applicable_to(
+        _file("python", frozenset({"frontend"}))
+    )
+
+
+def test_rule_with_no_unit_tags_applies_to_a_tagged_unit() -> None:
+    assert _rule().is_applicable_to(_file("python", frozenset({"frontend"})))
+
+
+def test_unit_tags_are_compared_without_regard_to_case() -> None:
+    assert _rule(unit_tags=["Backend"]).is_applicable_to(
+        _file(None, frozenset({"backend"}))
+    )
+
+
+def test_rule_unit_tags_and_languages_must_both_allow_the_unit() -> None:
+    rule = _rule(languages=["python"], unit_tags=["backend"])
+
+    assert not rule.is_applicable_to(_file("go", frozenset({"backend"})))
+    assert not rule.is_applicable_to(_file("python", frozenset({"frontend"})))

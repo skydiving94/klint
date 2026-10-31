@@ -1,11 +1,14 @@
 """Directory units: their children and how a directory describes itself."""
 
-from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
+from pathlib import Path
+
+from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit_traits import UnitTraits
+from tests.support.builders import list_judge_subjects, write_text
 
 
 def test_directory_children_are_its_files_then_its_subdirectories() -> None:
@@ -19,19 +22,19 @@ def test_directory_children_are_its_files_then_its_subdirectories() -> None:
     assert subdirectory.children() == []
 
 
-def test_directory_unit_describes_itself_without_assuming_a_language() -> None:
-    file_unit = AuditableFileMetadataUnit(
-        unit_id="docs/intro.md", file_name="intro.md", line_count=3
-    )
-    directory = AuditableDirectoryUnit(
-        unit_id="docs", directory_path="docs", files=[file_unit]
-    )
+def test_directory_is_described_without_assuming_a_language(tmp_path: Path) -> None:
+    docs = tmp_path / "docs"
+    write_text(docs / "intro.md", "# Intro\n\nHello.\n")
 
-    content = directory.get_content()
+    (subject,) = list_judge_subjects(docs, PROJECT_STRUCTURE_KIND_ID)
 
-    assert "docs" in content
-    assert "intro.md (lines=3)" in content
-    assert "Package Public API" not in content
+    assert subject.splitlines() == [
+        f"Target Directory Under Audit: {docs}",
+        "Summary: 1 immediate files, 0 immediate subdirectories",
+        f"Directory: {docs}",
+        "  Files:",
+        "    - intro.md (lines=3)",
+    ]
 
 
 def test_rule_for_directories_applies_to_a_python_package() -> None:

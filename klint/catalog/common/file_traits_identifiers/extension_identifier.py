@@ -18,6 +18,7 @@ class ExtensionFileTraitsIdentifier(BaseFileTraitsIdentifier):
             for extension, language in file_extension_to_language.items()
         }
 
-    def identify(self, path: str | Path) -> UnitTraits:
+    def identify(self, path: str | Path, scan_root: Path | None = None) -> UnitTraits:
+        del scan_root
         extension = Path(path).suffix.lower()
         return UnitTraits(language=self._file_extension_to_language.get(extension))

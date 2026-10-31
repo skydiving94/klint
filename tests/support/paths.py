@@ -27,6 +27,8 @@ FALLBACK_RULE_PACKS = (
 DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS = (
     RULE_PACKS / "common" / "language_to_file_extensions.json"
 )
+# The built-in tables that tell which side of a project a file belongs to.
+TAG_DETECTION = RULE_PACKS / "common" / "tag_detection.json"
 # Relative to the repo root, so unit ids in output stay short; tests that use
 # it run from there (see the in_repo_root fixture).
 MOCK_PROJECT = Path("examples/mock_bad_project")

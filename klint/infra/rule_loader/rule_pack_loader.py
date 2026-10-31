@@ -134,6 +134,7 @@ class RulePackLoader(BaseRuleLoader):
             target_unit_types=list(spec.target_unit_types),
             languages=languages,
             tags=list(spec.tags),
+            unit_tags=list(spec.unit_tags),
         )
 
     def _keeps_languages_of_its_pack(
