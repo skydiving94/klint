@@ -39,9 +39,8 @@ class FileSummaryRenderer(BaseUnitRenderer):
             ]
         else:
             premise_lines = [
-                f"Premise: the checked summaries of the "
-                f"{count_items(len(unit.hunks), 'hunk')} of the change to the "
-                f"file {unit.path} ({change}).",
+                f"Premise: summaries of the {count_items(len(unit.hunks), 'hunk')} "
+                f"changed in the file {unit.path} ({change}).",
                 *list_child_summary_lines(
                     [
                         ChildSummary(f"Hunk {number}", hunk.unit_id, hunk.hunk.summary)
@@ -83,13 +82,9 @@ class PackageSummaryRenderer(BaseUnitRenderer):
             )
             for file in unit.files
         ]
-        where = (
-            "the whole commit" if unit.is_root_package else f"the package {unit.path}"
-        )
+        where = "the commit" if unit.is_root_package else f"the package {unit.path}"
         premise_lines = [
-            f"Premise: the checked summaries of the changes in {where}: "
-            f"{count_items(len(unit.packages), 'package')} and "
-            f"{count_items(len(unit.files), 'file')}.",
+            f"Premise: summaries of the {_name_child_kinds(unit)} changed in {where}.",
             *list_child_summary_lines(children, render_input.child_findings),
         ]
         return join_premise_and_hypothesis(
@@ -105,3 +100,10 @@ def _find_relative_path(path: str, package_path: str) -> str:
     if package_path == ROOT_PACKAGE_PATH:
         return path
     return path.removeprefix(f"{package_path}/")
+
+
+def _name_child_kinds(package: AuditablePackageSummaryUnit) -> str:
+    """Return what is inside ``package``: "packages", "files", or both."""
+    if package.packages and package.files:
+        return "packages and files"
+    return "packages" if package.packages else "files"

@@ -46,8 +46,8 @@ def test_a_file_summary_is_judged_against_its_checked_hunk_summaries() -> None:
     run_change_summary_audit(judge)
 
     assert judge.find_subject(_GREET_FILE_SUMMARY) == (
-        "Premise: the checked summaries of the 2 hunks of the change to the "
-        "file app/greet.py (modified).\n"
+        "Premise: summaries of the 2 hunks changed in the file app/greet.py "
+        "(modified).\n"
         f"- Hunk 1: {GREETING_HUNK['summary']}\n"
         f"- Hunk 2 (its summary failed its own check): "
         f"{REMOVED_IMPORT_HUNK['summary']}\n"
@@ -62,15 +62,13 @@ def test_package_and_commit_summaries_are_judged_against_those_inside() -> None:
     run_change_summary_audit(judge)
 
     assert judge.find_subject(_APP_SUMMARY) == (
-        "Premise: the checked summaries of the changes in the package app: "
-        "0 packages and 1 file.\n"
+        "Premise: summaries of the files changed in the package app.\n"
         f"- File greet.py: {_GREET_FILE_SUMMARY}\n"
         "\n"
         f"Hypothesis: {_APP_SUMMARY}"
     )
     assert judge.find_subject(_COMMIT_SUMMARY) == (
-        "Premise: the checked summaries of the changes in the whole commit: "
-        "1 package and 1 file.\n"
+        "Premise: summaries of the packages and files changed in the commit.\n"
         f"- Package app: {_APP_SUMMARY}\n"
         f"- File README.md: {_README_SUMMARY}\n"
         "\n"
