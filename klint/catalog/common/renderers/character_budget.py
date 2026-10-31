@@ -4,21 +4,27 @@ from collections.abc import Sequence
 
 
 def join_lines_within_budget(
-    lines: Sequence[str], character_budget: int, what_lines_describe: str
+    lines: Sequence[str],
+    character_budget: int,
+    what_lines_describe: str,
+    stated_budget: int | None = None,
 ) -> str:
     """Join ``lines`` into a text of at most ``character_budget`` characters.
 
     When they do not all fit, the leading lines that fit are kept and a
     last line says how many lines of ``what_lines_describe``, such as "the
     file", were left out. A first line too long to fit is cut, and the last
-    line says so too.
+    line says so too. The last line names ``stated_budget`` as the budget
+    kept to, ``character_budget`` unless given: the budget of a longer text
+    the lines are part of.
     """
     text = "\n".join(lines)
     if len(text) <= character_budget:
         return text
+    named_budget = character_budget if stated_budget is None else stated_budget
     # The longest last line there can be: every line left out.
     longest_trimming_line = _format_trimming_line(
-        len(lines), what_lines_describe, character_budget, is_first_line_cut=True
+        len(lines), what_lines_describe, named_budget, is_first_line_cut=True
     )
     room = character_budget - len(longest_trimming_line)
     kept_length = 0
@@ -34,14 +40,14 @@ def join_lines_within_budget(
         trimming_line = _format_trimming_line(
             len(lines) - 1,
             what_lines_describe,
-            character_budget,
+            named_budget,
             is_first_line_cut=True,
         )
         return f"{first_line_part}\n{trimming_line}"[:character_budget]
     trimming_line = _format_trimming_line(
         len(lines) - kept_count,
         what_lines_describe,
-        character_budget,
+        named_budget,
         is_first_line_cut=False,
     )
     return "\n".join([*lines[:kept_count], trimming_line])[:character_budget]

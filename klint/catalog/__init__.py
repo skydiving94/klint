@@ -2,6 +2,7 @@
 
 from injector import Binder, Module
 
+from klint.catalog.change_summary import ChangeSummarySuiteModule
 from klint.catalog.code import CodeSuiteModule
 from klint.catalog.common import DomainNeutralSuiteModule
 
@@ -12,3 +13,4 @@ class BuiltInSuitesModule(Module):
     def configure(self, binder: Binder) -> None:
         binder.install(DomainNeutralSuiteModule())
         binder.install(CodeSuiteModule())
+        binder.install(ChangeSummarySuiteModule())
