@@ -23,14 +23,17 @@ class AuditRequest:
     audit_input is what to audit, such as a path on disk or content in
     memory, and audit_kind_id names the kind of audit, as a suite offers it.
     The rules of custom_rule_source, when given, merge over the loaded
-    ones. scan_progress_listener is told about each directory as it is
-    scanned. audit_progress_listener is told when the audit of the units
-    starts, and about each unit as its audit ends.
+    ones. A problem counts in the roll-up statuses only with at least
+    min_confidence, as for the findings a report selects.
+    scan_progress_listener is told about each directory as it is scanned.
+    audit_progress_listener is told when the audit of the units starts, and
+    about each unit as its audit ends.
     """
 
     audit_input: AuditInput
     audit_kind_id: str
     custom_rule_source: BaseRuleSource | None = None
+    min_confidence: float = 0.0
     scan_progress_listener: BaseScanProgressListener | None = None
     audit_progress_listener: BaseAuditProgressListener | None = None
 
@@ -93,7 +96,9 @@ class AuditPipeline:
         report = await self._unit_auditing.audit_units(
             portfolio, audit_kind, request.audit_progress_listener
         )
-        report = self._finding_roll_up.roll_up(report)
+        report = self._finding_roll_up.roll_up(
+            report, portfolio.units, request.min_confidence
+        )
         return AuditOutcome(
             report=self._finding_ranking.rank_findings(report, audit_kind),
             scanned_file_count=portfolio.scanned_file_count,

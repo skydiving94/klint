@@ -203,6 +203,7 @@ class AuditCommandApp:
                     path=arguments.rules_source.resolve(), is_required=True
                 )
             ),
+            min_confidence=arguments.min_confidence,
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress
             ),
@@ -236,6 +237,12 @@ class AuditCommandApp:
                 json.dumps(
                     {
                         command.json_key: report.audited_unit_ids(),
+                        "unit_id_to_roll_up_status": {
+                            unit_id: status.value
+                            for unit_id, status in (
+                                report.map_unit_id_to_roll_up_status().items()
+                            )
+                        },
                         "findings": [finding.convert_to_dict() for finding in findings],
                     },
                     indent=2,
@@ -247,6 +254,7 @@ class AuditCommandApp:
                     findings,
                     scanned_file_count=outcome.scanned_file_count,
                     audited_unit_count=len(outcome.selected_unit_ids),
+                    unit_id_to_roll_up_status=report.map_unit_id_to_roll_up_status(),
                 )
             )
         failures = report.select_findings(min_confidence=arguments.min_confidence)

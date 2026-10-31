@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 
 from klint.core.models.json_value import JsonValue
 from klint.core.models.location import Location
+from klint.core.models.roll_up_status import RollUpStatus
 from klint.core.models.scale import AnswerChoice
 from klint.core.models.unit import UnitContext
 
@@ -59,10 +61,16 @@ def _convert_location_to_dict(location: Location | None) -> JsonValue:
 
 @dataclass
 class AuditReport:
-    """What an audit found: the units it audited and the findings on them."""
+    """What an audit found: the units it audited and the findings on them.
+
+    It also records the unit each unit is nested directly inside, and, once
+    the findings are rolled up, each audited unit's roll-up status.
+    """
 
     _findings: list[AuditFinding] = field(default_factory=list)
     _audited_unit_ids: list[str] = field(default_factory=list)
+    _unit_id_to_parent_unit_id: dict[str, str] = field(default_factory=dict)
+    _unit_id_to_roll_up_status: dict[str, RollUpStatus] = field(default_factory=dict)
 
     def record(self, finding: AuditFinding) -> None:
         self._findings.append(finding)
@@ -70,6 +78,52 @@ class AuditReport:
     def record_audited_unit(self, unit_id: str) -> None:
         """Take note that the unit ``unit_id`` was audited without error."""
         self._audited_unit_ids.append(unit_id)
+
+    def record_unit_parent(self, unit_id: str, parent_unit_id: str) -> None:
+        """Take note that the unit ``unit_id`` is nested in ``parent_unit_id``."""
+        self._unit_id_to_parent_unit_id[unit_id] = parent_unit_id
+
+    def find_parent_unit_id(self, unit_id: str) -> str | None:
+        """Return the unit ``unit_id`` is nested directly inside; None if none."""
+        return self._unit_id_to_parent_unit_id.get(unit_id)
+
+    def record_roll_up_status(self, unit_id: str, status: RollUpStatus) -> None:
+        """Take note of the roll-up status of the audited unit ``unit_id``."""
+        self._unit_id_to_roll_up_status[unit_id] = status
+
+    def find_roll_up_status(self, unit_id: str) -> RollUpStatus:
+        """Return the roll-up status of the audited unit ``unit_id``.
+
+        Raises ValueError when none is recorded for it: the unit was not
+        audited, or the findings have not been rolled up.
+        """
+        status = self._unit_id_to_roll_up_status.get(unit_id)
+        if status is None:
+            raise ValueError(f"No roll-up status is recorded for unit '{unit_id}'")
+        return status
+
+    def map_unit_id_to_roll_up_status(self) -> dict[str, RollUpStatus]:
+        """Return the roll-up status of each audited unit, in audited order.
+
+        A unit with no status recorded is left out.
+        """
+        return {
+            unit_id: self._unit_id_to_roll_up_status[unit_id]
+            for unit_id in self._audited_unit_ids
+            if unit_id in self._unit_id_to_roll_up_status
+        }
+
+    def copy_with_findings(self, findings: Sequence[AuditFinding]) -> "AuditReport":
+        """Return a copy of this report that holds ``findings`` instead of its own.
+
+        The audited units, their parents and their roll-up statuses are kept.
+        """
+        return AuditReport(
+            _findings=list(findings),
+            _audited_unit_ids=list(self._audited_unit_ids),
+            _unit_id_to_parent_unit_id=dict(self._unit_id_to_parent_unit_id),
+            _unit_id_to_roll_up_status=dict(self._unit_id_to_roll_up_status),
+        )
 
     def audited_unit_ids(self) -> list[str]:
         """Return the IDs of the units audited without error, in recorded order."""
