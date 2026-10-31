@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
+from klint.core.models.location import Location
 from klint.core.models.report import AuditFinding
 from klint.core.models.roll_up_status import RollUpStatus
 from klint.core.models.scale import AnswerChoice
@@ -145,17 +146,28 @@ def _format_roll_up_badge(status: RollUpStatus | None) -> str:
     return f" {_ROLL_UP_STATUS_TO_STYLE[status]}[{label}]{_ANSI.RESET}"
 
 
+def _format_evidence_suffix(evidence_location: Location | None) -> str:
+    """Return where a finding's evidence sits, as shown after its rule; may be ""."""
+    if evidence_location is None:
+        return ""
+    line_range = evidence_location.line_range
+    lines = "" if line_range is None else f" lines {line_range[0]}-{line_range[1]}"
+    return f" {_ANSI.DIM}(evidence: {evidence_location.source}{lines}){_ANSI.RESET}"
+
+
 def format_audit_report(
     findings: Sequence[AuditFinding],
     scanned_file_count: int,
     audited_unit_count: int,
+    no_problems_message: str,
     unit_id_to_roll_up_status: Mapping[str, RollUpStatus] | None = None,
 ) -> str:
     """Return the terminal report of ``findings``, grouped by unit.
 
     Each unit shown carries its roll-up status from
     ``unit_id_to_roll_up_status``. A unit with no finding shown is shown too
-    when a problem was found on a unit nested in it.
+    when a problem was found on a unit nested in it. With no finding to
+    show, the report says ``no_problems_message``.
     """
     unit_id_to_roll_up_status = unit_id_to_roll_up_status or {}
     divider = "\u2500" * 72
@@ -169,8 +181,7 @@ def format_audit_report(
 
     if not findings:
         lines.append(
-            f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 No architectural or semantic issues "
-            f"found.{_ANSI.RESET}\n"
+            f"{_ANSI.BOLD}{_ANSI.GREEN}\u2714 {no_problems_message}{_ANSI.RESET}\n"
         )
         return "\n".join(lines)
 
@@ -207,6 +218,7 @@ def format_audit_report(
                 loc_suffix = (
                     f" {_ANSI.DIM}(lines {line_range[0]}-{line_range[1]}){_ANSI.RESET}"
                 )
+            loc_suffix += _format_evidence_suffix(finding.evidence_location)
 
             lines.append(
                 f"  {_format_badge(finding.answer)} "

@@ -33,7 +33,8 @@ class AuditCommand:
     name is what the user types and description is shown in the help.
     target_argument_name and target_argument_help describe the path to audit.
     audit_kind_id names the kind of audit the command asks for, and json_key
-    is the key the audited units are listed under in JSON output.
+    is the key the audited units are listed under in JSON output. The
+    terminal report says no_problems_message when it has no finding to show.
     """
 
     name: str
@@ -42,6 +43,7 @@ class AuditCommand:
     target_argument_help: str
     audit_kind_id: str
     json_key: str
+    no_problems_message: str = "No architectural or semantic issues found."
 
 
 @dataclass(frozen=True)
@@ -145,10 +147,7 @@ def parse_command_arguments(
     parser.add_argument(
         "--all",
         action="store_true",
-        help=(
-            "Output all judgments (Pass, Fail, Irrelevant, Lack of Evidence) "
-            "instead of fails only"
-        ),
+        help="Output every judgment, not only the problems",
     )
     parser.add_argument(
         "--min-confidence",
@@ -254,6 +253,7 @@ class AuditCommandApp:
                     findings,
                     scanned_file_count=outcome.scanned_file_count,
                     audited_unit_count=len(outcome.selected_unit_ids),
+                    no_problems_message=command.no_problems_message,
                     unit_id_to_roll_up_status=report.map_unit_id_to_roll_up_status(),
                 )
             )
