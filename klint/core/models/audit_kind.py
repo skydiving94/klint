@@ -1,7 +1,7 @@
 """One kind of audit a suite offers."""
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from klint.core.interfaces.extractor import BaseUnitExtractor
@@ -16,7 +16,6 @@ from klint.core.models.audit_order import AuditOrder
 from klint.core.models.render_input import DEFAULT_CHARACTER_BUDGET
 from klint.core.models.scale import AnswerScale
 from klint.core.models.unit import AuditableUnit
-from klint.core.unit_content_renderer import UnitContentRenderer
 
 # What the source reads an audit input into, and the extractor takes.
 InputT = TypeVar("InputT")
@@ -56,11 +55,11 @@ class AuditKind:
     kind_id names the kind in a request. accepted_input_kinds are the forms
     of input the kind takes. unit_source reads an input and gives its units,
     and rule_loader loads the rules asked about them. The judge answers each
-    rule on answer_scale. ranked_tags are the rule tags whose findings a
-    report lists first, most important first. audit_order is the order in
-    which the units are judged. unit_class_to_renderer gives the renderer
-    that writes what the judge reads about the units of each class, in at
-    most character_budget characters.
+    rule on answer_scale, reading what unit_class_to_renderer gives as the
+    renderer for each class of unit writes, in at most character_budget
+    characters. ranked_tags are the rule tags whose findings a report lists
+    first, most important first. audit_order is the order in which the
+    units are judged.
     """
 
     kind_id: str
@@ -68,11 +67,9 @@ class AuditKind:
     unit_source: BaseUnitSource
     rule_loader: BaseRuleLoader
     answer_scale: AnswerScale
+    unit_class_to_renderer: Mapping[type[AuditableUnit], BaseUnitRenderer]
     ranked_tags: tuple[str, ...] = ()
     audit_order: AuditOrder = AuditOrder.ALL_AT_ONCE
-    unit_class_to_renderer: Mapping[type[AuditableUnit], BaseUnitRenderer] = field(
-        default_factory=lambda: {AuditableUnit: UnitContentRenderer()}
-    )
     character_budget: int = DEFAULT_CHARACTER_BUDGET
 
     def __post_init__(self) -> None:

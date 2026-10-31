@@ -63,9 +63,6 @@ class OutlineSectionUnit(AuditableUnit):
     text: str = ""
     sections: tuple["OutlineSectionUnit", ...] = ()
 
-    def get_content(self) -> str:
-        return self.text
-
     def children(self) -> Sequence[AuditableUnit]:
         return self.sections
 

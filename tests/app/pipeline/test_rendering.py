@@ -1,16 +1,36 @@
 """What the judge reads about each unit, as the renderers of its kind write it."""
 
+import asyncio
+import json
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from injector import Binder
 
 from klint.app.audit_kind_registry import AuditKindRegistry
+from klint.app.pipeline.audit_pipeline import AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.cli.wiring import create_command_injector
-from tests.support.builders import list_judge_subjects, make_settings, write_text
-from tests.support.fakes import SubjectJudge
-from tests.support.outline_suite import SUMMARIZED_OUTLINE_KIND_ID, run_outline_audit
+from klint.core.interfaces.suite import BaseSuite
+from klint.core.models.audit_input import InMemoryBytesInput
+from klint.core.models.audit_kind import AuditKind
+from tests.support.builders import (
+    build_audit_pipeline,
+    list_judge_subjects,
+    make_settings,
+    write_text,
+)
+from tests.support.fakes import FakeJudge, SubjectJudge
+from tests.support.outline_suite import (
+    OUTLINE,
+    SUMMARIZED_OUTLINE_KIND_ID,
+    OutlineSuite,
+    run_outline_audit,
+)
+
+UNRENDERED_OUTLINE_KIND_ID = "unrendered_outline"
 
 
 def _map_first_line_to_subject(judge: SubjectJudge) -> dict[str, str]:
@@ -137,3 +157,38 @@ def test_line_too_long_for_the_budget_is_cut(tmp_path: Path) -> None:
     assert len(subject) <= 2000
     assert content.startswith(first_line)
     assert "the rest of the line above and 2 more lines" in trimming_line
+
+
+class UnrenderedOutlineSuite(OutlineSuite):
+    """Offers the outline audit with no renderer for its sections."""
+
+    def list_audit_kinds(self) -> list[AuditKind]:
+        outline_kind, *_ = super().list_audit_kinds()
+        return [
+            replace(
+                outline_kind,
+                kind_id=UNRENDERED_OUTLINE_KIND_ID,
+                unit_class_to_renderer={},
+            )
+        ]
+
+
+def test_kind_with_no_renderer_for_a_unit_fails_before_the_judge_is_asked(
+    fake_judge: type[FakeJudge],
+) -> None:
+    judge = fake_judge()
+
+    def add_the_unrendered_outline_suite(binder: Binder) -> None:
+        binder.multibind(list[BaseSuite], to=[UnrenderedOutlineSuite])
+
+    pipeline = build_audit_pipeline(judge, overrides=[add_the_unrendered_outline_suite])
+    request = AuditRequest(
+        audit_input=InMemoryBytesInput(
+            content=json.dumps(OUTLINE).encode(), media_type="application/json"
+        ),
+        audit_kind_id=UNRENDERED_OUTLINE_KIND_ID,
+    )
+
+    with pytest.raises(ValueError, match="no renderer for OutlineSectionUnit units"):
+        asyncio.run(pipeline.run_audit(request))
+    assert judge.requests == []

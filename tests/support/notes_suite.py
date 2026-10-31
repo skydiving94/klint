@@ -70,9 +70,6 @@ class NoteUnit(AuditableUnit):
 
     text: str = ""
 
-    def get_content(self) -> str:
-        return self.text
-
 
 class NoteRenderer(BaseUnitRenderer):
     """Shows the judge the text of a note."""

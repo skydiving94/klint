@@ -16,9 +16,6 @@ class AuditableFileUnit(AuditableUnit):
     start_line: int | None = None
     end_line: int | None = None
 
-    def get_content(self) -> str:
-        return self.content
-
     def get_location(self) -> Location | None:
         return Location(
             source=self.file_path or self.unit_id,
