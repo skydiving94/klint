@@ -6,7 +6,8 @@ The suites an audit draws on are added by the caller; each one binds what
 it needs itself.
 """
 
-from collections.abc import Callable, Mapping, Sequence
+import warnings
+from collections.abc import Callable, Mapping, Sequence, Set
 from dataclasses import replace
 from pathlib import Path
 from typing import NewType, assert_never
@@ -19,12 +20,20 @@ from klint.app.settings import AppSettings
 from klint.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
+from klint.catalog.common.file_traits_identifiers.overriding_identifier import (
+    OverridingFileTraitsIdentifier,
+)
+from klint.catalog.common.file_traits_identifiers.tag_detecting_identifier import (
+    TagDetectingFileTraitsIdentifier,
+)
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.suite import BaseSuite
+from klint.core.klint_warning import KlintWarning
 from klint.core.models.audit_kind import AuditKind
+from klint.core.models.file_traits_override import FileTraitsOverride
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
@@ -32,6 +41,7 @@ from klint.infra.language_to_file_extensions_loader.json_loader import (
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
 from klint.infra.system_one.remote import RemoteSystemOneJudge
+from klint.infra.tag_detection_loader.json_loader import load_tag_detection_table
 
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
@@ -98,9 +108,20 @@ class KlintModule(Module):
     @singleton
     @provider
     def provide_file_traits_identifier(
-        self, file_extension_to_language: FileExtensionToLanguage
+        self, settings: AppSettings, file_extension_to_language: FileExtensionToLanguage
     ) -> BaseFileTraitsIdentifier:
-        return ExtensionFileTraitsIdentifier(file_extension_to_language)
+        # The language from the extension and the tags the file shows, then
+        # what the project's klint.json says over them.
+        _warn_about_unknown_override_languages(
+            settings.file_traits_overrides, set(file_extension_to_language.values())
+        )
+        return OverridingFileTraitsIdentifier(
+            TagDetectingFileTraitsIdentifier(
+                ExtensionFileTraitsIdentifier(file_extension_to_language),
+                load_tag_detection_table(settings.tag_detection_path),
+            ),
+            settings.file_traits_overrides,
+        )
 
     @singleton
     @provider
@@ -157,6 +178,22 @@ class KlintModule(Module):
                 for audit_kind in suite.list_audit_kinds()
             ]
         )
+
+
+def _warn_about_unknown_override_languages(
+    file_traits_overrides: Sequence[FileTraitsOverride], known_languages: Set[str]
+) -> None:
+    """Warn about each override that names a language no file is identified as."""
+    for override in file_traits_overrides:
+        if override.language is not None and override.language not in known_languages:
+            warnings.warn(
+                f"The file_traits entry for '{override.glob}' names unknown "
+                f"language '{override.language}', so no pack limited to "
+                f"languages loads for its files; known languages: "
+                f"{sorted(known_languages)}",
+                KlintWarning,
+                stacklevel=2,
+            )
 
 
 def _create_rule_sources(rule_packs: Sequence[Path]) -> list[BaseRuleSource]:

@@ -4,8 +4,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
-from klint.catalog.common.extraction.binary_check import is_likely_binary
 from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.common.extraction.file_start import is_binary_start, read_file_start
+from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit_traits import UnitTraits
 
@@ -26,35 +27,44 @@ class TraitsBasedExtractionDelegator(Generic[ExtractorT]):
 
     A kind of audit gives it the extractor for each language it handles and
     the fallback for any other language, or none; it builds none of them
-    itself. Languages are matched whatever their case. A file is checked
-    here, once, for being binary, and its extractor is told.
+    itself. Languages are matched whatever their case. The start of a file
+    is read here, once: its extractor is told whether the file is binary,
+    and file_traits_identifier, when given, tells from the start of a text
+    file what its path could not.
     """
 
     def __init__(
         self,
         language_to_extractor: Mapping[str, ExtractorT],
         fallback_extractor: ExtractorT,
+        file_traits_identifier: BaseFileTraitsIdentifier | None = None,
     ) -> None:
         self._language_to_extractor = {
             language.lower(): extractor
             for language, extractor in language_to_extractor.items()
         }
         self._fallback_extractor = fallback_extractor
+        self._file_traits_identifier = file_traits_identifier
 
     def dispatch_file(self, scanned_file: ScannedFile) -> FileDispatch[ExtractorT]:
         """Return the extractor for ``scanned_file``, and the file as it takes it.
 
-        The file is checked for being binary, reading only its start. Raises
-        OSError when it cannot be read.
+        Only the start of the file is read. Raises OSError when it cannot be
+        read.
         """
-        dispatched_file = DispatchedFile(
-            path=scanned_file.path,
-            traits=scanned_file.traits,
-            is_binary=is_likely_binary(scanned_file.path),
-        )
+        path = scanned_file.path
+        file_start = read_file_start(path)
+        is_binary = is_binary_start(file_start)
+        traits = scanned_file.traits
+        if not is_binary and self._file_traits_identifier is not None:
+            traits = self._file_traits_identifier.identify_from_file_start(
+                path, traits, file_start.decode("utf-8", errors="replace")
+            )
         return FileDispatch(
-            extractor=self.select_extractor(scanned_file.traits),
-            dispatched_file=dispatched_file,
+            extractor=self.select_extractor(traits),
+            dispatched_file=DispatchedFile(
+                path=path, traits=traits, is_binary=is_binary
+            ),
         )
 
     def select_extractor(self, traits: UnitTraits) -> ExtractorT:

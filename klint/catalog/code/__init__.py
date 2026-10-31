@@ -137,11 +137,15 @@ class CodeSuiteModule(Module):
 
     @provider
     def provide_file_contents_extractor(
-        self, language_to_unit_extractor: dict[str, BaseUnitExtractor[DispatchedFile]]
+        self,
+        language_to_unit_extractor: dict[str, BaseUnitExtractor[DispatchedFile]],
+        file_traits_identifier: BaseFileTraitsIdentifier,
     ) -> FileContentsExtractor:
         return FileContentsExtractor(
             TraitsBasedExtractionDelegator(
-                language_to_unit_extractor, fallback_extractor=WholeFileExtractor()
+                language_to_unit_extractor,
+                fallback_extractor=WholeFileExtractor(),
+                file_traits_identifier=file_traits_identifier,
             )
         )
 
@@ -150,11 +154,13 @@ class CodeSuiteModule(Module):
         self,
         language_to_file_metadata_extractor: dict[str, BaseFileMetadataExtractor],
         language_to_directory_unit_factory: dict[str, BaseDirectoryUnitFactory],
+        file_traits_identifier: BaseFileTraitsIdentifier,
     ) -> RecursiveProjectExtractor:
         return RecursiveProjectExtractor(
             TraitsBasedExtractionDelegator(
                 language_to_file_metadata_extractor,
                 fallback_extractor=LanguageNeutralFileMetadataExtractor(),
+                file_traits_identifier=file_traits_identifier,
             ),
             TraitsBasedExtractionDelegator(
                 language_to_directory_unit_factory,
