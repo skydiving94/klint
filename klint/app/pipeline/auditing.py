@@ -24,14 +24,16 @@ class UnitAuditing:
     ) -> AuditReport:
         """Audit every unit of ``portfolio`` for ``audit_kind``; return the report.
 
-        The judge answers on the kind's scale. A unit whose audit fails is
-        left out of the report and the others go on. The listener, when
+        The judge answers on the kind's scale, in the kind's audit order. A
+        unit whose audit fails is left out of the report and the others go
+        on. The listener, when
         given, is told when the audit starts and about each unit as its audit
         ends.
         """
         return await self._auditor.audit(
             portfolio.units,
-            portfolio.language_to_rules,
+            portfolio.rule_set,
             audit_kind.answer_scale,
             audit_progress_listener,
+            audit_order=audit_kind.audit_order,
         )

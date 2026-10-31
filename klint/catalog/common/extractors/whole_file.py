@@ -7,14 +7,14 @@ from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit import AuditableUnit
 
 
-class WholeFileExtractor(BaseUnitExtractor):
+class WholeFileExtractor(BaseUnitExtractor[ScannedFile]):
     """Reads a whole file as one unit, in the language its traits give.
 
     A binary file gives no unit.
     """
 
-    async def extract(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
-        return await asyncio.to_thread(self._read_file_sync, scanned_file)
+    async def extract(self, audit_input: ScannedFile) -> list[AuditableUnit]:
+        return await asyncio.to_thread(self._read_file_sync, audit_input)
 
     def _read_file_sync(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
         path = scanned_file.path
@@ -25,7 +25,7 @@ class WholeFileExtractor(BaseUnitExtractor):
         return [
             AuditableFileUnit(
                 unit_id=str(path),
-                language=scanned_file.traits.language,
+                traits=scanned_file.traits,
                 content=content,
                 file_path=str(path),
                 start_line=1,

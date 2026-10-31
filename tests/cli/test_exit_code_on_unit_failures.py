@@ -107,6 +107,10 @@ def test_run_with_no_unit_to_audit_exits_0(
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert json.loads(captured.out) == {command.json_key: [], "findings": []}
+    assert json.loads(captured.out) == {
+        command.json_key: [],
+        "unit_id_to_roll_up_status": {},
+        "findings": [],
+    }
     assert captured.err == ""
     assert judge.requests == []

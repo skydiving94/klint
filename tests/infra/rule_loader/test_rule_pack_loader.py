@@ -1,4 +1,4 @@
-"""Loading, merging and validating rule packs, chosen by the traits of files."""
+"""Loading, merging and validating rule packs, chosen by the traits of units."""
 
 import asyncio
 import json
@@ -9,11 +9,12 @@ from typing import Any
 import pytest
 
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.file_traits import FileTraits
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
+from klint.core.models.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
-from klint.infra.rule_loader.json_rule_loader import JsonRuleLoader
+from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
+from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -29,32 +30,45 @@ from tests.support.paths import (
     REACT_RULE_PACK,
 )
 
-PYTHON = FileTraits(language="python")
-TYPESCRIPT = FileTraits(language="typescript")
-JAVA = FileTraits(language="java")
-UNIDENTIFIED = FileTraits(language=None)
+PYTHON = UnitTraits(language="python")
+TYPESCRIPT = UnitTraits(language="typescript")
+JAVA = UnitTraits(language="java")
+UNIDENTIFIED = UnitTraits(language=None)
 # The languages a file can be identified as, for the packs written here.
 TEST_PACK_LANGUAGES = frozenset({"python", "typescript", "javascript", "java", "go"})
+
+
+def _sources(rule_packs: Sequence[Path]) -> list[JsonFileRuleSource]:
+    return [JsonFileRuleSource(path) for path in rule_packs]
 
 
 def _loader(
     rule_packs: Sequence[Path],
     fallback_rule_packs: Sequence[Path] = (),
     known_languages: Collection[str] = TEST_PACK_LANGUAGES,
-) -> JsonRuleLoader:
-    return JsonRuleLoader(
-        rule_packs, fallback_rule_packs, UNIT_REGISTRY, known_languages
+    project_rule_packs: Sequence[Path] = (),
+    unit_registry: UnitRegistry = UNIT_REGISTRY,
+) -> RulePackLoader:
+    return RulePackLoader(
+        _sources(rule_packs),
+        _sources(fallback_rule_packs),
+        unit_registry,
+        known_languages,
+        _sources(project_rule_packs),
     )
 
 
-def _built_in_loader() -> JsonRuleLoader:
+def _built_in_loader() -> RulePackLoader:
     return _loader(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS, KNOWN_LANGUAGES)
 
 
 def _load(
-    loader: JsonRuleLoader, traits: FileTraits = PYTHON, custom: Path | None = None
+    loader: RulePackLoader, traits: UnitTraits = PYTHON, custom: Path | None = None
 ) -> dict[str, AuditRule]:
-    rules = asyncio.run(loader.load_rules(traits, custom))
+    custom_rule_source = (
+        None if custom is None else JsonFileRuleSource(custom, is_required=True)
+    )
+    rules = asyncio.run(loader.load_rules(traits, custom_rule_source))
     return {rule.rule_id: rule for rule in rules}
 
 
@@ -273,7 +287,7 @@ def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
 
 @pytest.mark.parametrize("traits", [PYTHON, UNIDENTIFIED])
 def test_custom_rules_merge_whatever_the_traits(
-    tmp_path: Path, traits: FileTraits
+    tmp_path: Path, traits: UnitTraits
 ) -> None:
     pack = write_json(tmp_path / "pack.json", {"for_code": FILE_RULE})
     fallback = write_json(tmp_path / "fallback.json", {"for_prose": FILE_RULE})
@@ -379,7 +393,7 @@ def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_
         tmp_path / "custom.json",
         {"project_only": {**FILE_RULE, "instructions": "From --rules?"}},
     )
-    loader = JsonRuleLoader([pack], [], UNIT_REGISTRY, TEST_PACK_LANGUAGES, [project])
+    loader = _loader([pack], project_rule_packs=[project])
 
     python_rules = _load(loader, PYTHON, custom)
     java_rules = _load(loader, JAVA)
@@ -475,7 +489,7 @@ def test_malformed_rule_in_a_pack_that_is_not_chosen_stops_nothing(
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE})
 
-    with pytest.raises(FileNotFoundError, match="Custom rules file does not exist"):
+    with pytest.raises(FileNotFoundError, match="Rules file does not exist"):
         _load(_loader([pack]), custom=tmp_path / "absent.json")
 
 
@@ -567,7 +581,7 @@ def test_rule_loading_only_accepts_registered_unit_types(tmp_path: Path) -> None
     pack = write_json(
         tmp_path / "pack.json", {"a": {**FILE_RULE, "target_unit_types": ["file"]}}
     )
-    loader = JsonRuleLoader([pack], [], UnitRegistry(), TEST_PACK_LANGUAGES)
+    loader = _loader([pack], unit_registry=UnitRegistry())
 
     with pytest.raises(ValueError, match="unknown target_unit_types"):
         asyncio.run(loader.load_rules(PYTHON))

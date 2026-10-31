@@ -32,18 +32,15 @@ class FindingRanking:
                 default=len(tag_to_rank),
             )
 
-        ranked_report = AuditReport()
-        for unit_id in report.audited_unit_ids():
-            ranked_report.record_audited_unit(unit_id)
-        for finding in sorted(
-            findings,
-            key=lambda finding: (
-                unit_id_to_rank[finding.unit_id],
-                finding.answer.sort_rank,
-                find_tag_rank(finding),
-                -(finding.confidence if finding.confidence is not None else -1.0),
-                finding.rule_id,
-            ),
-        ):
-            ranked_report.record(finding)
-        return ranked_report
+        return report.copy_with_findings(
+            sorted(
+                findings,
+                key=lambda finding: (
+                    unit_id_to_rank[finding.unit_id],
+                    finding.answer.sort_rank,
+                    find_tag_rank(finding),
+                    -(finding.confidence if finding.confidence is not None else -1.0),
+                    finding.rule_id,
+                ),
+            )
+        )

@@ -9,6 +9,7 @@ from injector import Binder
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
 from klint.core.interfaces.suite import BaseSuite
+from klint.core.models.audit_input import DiskPathInput
 from klint.core.models.audit_kind import AuditKind
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
@@ -65,7 +66,9 @@ def _run_audit(
     pipeline = build_audit_pipeline(
         judge, settings, overrides=[add_the_ranked_notes_suite]
     )
-    request = AuditRequest(target=target, audit_kind_id=audit_kind_id)
+    request = AuditRequest(
+        audit_input=DiskPathInput(target), audit_kind_id=audit_kind_id
+    )
     return asyncio.run(pipeline.run_audit(request))
 
 

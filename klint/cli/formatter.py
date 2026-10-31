@@ -1,10 +1,11 @@
 import sys
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.report import AuditFinding
+from klint.core.models.roll_up_status import RollUpStatus
 from klint.core.models.scale import AnswerChoice
 
 
@@ -129,11 +130,34 @@ def _format_confidence_bar(
     return f"{color}{bar}{_ANSI.RESET} {_ANSI.BOLD}{pct}{_ANSI.RESET}"
 
 
+_ROLL_UP_STATUS_TO_STYLE = {
+    RollUpStatus.OWN_PROBLEM: _ANSI.BOLD + _ANSI.RED,
+    RollUpStatus.DESCENDANT_PROBLEM: _ANSI.BOLD + _ANSI.YELLOW,
+    RollUpStatus.NO_PROBLEM: _ANSI.GREEN,
+}
+
+
+def _format_roll_up_badge(status: RollUpStatus | None) -> str:
+    """Return the badge of a unit's roll-up status; none for a unit with none."""
+    if status is None:
+        return ""
+    label = status.value.replace("_", " ").upper()
+    return f" {_ROLL_UP_STATUS_TO_STYLE[status]}[{label}]{_ANSI.RESET}"
+
+
 def format_audit_report(
     findings: Sequence[AuditFinding],
     scanned_file_count: int,
     audited_unit_count: int,
+    unit_id_to_roll_up_status: Mapping[str, RollUpStatus] | None = None,
 ) -> str:
+    """Return the terminal report of ``findings``, grouped by unit.
+
+    Each unit shown carries its roll-up status from
+    ``unit_id_to_roll_up_status``. A unit with no finding shown is shown too
+    when a problem was found on a unit nested in it.
+    """
+    unit_id_to_roll_up_status = unit_id_to_roll_up_status or {}
     divider = "\u2500" * 72
     lines: list[str] = []
     lines.append(
@@ -156,11 +180,26 @@ def format_audit_report(
 
     fail_count = sum(1 for finding in findings if finding.is_problem())
 
-    for unit_id, unit_findings in grouped.items():
+    # Units in audited order, then any others with findings in theirs.
+    shown_unit_ids = dict.fromkeys(
+        [
+            unit_id
+            for unit_id, status in unit_id_to_roll_up_status.items()
+            if unit_id in grouped or status is RollUpStatus.DESCENDANT_PROBLEM
+        ]
+        + list(grouped)
+    )
+    for unit_id in shown_unit_ids:
         lines.append(
             f"\n{_ANSI.BOLD}Target:{_ANSI.RESET} {_ANSI.CYAN}{unit_id}{_ANSI.RESET}"
+            f"{_format_roll_up_badge(unit_id_to_roll_up_status.get(unit_id))}"
         )
-        for finding in unit_findings:
+        if unit_id not in grouped:
+            lines.append(
+                f"      {_ANSI.DIM}\u21b3 A problem was found in a unit nested in "
+                f"it{_ANSI.RESET}"
+            )
+        for finding in grouped.get(unit_id, []):
             line_range = finding.location.line_range if finding.location else None
 
             loc_suffix = ""

@@ -64,7 +64,11 @@ def test_both_commands_take_the_same_options(
     assert [(i["rule_id"], i["answer"]) for i in every_judgment["findings"]] == [
         (rule_id, "Pass")
     ]
-    assert confident_judgments == {command.json_key: [audited], "findings": []}
+    assert confident_judgments == {
+        command.json_key: [audited],
+        "unit_id_to_roll_up_status": {audited: "no_problem"},
+        "findings": [],
+    }
 
 
 @pytest.mark.parametrize(

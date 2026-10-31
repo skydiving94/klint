@@ -110,8 +110,14 @@ def test_min_confidence_hides_low_confidence_findings(
     _run(app, target, "--json", "--min-confidence", "0.3")
     below_confidence = _json_output(capsys)
 
-    assert above_confidence == {"examined_files": [str(target)], "findings": []}
+    # A problem below the least confidence does not count in the roll-up either.
+    assert above_confidence == {
+        "examined_files": [str(target)],
+        "unit_id_to_roll_up_status": {str(target): "no_problem"},
+        "findings": [],
+    }
     assert below_confidence["findings"]
+    assert below_confidence["unit_id_to_roll_up_status"] == {str(target): "own_problem"}
 
 
 def test_pack_for_some_languages_is_asked_only_about_files_in_them(
@@ -308,15 +314,17 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     assert len(judge.requests) == 1
 
 
-class BrokenExtractor(BaseUnitExtractor):
+class BrokenExtractor(BaseUnitExtractor[ScannedFile]):
     """Fails on every file, for a reason other than reading it."""
 
-    async def extract(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
-        raise RuntimeError(f"the extractor is broken on {scanned_file.path.name}")
+    async def extract(self, audit_input: ScannedFile) -> list[AuditableUnit]:
+        raise RuntimeError(f"the extractor is broken on {audit_input.path.name}")
 
 
 def use_the_broken_extractor_for_python(binder: Binder) -> None:
-    binder.multibind(dict[str, BaseUnitExtractor], to={"python": BrokenExtractor})
+    binder.multibind(
+        dict[str, BaseUnitExtractor[ScannedFile]], to={"python": BrokenExtractor}
+    )
 
 
 def test_file_an_extractor_fails_on_is_left_out_with_a_warning(
@@ -352,7 +360,11 @@ def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
     exit_code = _run(_file_app(judge), named_pipe, "--json")
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert _json_output(capsys) == {"examined_files": [], "findings": []}
+    assert _json_output(capsys) == {
+        "examined_files": [],
+        "unit_id_to_roll_up_status": {},
+        "findings": [],
+    }
     assert judge.requests == []
 
 
@@ -438,7 +450,7 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert _run(app, tmp_path / "absent.py") == ExitCode.RUN_ERROR
     assert "Audit target does not exist" in capsys.readouterr().err
     assert _run(app, target, "--rules", tmp_path / "absent.json") == ExitCode.RUN_ERROR
-    assert "Custom rules file does not exist" in capsys.readouterr().err
+    assert "Rules file does not exist" in capsys.readouterr().err
     # The command stops before anything is audited.
     assert judge.requests == []
 

@@ -24,7 +24,7 @@ from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import (
     build_target_scanner,
     extract_project,
@@ -35,10 +35,10 @@ from tests.support.builders import (
 class JavaMarkingExtractor(BaseFileMetadataExtractor):
     """Stands in for an extractor of another language; marks what it reads."""
 
-    def extract_file(self, path: Path, traits: FileTraits) -> AuditableFileMetadataUnit:
+    def extract_file(self, path: Path, traits: UnitTraits) -> AuditableFileMetadataUnit:
         return AuditableFileMetadataUnit(
             unit_id=str(path),
-            language=traits.language,
+            traits=traits,
             file_name=path.name,
             file_path=str(path),
             classes=["read as java"],

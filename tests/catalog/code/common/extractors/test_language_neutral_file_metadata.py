@@ -5,7 +5,7 @@ from pathlib import Path
 from klint.catalog.code.common.extractors.language_neutral_file_metadata import (
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.core.models.file_traits import FileTraits
+from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 
@@ -16,7 +16,7 @@ def test_language_neutral_metadata_records_only_name_and_line_count(
         tmp_path / "view.tsx", "import React from 'react';\nexport {};\n"
     )
 
-    traits = FileTraits(language="typescript")
+    traits = UnitTraits(language="typescript")
 
     unit = LanguageNeutralFileMetadataExtractor().extract_file(target, traits)
 

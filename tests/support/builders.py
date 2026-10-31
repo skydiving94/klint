@@ -22,6 +22,7 @@ from klint.catalog.common.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.models import rule_pack
 from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
@@ -179,3 +180,32 @@ def extract_python_project(target: Path) -> AuditablePythonPackageUnit:
     unit = extract_project(target)
     assert isinstance(unit, AuditablePythonPackageUnit)
     return unit
+
+
+def build_rule_pack(
+    origin: str,
+    *rule_ids: str,
+    languages: tuple[str, ...] | None = None,
+    target_unit_types: tuple[str, ...] = ("file",),
+) -> rule_pack.RulePackSpec:
+    """Return a pack of choice rules asking "Is <rule_id> kept?", with no file.
+
+    The pack is limited to ``languages`` when given, and each rule targets
+    ``target_unit_types``.
+    """
+    return rule_pack.RulePackSpec(
+        origin=origin,
+        scope=rule_pack.PackScope(languages=languages),
+        rules=tuple(
+            rule_pack.RuleSpec(
+                rule_id=rule_id,
+                question_type=QuestionType.CHOICE,
+                instructions=f"Is {rule_id} kept?",
+                target_unit_types=target_unit_types,
+                languages=(),
+                tags=(),
+            )
+            for rule_id in rule_ids
+        ),
+        rule_problems=(),
+    )

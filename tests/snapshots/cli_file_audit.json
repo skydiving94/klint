@@ -2,6 +2,9 @@
   "examined_files": [
     "examples/backend_data_and_security.py"
   ],
+  "unit_id_to_roll_up_status": {
+    "examples/backend_data_and_security.py": "own_problem"
+  },
   "findings": [
     {
       "rule_id": "clear_names",

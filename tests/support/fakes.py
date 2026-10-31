@@ -1,11 +1,13 @@
-"""Test doubles that stand in for the model."""
+"""Test doubles that stand in for the model and for rule sources."""
 
 import asyncio
 
 from injector import Module, provider, singleton
 
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.rule_pack import RulePackSpec
 
 
 class FakeJudge(BaseJudge):
@@ -108,3 +110,41 @@ class JudgeOverride(Module):
     @provider
     def provide_judge(self) -> BaseJudge:
         return self._judge
+
+
+class InMemoryRuleSource(BaseRuleSource):
+    """Holds rule packs built in test code; no file is read."""
+
+    def __init__(self, *packs: RulePackSpec) -> None:
+        self._packs = list(packs)
+
+    def read_rule_packs(self) -> list[RulePackSpec]:
+        return list(self._packs)
+
+
+class SubjectJudge(FakeJudge):
+    """Answers every question by the subject asked about.
+
+    A subject in ``subject_to_choice`` gets that choice for every question,
+    any other gets ``default``. A subject in ``refused_subjects`` makes the
+    judge fail, as when it is down.
+    """
+
+    def __init__(
+        self,
+        subject_to_choice: dict[str, str],
+        default: str = "pass",
+        confidence: float = 0.9,
+        refused_subjects: frozenset[str] = frozenset(),
+    ) -> None:
+        super().__init__(default=default, confidence=confidence)
+        self.subject_to_choice = subject_to_choice
+        self.refused_subjects = refused_subjects
+
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+        if request.subject in self.refused_subjects:
+            self.requests.append(request)
+            raise RuntimeError("judge is down")
+        choice = self.subject_to_choice.get(request.subject, self.default)
+        self.choices = {question.question_id: choice for question in request.questions}
+        return await super().answer(request)
