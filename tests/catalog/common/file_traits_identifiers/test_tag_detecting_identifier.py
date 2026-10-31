@@ -155,3 +155,14 @@ def test_import_tags_add_to_the_tags_of_the_path() -> None:
         ).tags
         == BACKEND | FRONTEND
     )
+
+
+def test_glob_with_repeated_folder_wildcards_fails_fast_on_a_long_path() -> None:
+    identifier = TagDetectingFileTraitsIdentifier(
+        ExtensionFileTraitsIdentifier({}),
+        TagDetectionTable(path_glob_to_tags={"**/" * 30 + "api/x": BACKEND}),
+    )
+    deep_path = ROOT.joinpath(*["dir"] * 40, "api", "y")
+
+    assert identifier.identify(deep_path, ROOT).tags == frozenset()
+    assert identifier.identify(ROOT / "a" / "api" / "x", ROOT).tags == BACKEND

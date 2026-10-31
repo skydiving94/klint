@@ -17,6 +17,10 @@ def does_path_match_glob(path: PurePath, glob: str) -> bool:
 
 @cache
 def _compile_glob(glob: str) -> re.Pattern[str]:
+    # "**/**/" means no more than "**/", and a run of them would make the
+    # pattern slow to fail.
+    while "**/**/" in glob:
+        glob = glob.replace("**/**/", "**/")
     pattern_parts: list[str] = []
     index = 0
     while index < len(glob):
