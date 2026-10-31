@@ -54,6 +54,6 @@ class UnitAcquisition:
             target_scanner.scan_target, target, scan_progress_listener
         )
         return AcquiredUnits(
-            units=await audit_kind.extractor.extract_units(scanned_target),
+            units=await audit_kind.extractor.extract(scanned_target),
             scanned_file_count=len(scanned_target.files),
         )

@@ -5,12 +5,12 @@ from collections.abc import Iterator
 from injector import inject
 
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
-from klint.core.interfaces.target_extractor import BaseTargetExtractor
+from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.scanned_tree import ScannedTarget
 from klint.core.models.unit import AuditableUnit
 
 
-class ProjectStructureExtractor(BaseTargetExtractor):
+class ProjectStructureExtractor(BaseUnitExtractor[ScannedTarget]):
     """Extracts the directory unit of a project, and every unit nested in it.
 
     Raises ValueError when the target is not a directory.
@@ -20,13 +20,13 @@ class ProjectStructureExtractor(BaseTargetExtractor):
     def __init__(self, project_extractor: RecursiveProjectExtractor) -> None:
         self._project_extractor = project_extractor
 
-    async def extract_units(self, scanned_target: ScannedTarget) -> list[AuditableUnit]:
-        if scanned_target.directory is None:
+    async def extract(self, audit_input: ScannedTarget) -> list[AuditableUnit]:
+        if audit_input.directory is None:
             raise ValueError(
                 "Project structure audit target must be a directory: "
-                f"{scanned_target.path}"
+                f"{audit_input.path}"
             )
-        root_unit = await self._project_extractor.extract(scanned_target.directory)
+        root_unit = await self._project_extractor.extract(audit_input.directory)
         return list(_yield_unit_and_nested_units(root_unit))
 
 

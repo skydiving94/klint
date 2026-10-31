@@ -28,6 +28,7 @@ from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_kind import AuditKind
+from klint.core.models.scanned_tree import ScannedFile
 from klint.core.registry import UnitRegistry
 
 # The kinds of audit this suite offers: each file's contents, and the
@@ -84,7 +85,7 @@ class CodeSuiteModule(Module):
         binder.multibind(list[BaseSuite], to=[CodeSuite])
         # What handles each language, looked up by the traits of each file. A
         # language not listed is handled in a language-neutral way.
-        binder.multibind(dict[str, BaseUnitExtractor], to={})
+        binder.multibind(dict[str, BaseUnitExtractor[ScannedFile]], to={})
         binder.multibind(
             dict[str, BaseFileMetadataExtractor],
             to={python.SUITE_LANGUAGE: PythonFileMetadataExtractor},

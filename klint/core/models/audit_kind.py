@@ -2,10 +2,11 @@
 
 from dataclasses import dataclass
 
+from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.rule_loader import BaseRuleLoader
-from klint.core.interfaces.target_extractor import BaseTargetExtractor
 from klint.core.models.ignored_names import IgnoredNames
 from klint.core.models.scale import AnswerScale
+from klint.core.models.scanned_tree import ScannedTarget
 
 
 @dataclass(frozen=True)
@@ -20,7 +21,7 @@ class AuditKind:
     """
 
     kind_id: str
-    extractor: BaseTargetExtractor
+    extractor: BaseUnitExtractor[ScannedTarget]
     rule_loader: BaseRuleLoader
     answer_scale: AnswerScale
     ignored_names: IgnoredNames

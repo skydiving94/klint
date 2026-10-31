@@ -308,15 +308,17 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     assert len(judge.requests) == 1
 
 
-class BrokenExtractor(BaseUnitExtractor):
+class BrokenExtractor(BaseUnitExtractor[ScannedFile]):
     """Fails on every file, for a reason other than reading it."""
 
-    async def extract(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
-        raise RuntimeError(f"the extractor is broken on {scanned_file.path.name}")
+    async def extract(self, audit_input: ScannedFile) -> list[AuditableUnit]:
+        raise RuntimeError(f"the extractor is broken on {audit_input.path.name}")
 
 
 def use_the_broken_extractor_for_python(binder: Binder) -> None:
-    binder.multibind(dict[str, BaseUnitExtractor], to={"python": BrokenExtractor})
+    binder.multibind(
+        dict[str, BaseUnitExtractor[ScannedFile]], to={"python": BrokenExtractor}
+    )
 
 
 def test_file_an_extractor_fails_on_is_left_out_with_a_warning(

@@ -7,9 +7,9 @@ from typing import ClassVar
 from injector import Binder
 
 from klint.cli.runner import AuditCommand
+from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.interfaces.target_extractor import BaseTargetExtractor
 from klint.core.models.audit_kind import AuditKind
 from klint.core.models.file_traits import FileTraits
 from klint.core.models.ignored_names import IgnoredNames
@@ -60,13 +60,13 @@ class NoteUnit(AuditableUnit):
         return self.text
 
 
-class NoteExtractor(BaseTargetExtractor):
+class NoteExtractor(BaseUnitExtractor[ScannedTarget]):
     """Reads each .txt file of a target as one note."""
 
-    async def extract_units(self, scanned_target: ScannedTarget) -> list[AuditableUnit]:
+    async def extract(self, audit_input: ScannedTarget) -> list[AuditableUnit]:
         return [
             NoteUnit(unit_id=str(scanned_file.path), text=scanned_file.path.read_text())
-            for scanned_file in scanned_target.files
+            for scanned_file in audit_input.files
             if scanned_file.path.suffix == ".txt"
         ]
 
