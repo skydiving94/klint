@@ -1,0 +1,30 @@
+{
+  "extension_to_tags": {
+    ".tsx": ["frontend"],
+    ".jsx": ["frontend"],
+    ".vue": ["frontend"],
+    ".svelte": ["frontend"],
+    ".html": ["frontend"],
+    ".htm": ["frontend"],
+    ".css": ["frontend"],
+    ".scss": ["frontend"],
+    ".sass": ["frontend"],
+    ".less": ["frontend"],
+    ".sql": ["backend"]
+  },
+  "path_glob_to_tags": {
+    "**/*backend*": ["backend"],
+    "**/*backend*/**": ["backend"],
+    "**/api/**": ["backend"],
+    "**/server/**": ["backend"],
+    "**/routes/**": ["backend"],
+    "**/controllers/**": ["backend"],
+    "**/migrations/**": ["backend"],
+    "**/*frontend*": ["frontend"],
+    "**/*frontend*/**": ["frontend"],
+    "**/components/**": ["frontend"],
+    "**/pages/**": ["frontend"],
+    "**/ui/**": ["frontend"],
+    "**/styles/**": ["frontend"]
+  }
+}

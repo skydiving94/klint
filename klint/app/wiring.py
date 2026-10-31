@@ -19,6 +19,9 @@ from klint.app.settings import AppSettings
 from klint.catalog.common.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
+from klint.catalog.common.file_traits_identifiers.tag_detecting_identifier import (
+    TagDetectingFileTraitsIdentifier,
+)
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_loader import BaseRuleLoader
@@ -32,6 +35,7 @@ from klint.infra.language_to_file_extensions_loader.json_loader import (
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
 from klint.infra.system_one.remote import RemoteSystemOneJudge
+from klint.infra.tag_detection_loader.json_loader import load_tag_detection_table
 
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
@@ -98,9 +102,13 @@ class KlintModule(Module):
     @singleton
     @provider
     def provide_file_traits_identifier(
-        self, file_extension_to_language: FileExtensionToLanguage
+        self, settings: AppSettings, file_extension_to_language: FileExtensionToLanguage
     ) -> BaseFileTraitsIdentifier:
-        return ExtensionFileTraitsIdentifier(file_extension_to_language)
+        # The language from the extension, then the tags the path shows.
+        return TagDetectingFileTraitsIdentifier(
+            ExtensionFileTraitsIdentifier(file_extension_to_language),
+            load_tag_detection_table(settings.tag_detection_path),
+        )
 
     @singleton
     @provider

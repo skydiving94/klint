@@ -55,7 +55,8 @@ class TargetScanner:
     def scan_file(self, file_path: Path) -> ScannedFile:
         """Return the file at ``file_path`` with its traits, as a target of its own."""
         return ScannedFile(
-            path=file_path, traits=self._file_traits_identifier.identify(file_path)
+            path=file_path,
+            traits=self._file_traits_identifier.identify(file_path, file_path.parent),
         )
 
     def scan_directory(
@@ -69,7 +70,9 @@ class TargetScanner:
         is listed: the target first, then the others in path order. When the
         target itself cannot be read, it is returned with nothing in it.
         """
-        scanned_target = self._scan_directory(directory, None, scan_progress_listener)
+        scanned_target = self._scan_directory(
+            directory, None, directory, scan_progress_listener
+        )
         if scanned_target is None:
             return ScannedDirectory(path=directory)
         return scanned_target
@@ -78,9 +81,13 @@ class TargetScanner:
         self,
         directory: Path,
         parent: ScannedDirectory | None,
+        scan_root: Path,
         scan_progress_listener: BaseScanProgressListener | None,
     ) -> ScannedDirectory | None:
-        """Return ``directory`` as a tree; None when it cannot be read."""
+        """Return ``directory`` as a tree; None when it cannot be read.
+
+        scan_root is the directory the scan started from.
+        """
         entries = self._list_entries(directory)
         if entries is None:
             return None
@@ -92,7 +99,7 @@ class TargetScanner:
                 if self._is_ignored_directory(entry):
                     continue
                 scanned_subdirectory = self._scan_directory(
-                    entry, scanned_directory, scan_progress_listener
+                    entry, scanned_directory, scan_root, scan_progress_listener
                 )
                 if scanned_subdirectory is not None:
                     scanned_directory.subdirectories.append(scanned_subdirectory)
@@ -100,7 +107,7 @@ class TargetScanner:
                 scanned_directory.files.append(
                     ScannedFile(
                         path=entry,
-                        traits=self._file_traits_identifier.identify(entry),
+                        traits=self._file_traits_identifier.identify(entry, scan_root),
                         parent=scanned_directory,
                     )
                 )

@@ -32,6 +32,9 @@ _BUILT_IN_FALLBACK_RULE_PACKS = (
 # The built-in list of languages and their file extensions, relative to
 # klint/resources/catalog/.
 _BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = "code/common/language_to_file_extensions.json"
+# The built-in tables that tell which side of a project a file belongs to,
+# relative to klint/resources/catalog/.
+_BUILT_IN_TAG_DETECTION = "code/common/tag_detection.json"
 
 
 @dataclass(frozen=True)
@@ -107,6 +110,11 @@ def _locate_built_in_language_to_file_extensions() -> Path:
     return _locate_built_in_resource(_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS)
 
 
+def _locate_built_in_tag_detection() -> Path:
+    """Locate the built-in tag detection tables."""
+    return _locate_built_in_resource(_BUILT_IN_TAG_DETECTION)
+
+
 def _resolve_setting_path(setting: _SettingValue | None) -> Path | None:
     """Return the path ``setting`` names; a relative one is taken from its source."""
     if setting is None:
@@ -140,6 +148,8 @@ class AppSettings:
     language_to_file_extensions_path: Path = field(
         default_factory=_locate_built_in_language_to_file_extensions
     )
+    # The file of tables that tell which side of a project a file belongs to.
+    tag_detection_path: Path = field(default_factory=_locate_built_in_tag_detection)
 
     @classmethod
     def from_env(
