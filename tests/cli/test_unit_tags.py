@@ -1,7 +1,10 @@
 """Rules limited to unit tags, asked by the tags detected for each file."""
 
 import asyncio
+import json
 from pathlib import Path
+
+import pytest
 
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
@@ -14,6 +17,11 @@ from tests.support.builders import (
     write_text,
 )
 from tests.support.fakes import FakeJudge
+from tests.support.paths import (
+    BUILT_IN_RULE_PACKS,
+    FALLBACK_RULE_PACKS,
+    REACT_RULE_PACK,
+)
 
 TAGGED_RULES = {
     "backend_rule": {**FILE_RULE, "unit_tags": ["backend"]},
@@ -106,3 +114,44 @@ def test_project_audit_tags_the_files_of_a_directory_alike(tmp_path: Path) -> No
 
     # Only the file that imports React is asked the frontend rule.
     assert content_to_rule_ids == {"view.js (lines=1)": {"frontend_file"}}
+
+
+@pytest.mark.usefixtures("in_repo_root")
+def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
+    judge = FakeJudge()
+    settings = make_settings(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS)
+    app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
+    asyncio.run(app.run(["examples", "--json"]))
+    content_to_rule_ids = judge.subject_to_asked_rule_ids()
+    backend_rule_ids = set(_read_rule_ids(BUILT_IN_RULE_PACKS[0]))
+    react_rule_ids = set(_read_rule_ids(REACT_RULE_PACK))
+
+    def asked_rule_ids(example: str) -> set[str]:
+        (rule_ids,) = [
+            rule_ids
+            for content, rule_ids in content_to_rule_ids.items()
+            if Path(example)
+            .read_text(encoding="utf-8")
+            .startswith(content.split("\n[... ")[0])
+        ]
+        return rule_ids
+
+    for example in (
+        "examples/frontend_architecture.tsx",
+        "examples/frontend_hooks_and_dom.tsx",
+    ):
+        assert asked_rule_ids(example) == react_rule_ids | {"god_component"}
+    for example in (
+        "examples/backend_data_and_security.py",
+        "examples/mock_bad_project/api/checkout_routes.py",
+        # Backend by its import of sqlite3 alone.
+        "examples/mock_bad_project/domain/order_entity.py",
+        # No signal: every rule for its language.
+        "examples/mock_bad_project/utils/misc_helpers.py",
+    ):
+        assert asked_rule_ids(example) == backend_rule_ids | {"god_component"}
+
+
+def _read_rule_ids(pack: Path) -> list[str]:
+    rules: dict[str, object] = json.loads(pack.read_text(encoding="utf-8"))["rules"]
+    return list(rules)
