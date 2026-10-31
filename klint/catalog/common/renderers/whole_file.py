@@ -13,6 +13,8 @@ class WholeFileRenderer(BaseUnitRenderer):
 
     def render_subject(self, render_input: RenderInput) -> str:
         content = render_input.get_unit_as(AuditableFileUnit).content
+        if len(content) <= render_input.character_budget:
+            return content
         return join_lines_within_budget(
-            content.split("\n"), render_input.character_budget, "the file"
+            content.splitlines(), render_input.character_budget, "the file"
         )

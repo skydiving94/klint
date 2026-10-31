@@ -49,11 +49,11 @@ class Auditor:
 
         The judge reads about each unit the text its renderer in
         ``audit_kind`` writes, within the kind's character budget, and
-        answers on the kind's scale. In the kind's
-        CHILDREN_FIRST order, the units are judged a level at a time, the
-        deepest first, so that each is judged after the units nested inside
-        it, and its renderer is given their findings; the limit on units
-        judged at once applies within a level. Whatever the order, the report
+        answers on the kind's scale. In the kind's CHILDREN_FIRST order, the
+        units are judged a level at a time, the deepest first, so that each
+        is judged after the units nested inside it, and its renderer is given
+        their findings; the limit on units judged at once applies within a
+        level. Whatever the order, the report
         holds the units audited without error, and their findings, in the
         order of ``units``. The listener, when given, is told when the audit
         starts and about each unit as its audit ends. Raises ValueError,
@@ -64,8 +64,19 @@ class Auditor:
             audit_progress_listener.report_audit_started(len(units))
         semaphore = asyncio.Semaphore(_MAX_CONCURRENT_AUDITS)
 
-        # The findings of the units judged in the levels before the current one.
-        unit_id_to_findings: dict[str, list[AuditFinding]] = {}
+        unit_findings: list[list[AuditFinding] | None] = [None] * len(units)
+        # Where each unit sits in ``units``, found by the unit itself, so that
+        # units sharing an ID keep their findings apart.
+        unit_identity_to_index = {id(unit): index for index, unit in enumerate(units)}
+
+        def collect_child_findings(unit: AuditableUnit) -> tuple[AuditFinding, ...]:
+            """Return the findings so far on the units nested directly in ``unit``."""
+            child_findings: list[AuditFinding] = []
+            for child in unit.children():
+                index = unit_identity_to_index.get(id(child))
+                if index is not None:
+                    child_findings.extend(unit_findings[index] or ())
+            return tuple(child_findings)
 
         async def audit_one(index: int) -> list[AuditFinding] | None:
             """Return the findings on ``units[index]``; None when its audit fails."""
@@ -73,7 +84,7 @@ class Auditor:
             render_input = RenderInput(
                 unit=unit,
                 character_budget=audit_kind.character_budget,
-                child_findings=_collect_child_findings(unit, unit_id_to_findings),
+                child_findings=collect_child_findings(unit),
             )
             async with semaphore:
                 try:
@@ -93,15 +104,14 @@ class Auditor:
                 audit_progress_listener.report_unit_audited(unit.unit_id)
             return findings
 
-        unit_findings: list[list[AuditFinding] | None] = [None] * len(units)
+        # A level's findings are recorded once the whole level is judged, so
+        # what a renderer is given does not depend on timing.
         for level in _order_levels(units, audit_kind.audit_order):
             level_findings = await asyncio.gather(
                 *(audit_one(index) for index in level)
             )
             for index, findings in zip(level, level_findings, strict=True):
                 unit_findings[index] = findings
-                if findings is not None:
-                    unit_id_to_findings[units[index].unit_id] = findings
         report = AuditReport()
         for unit, findings in zip(units, unit_findings, strict=True):
             if findings is None:
@@ -169,17 +179,6 @@ def _order_levels(
                 )
                 depth_to_indexes[depth].append(index)
             return [depth_to_indexes[depth] for depth in sorted(depth_to_indexes)[::-1]]
-
-
-def _collect_child_findings(
-    unit: AuditableUnit, unit_id_to_findings: dict[str, list[AuditFinding]]
-) -> tuple[AuditFinding, ...]:
-    """Return the findings so far on the units nested directly inside ``unit``."""
-    return tuple(
-        finding
-        for child in unit.children()
-        for finding in unit_id_to_findings.get(child.unit_id, ())
-    )
 
 
 def _build_request(

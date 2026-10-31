@@ -55,11 +55,11 @@ class AuditKind:
     kind_id names the kind in a request. accepted_input_kinds are the forms
     of input the kind takes. unit_source reads an input and gives its units,
     and rule_loader loads the rules asked about them. The judge answers each
-    rule on answer_scale, reading what unit_class_to_renderer gives as the
-    renderer for each class of unit writes, in at most character_budget
-    characters. ranked_tags are the rule tags whose findings a report lists
-    first, most important first. audit_order is the order in which the
-    units are judged.
+    rule on answer_scale. unit_class_to_renderer gives, for each class of
+    unit, the renderer that writes what the judge reads about such units, in
+    at most character_budget characters. ranked_tags are the rule tags whose
+    findings a report lists first, most important first. audit_order is the
+    order in which the units are judged.
     """
 
     kind_id: str

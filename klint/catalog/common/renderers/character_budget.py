@@ -54,8 +54,15 @@ def _format_trimming_line(
     is_first_line_cut: bool,
 ) -> str:
     """Return the last line of a trimmed text, saying what it left out."""
-    cut_part = "the rest of the line above and " if is_first_line_cut else ""
+    left_out_parts: list[str] = []
+    if is_first_line_cut:
+        left_out_parts.append("the rest of the line above")
+    if left_out_count > 0:
+        line_word = "line" if left_out_count == 1 else "lines"
+        left_out_parts.append(
+            f"{left_out_count} more {line_word} of {what_lines_describe}"
+        )
     return (
-        f"[... {cut_part}{left_out_count} more lines of {what_lines_describe} "
-        f"left out to stay within {character_budget} characters]"
+        f"[... {' and '.join(left_out_parts)} left out to stay within "
+        f"{character_budget} characters]"
     )

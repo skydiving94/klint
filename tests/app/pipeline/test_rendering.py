@@ -16,6 +16,7 @@ from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_input import InMemoryBytesInput
 from klint.core.models.audit_kind import AuditKind
+from klint.core.models.json_value import JsonValue
 from tests.support.builders import (
     build_audit_pipeline,
     list_judge_subjects,
@@ -69,7 +70,7 @@ def test_child_whose_audit_failed_gives_its_parent_no_findings() -> None:
 
 def _read_left_out_count(trimming_line: str) -> int:
     match = re.fullmatch(
-        r"\[\.\.\. (?:the rest of the line above and )?(\d+) more lines of .+ "
+        r"\[\.\.\. (?:the rest of the line above and )?(\d+) more lines? of .+ "
         r"left out to stay within 2000 characters\]",
         trimming_line,
     )
@@ -134,10 +135,8 @@ def test_long_file_is_shown_from_its_first_line_as_far_as_the_budget_goes(
 
     assert len(subject) <= 2000
     *kept_lines, trimming_line = subject.split("\n")
-    assert kept_lines == content.split("\n")[: len(kept_lines)]
-    assert len(kept_lines) + _read_left_out_count(trimming_line) == len(
-        content.split("\n")
-    )
+    assert kept_lines == content.splitlines()[: len(kept_lines)]
+    assert len(kept_lines) + _read_left_out_count(trimming_line) == 300
 
 
 def test_file_of_exactly_the_budget_is_shown_whole(tmp_path: Path) -> None:
@@ -156,7 +155,10 @@ def test_line_too_long_for_the_budget_is_cut(tmp_path: Path) -> None:
     first_line, trimming_line = subject.split("\n")
     assert len(subject) <= 2000
     assert content.startswith(first_line)
-    assert "the rest of the line above and 2 more lines" in trimming_line
+    assert trimming_line == (
+        "[... the rest of the line above and 1 more line of the file left out "
+        "to stay within 2000 characters]"
+    )
 
 
 class UnrenderedOutlineSuite(OutlineSuite):
@@ -192,3 +194,30 @@ def test_kind_with_no_renderer_for_a_unit_fails_before_the_judge_is_asked(
     with pytest.raises(ValueError, match="no renderer for OutlineSectionUnit units"):
         asyncio.run(pipeline.run_audit(request))
     assert judge.requests == []
+
+
+def test_children_sharing_an_id_give_their_parents_their_own_findings() -> None:
+    outline: JsonValue = {
+        "id": "book",
+        "text": "The book.",
+        "sections": [
+            {"id": "chapter 1", "sections": [{"id": "intro", "text": "Weak."}]},
+            {"id": "chapter 2", "sections": [{"id": "intro", "text": "Strong."}]},
+        ],
+    }
+    judge = SubjectJudge({"Weak.": "fail"})
+
+    outcome = run_outline_audit(
+        judge, outline=outline, audit_kind_id=SUMMARIZED_OUTLINE_KIND_ID
+    )
+
+    chapter_subjects = sorted(
+        request.subject
+        for request in judge.requests
+        if request.subject.startswith("\n")
+    )
+    assert chapter_subjects == [
+        "\nintro: clear_section = fail",
+        "\nintro: clear_section = pass",
+    ]
+    assert len(outcome.report.audited_unit_ids()) == 5
