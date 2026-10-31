@@ -12,6 +12,7 @@ from klint.app.pipeline.ranking import FindingRanking
 from klint.app.pipeline.roll_up import FindingRollUp
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
+from klint.core.models.audit_input import AuditInput
 from klint.core.models.report import AuditReport
 
 
@@ -19,15 +20,15 @@ from klint.core.models.report import AuditReport
 class AuditRequest:
     """What to audit, and who to tell as the audit goes.
 
-    target is the file or directory to audit, and audit_kind_id names the
-    kind of audit, as a suite offers it. The rules in custom_rules_source,
-    when given, merge over the loaded ones. scan_progress_listener is told
-    about each directory as it is scanned. audit_progress_listener is told
-    when the audit of the units starts, and about each unit as its audit
-    ends.
+    audit_input is what to audit, such as a path on disk or content in
+    memory, and audit_kind_id names the kind of audit, as a suite offers it.
+    The rules in custom_rules_source, when given, merge over the loaded
+    ones. scan_progress_listener is told about each directory as it is
+    scanned. audit_progress_listener is told when the audit of the units
+    starts, and about each unit as its audit ends.
     """
 
-    target: Path
+    audit_input: AuditInput
     audit_kind_id: str
     custom_rules_source: Path | None = None
     scan_progress_listener: BaseScanProgressListener | None = None
@@ -40,7 +41,7 @@ class AuditOutcome:
 
     report holds the units audited without error, and the findings in
     report order.
-    scanned_file_count is the number of files the scan recorded.
+    scanned_file_count is the number of files read.
     selected_unit_ids lists, in audit order, every unit at least one rule
     applies to; a unit listed here and missing from the report is one whose
     audit failed.
@@ -77,13 +78,14 @@ class AuditPipeline:
     async def run_audit(self, request: AuditRequest) -> AuditOutcome:
         """Audit what ``request`` names and return the outcome.
 
-        Raises ValueError when no suite offers the kind of audit, and raises
-        when the target or a rules file cannot be used. A unit whose audit
+        Raises ValueError when no suite offers the kind of audit or the kind
+        does not take that form of input, and raises when the input or a
+        rules file cannot be used. A unit whose audit
         fails is left out of the report and the others go on.
         """
         audit_kind = self._audit_kind_registry.find_audit_kind(request.audit_kind_id)
         portfolio = await self._audit_preparer.prepare_audit(
-            request.target,
+            request.audit_input,
             audit_kind,
             custom_rules_source=request.custom_rules_source,
             scan_progress_listener=request.scan_progress_listener,

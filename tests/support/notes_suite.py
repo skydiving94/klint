@@ -4,13 +4,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from injector import Binder
+from injector import Binder, inject
 
+from klint.catalog.common.sources.directory_tree_source import (
+    DirectoryTreeSourceFactory,
+)
 from klint.cli.runner import AuditCommand
 from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_kind import AuditKind
+from klint.core.models.audit_input import AuditInputKind
+from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.file_traits import FileTraits
 from klint.core.models.ignored_names import IgnoredNames
 from klint.core.models.question_type import QuestionType
@@ -87,14 +92,23 @@ class FixedRuleLoader(BaseRuleLoader):
 class NotesSuite(BaseSuite):
     """Audits notes for politeness; a scan leaves out the drafts folder."""
 
+    @inject
+    def __init__(self, file_traits_identifier: BaseFileTraitsIdentifier) -> None:
+        self._directory_tree_source_factory = DirectoryTreeSourceFactory(
+            file_traits_identifier,
+            IgnoredNames(directory_names=frozenset({"drafts"})),
+        )
+
     def list_audit_kinds(self) -> list[AuditKind]:
         return [
             AuditKind(
                 kind_id=NOTES_KIND_ID,
-                extractor=NoteExtractor(),
+                accepted_input_kinds=frozenset({AuditInputKind.DISK_PATH}),
+                unit_source=UnitSource(
+                    self._directory_tree_source_factory, NoteExtractor()
+                ),
                 rule_loader=FixedRuleLoader([POLITE_RULE]),
                 answer_scale=POLITENESS_SCALE,
-                ignored_names=IgnoredNames(directory_names=frozenset({"drafts"})),
             )
         ]
 

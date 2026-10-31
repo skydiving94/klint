@@ -12,6 +12,7 @@ from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
 from klint.cli.exit_code import ExitCode
 from klint.core.interfaces.suite import BaseSuite
+from klint.core.models.audit_input import DiskPathInput
 from klint.core.models.audit_kind import AuditKind
 from tests.support.builders import (
     build_audit_command_app,
@@ -79,7 +80,9 @@ def test_two_kinds_with_different_scales_run_in_one_process(
     pipeline = build_audit_pipeline(judge, overrides=[add_the_notes_suite])
 
     def run_audit(audit_kind_id: str) -> AuditOutcome:
-        request = AuditRequest(target=tmp_path, audit_kind_id=audit_kind_id)
+        request = AuditRequest(
+            audit_input=DiskPathInput(tmp_path), audit_kind_id=audit_kind_id
+        )
         return asyncio.run(pipeline.run_audit(request))
 
     code_outcome = run_audit(FILE_CONTENTS_KIND_ID)

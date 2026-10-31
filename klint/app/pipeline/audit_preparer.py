@@ -9,6 +9,7 @@ from injector import inject
 from klint.app.pipeline.acquisition import UnitAcquisition
 from klint.app.pipeline.rule_selection import RuleSelection
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
+from klint.core.models.audit_input import AuditInput
 from klint.core.models.audit_kind import AuditKind
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit import AuditableUnit
@@ -19,10 +20,10 @@ class PendingAuditPortfolio:
     """Everything one audit run will go through, prepared and not yet audited.
 
     units are what the rules will be applied to: the units extracted from
-    the target, nested ones included, that at least one rule applies to.
+    the input, nested ones included, that at least one rule applies to.
     language_to_rules holds, for each language a unit is written in, the
     rules to ask about it; the key None is for units whose language is not
-    identified. scanned_file_count is the number of files the scan recorded.
+    identified. scanned_file_count is the number of files read.
     """
 
     units: list[AuditableUnit]
@@ -31,7 +32,7 @@ class PendingAuditPortfolio:
 
 
 class AuditPreparer:
-    """Prepares an audit of a target: acquires its units, then selects rules.
+    """Prepares an audit of an input: acquires its units, then selects rules.
 
     The units that no rule applies to are left out. No rule is applied here
     and no judge is asked.
@@ -46,20 +47,20 @@ class AuditPreparer:
 
     async def prepare_audit(
         self,
-        target: Path,
+        audit_input: AuditInput,
         audit_kind: AuditKind,
         *,
         custom_rules_source: Path | None = None,
         scan_progress_listener: BaseScanProgressListener | None = None,
     ) -> PendingAuditPortfolio:
-        """Scan ``target``, extract its units and load their rules.
+        """Read ``audit_input``, extract its units and load their rules.
 
-        Raises when the target or a rules file cannot be used. The rules in
+        Raises when the input or a rules file cannot be used. The rules in
         ``custom_rules_source``, when given, merge over the loaded ones. The
         listener, when given, is told about each directory as it is scanned.
         """
         acquired_units = await self._unit_acquisition.acquire_units(
-            target, audit_kind, scan_progress_listener
+            audit_input, audit_kind, scan_progress_listener
         )
         language_to_rules = await self._rule_selection.select_rules(
             acquired_units.units, audit_kind, custom_rules_source
