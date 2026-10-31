@@ -13,6 +13,7 @@ from klint.core.interfaces.unit_source import BaseUnitSource
 from klint.core.models.acquired_units import AcquiredUnits
 from klint.core.models.audit_input import AuditInput, AuditInputKind
 from klint.core.models.audit_order import AuditOrder
+from klint.core.models.render_input import DEFAULT_CHARACTER_BUDGET
 from klint.core.models.scale import AnswerScale
 from klint.core.models.unit import AuditableUnit
 from klint.core.unit_content_renderer import UnitContentRenderer
@@ -58,7 +59,8 @@ class AuditKind:
     rule on answer_scale. ranked_tags are the rule tags whose findings a
     report lists first, most important first. audit_order is the order in
     which the units are judged. unit_class_to_renderer gives the renderer
-    that writes what the judge reads about the units of each class.
+    that writes what the judge reads about the units of each class, in at
+    most character_budget characters.
     """
 
     kind_id: str
@@ -71,6 +73,14 @@ class AuditKind:
     unit_class_to_renderer: Mapping[type[AuditableUnit], BaseUnitRenderer] = field(
         default_factory=lambda: {AuditableUnit: UnitContentRenderer()}
     )
+    character_budget: int = DEFAULT_CHARACTER_BUDGET
+
+    def __post_init__(self) -> None:
+        if self.character_budget < 1:
+            raise ValueError(
+                f"Audit kind '{self.kind_id}' needs a character budget of at "
+                f"least 1, not {self.character_budget}"
+            )
 
     def find_renderer(self, unit: AuditableUnit) -> BaseUnitRenderer:
         """Return the renderer for ``unit``.

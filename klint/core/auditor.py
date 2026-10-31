@@ -48,7 +48,8 @@ class Auditor:
         """Audit each unit with the rules ``rule_set`` chooses; return the report.
 
         The judge reads about each unit the text its renderer in
-        ``audit_kind`` writes, and answers on the kind's scale. In the kind's
+        ``audit_kind`` writes, within the kind's character budget, and
+        answers on the kind's scale. In the kind's
         CHILDREN_FIRST order, the units are judged a level at a time, the
         deepest first, so that each is judged after the units nested inside
         it, and its renderer is given their findings; the limit on units
@@ -71,6 +72,7 @@ class Auditor:
             unit = units[index]
             render_input = RenderInput(
                 unit=unit,
+                character_budget=audit_kind.character_budget,
                 child_findings=_collect_child_findings(unit, unit_id_to_findings),
             )
             async with semaphore:

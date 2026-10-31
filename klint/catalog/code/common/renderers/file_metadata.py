@@ -1,4 +1,5 @@
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.common.renderers.character_budget import join_lines_within_budget
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.models.render_input import RenderInput
 
@@ -7,8 +8,11 @@ class FileMetadataRenderer(BaseUnitRenderer):
     """Shows the judge what was read from a file, in one line."""
 
     def render_subject(self, render_input: RenderInput) -> str:
-        return describe_file_metadata(
+        description = describe_file_metadata(
             render_input.get_unit_as(AuditableFileMetadataUnit)
+        )
+        return join_lines_within_budget(
+            [description], render_input.character_budget, "the file's description"
         )
 
 

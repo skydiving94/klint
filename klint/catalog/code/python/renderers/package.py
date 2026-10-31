@@ -7,6 +7,7 @@ from klint.catalog.code.common.renderers.directory import (
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.python.module_names import collect_module_names
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.renderers.character_budget import join_lines_within_budget
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.models.render_input import RenderInput
 
@@ -17,7 +18,8 @@ class PythonPackageRenderer(BaseUnitRenderer):
     Before the tree, it shows the package's public API, the imports in its
     tree split into the project's own and external ones, and cycles between
     its subpackages. A file in its tree that cannot be parsed is named,
-    since what it holds is unknown.
+    since what it holds is unknown. The tree is shown as far as the
+    character budget goes.
     """
 
     def render_subject(self, render_input: RenderInput) -> str:
@@ -54,7 +56,9 @@ class PythonPackageRenderer(BaseUnitRenderer):
             )
         lines.extend(_list_dependency_roll_up_lines(package, module_names))
         lines.extend(list_tree_lines(package))
-        return "\n".join(lines)
+        return join_lines_within_budget(
+            lines, render_input.character_budget, "the tree"
+        )
 
 
 def _collect_imports_beneath(directory: AuditableDirectoryUnit) -> set[str]:

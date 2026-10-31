@@ -1,5 +1,6 @@
 from klint.catalog.code.common.renderers.file_metadata import describe_file_metadata
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
+from klint.catalog.common.renderers.character_budget import join_lines_within_budget
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.models.render_input import RenderInput
 
@@ -8,7 +9,8 @@ class DirectoryRenderer(BaseUnitRenderer):
     """Shows the judge a directory's tree, in a way that fits any language.
 
     The tree lists each directory's subdirectories and a line per file of
-    what was read from it, the whole tree beneath the directory down.
+    what was read from it, the whole tree beneath the directory down, as far
+    as the character budget goes.
     """
 
     def render_subject(self, render_input: RenderInput) -> str:
@@ -19,7 +21,9 @@ class DirectoryRenderer(BaseUnitRenderer):
             f"{len(directory.subdirectories)} immediate subdirectories",
             *list_tree_lines(directory),
         ]
-        return "\n".join(lines)
+        return join_lines_within_budget(
+            lines, render_input.character_budget, "the tree"
+        )
 
 
 def format_display_path(directory: AuditableDirectoryUnit) -> str:

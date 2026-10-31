@@ -14,5 +14,8 @@ class BaseUnitRenderer(ABC):
     def render_subject(self, render_input: RenderInput) -> str:
         """Return the text the judge reads about ``render_input.unit``.
 
-        Raises TypeError when this renderer cannot describe such a unit.
+        The text holds at most ``render_input.character_budget`` characters.
+        A renderer that leaves something out to stay within them ends the
+        text with a line saying what it left out. Raises TypeError when this
+        renderer cannot describe such a unit.
         """

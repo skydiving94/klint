@@ -1,5 +1,14 @@
 """What the judge reads about each unit, as the renderers of its kind write it."""
 
+import re
+from pathlib import Path
+
+import pytest
+
+from klint.app.audit_kind_registry import AuditKindRegistry
+from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
+from klint.cli.wiring import create_command_injector
+from tests.support.builders import list_judge_subjects, make_settings, write_text
 from tests.support.fakes import SubjectJudge
 from tests.support.outline_suite import SUMMARIZED_OUTLINE_KIND_ID, run_outline_audit
 
@@ -36,3 +45,95 @@ def test_child_whose_audit_failed_gives_its_parent_no_findings() -> None:
     assert _map_first_line_to_subject(judge)["Chapter 1."] == (
         "Chapter 1.\nsection 1.2: clear_section = pass"
     )
+
+
+def _read_left_out_count(trimming_line: str) -> int:
+    match = re.fullmatch(
+        r"\[\.\.\. (?:the rest of the line above and )?(\d+) more lines of .+ "
+        r"left out to stay within 2000 characters\]",
+        trimming_line,
+    )
+    assert match is not None, trimming_line
+    return int(match.group(1))
+
+
+@pytest.mark.parametrize(
+    "audit_kind_id", [FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID]
+)
+def test_built_in_kinds_keep_what_the_judge_reads_within_2000_characters(
+    audit_kind_id: str,
+) -> None:
+    registry = create_command_injector(make_settings()).get(AuditKindRegistry)
+
+    assert registry.find_audit_kind(audit_kind_id).character_budget == 2000
+
+
+def _find_directory_subject(subjects: list[str], directory: Path) -> str:
+    """Return the subject whose first line names ``directory`` as the target."""
+    (subject,) = [
+        subject
+        for subject in subjects
+        if subject.splitlines()[0]
+        .removeprefix("Target Directory Under Audit: ")
+        .split(" (package name: ")[0]
+        == str(directory)
+    ]
+    return subject
+
+
+@pytest.mark.parametrize("extension", ["py", "md"])
+def test_deep_tree_stays_within_budget_and_ends_with_what_it_left_out(
+    tmp_path: Path, extension: str
+) -> None:
+    root = tmp_path / "deep"
+    directory = root
+    for depth in range(12):
+        for index in range(3):
+            write_text(directory / f"module_{index}.{extension}", "import os\n")
+        deepest = directory
+        directory = directory / f"level_{depth}"
+
+    subjects = list_judge_subjects(root, PROJECT_STRUCTURE_KIND_ID)
+
+    root_subject = _find_directory_subject(subjects, root)
+    assert len(root_subject) <= 2000
+    trimming_line = root_subject.splitlines()[-1]
+    assert _read_left_out_count(trimming_line) > 0
+    assert "lines of the tree" in trimming_line
+    # The deepest directory holds little enough to be shown whole.
+    assert not _find_directory_subject(subjects, deepest).endswith(" characters]")
+
+
+def test_long_file_is_shown_from_its_first_line_as_far_as_the_budget_goes(
+    tmp_path: Path,
+) -> None:
+    content = "".join(f"value_{index} = {index}\n" for index in range(300))
+    target = write_text(tmp_path / "long.py", content)
+
+    (subject,) = list_judge_subjects(target, FILE_CONTENTS_KIND_ID)
+
+    assert len(subject) <= 2000
+    *kept_lines, trimming_line = subject.split("\n")
+    assert kept_lines == content.split("\n")[: len(kept_lines)]
+    assert len(kept_lines) + _read_left_out_count(trimming_line) == len(
+        content.split("\n")
+    )
+
+
+def test_file_of_exactly_the_budget_is_shown_whole(tmp_path: Path) -> None:
+    content = ("x" * 99 + "\n") * 20
+    target = write_text(tmp_path / "exact.py", content)
+
+    assert list_judge_subjects(target, FILE_CONTENTS_KIND_ID) == [content]
+
+
+def test_line_too_long_for_the_budget_is_cut(tmp_path: Path) -> None:
+    content = "x" * 5000 + "\ny = 1\n"
+    target = write_text(tmp_path / "minified.js", content)
+
+    (subject,) = list_judge_subjects(target, FILE_CONTENTS_KIND_ID)
+
+    first_line, trimming_line = subject.split("\n")
+    assert len(subject) <= 2000
+    assert content.startswith(first_line)
+    assert "the rest of the line above and 2 more lines" in trimming_line
