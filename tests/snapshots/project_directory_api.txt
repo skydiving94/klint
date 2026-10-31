@@ -6,4 +6,4 @@ External / Third-Party / Stdlib Imports in Tree: [sqlite3, traceback, urllib.req
 Directory: examples/mock_bad_project/api
   Files:
     - __init__.py (lines=3; exports=[handle_checkout_request]; imports=[.checkout_routes, .checkout_routes.handle_checkout_request])
-    - checkout_routes.py (lines=50; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
+    - checkout_routes.py (lines=44; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
