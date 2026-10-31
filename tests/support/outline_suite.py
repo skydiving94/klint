@@ -17,6 +17,7 @@ from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.catalog.common.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
+from klint.cli.runner import AuditCommand
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.suite import BaseSuite
@@ -32,6 +33,14 @@ from tests.support.builders import build_audit_pipeline
 from tests.support.notes_suite import FixedRuleLoader
 
 OUTLINE_KIND_ID = "outline"
+OUTLINE_COMMAND = AuditCommand(
+    name="klint-outline",
+    description="Audits an outline",
+    target_argument_name="outline",
+    target_argument_help="Outline JSON file",
+    audit_kind_id=OUTLINE_KIND_ID,
+    json_key="examined_sections",
+)
 CLEAR_SECTION_RULE = AuditRule(
     rule_id="clear_section",
     question_type=QuestionType.CHOICE,
@@ -92,7 +101,9 @@ class OutlineSuite(BaseSuite):
         return [
             AuditKind(
                 kind_id=OUTLINE_KIND_ID,
-                accepted_input_kinds=frozenset({AuditInputKind.IN_MEMORY_BYTES}),
+                accepted_input_kinds=frozenset(
+                    {AuditInputKind.DISK_PATH, AuditInputKind.IN_MEMORY_BYTES}
+                ),
                 unit_source=UnitSource(JsonDocumentSourceFactory(), OutlineExtractor()),
                 rule_loader=FixedRuleLoader([CLEAR_SECTION_RULE]),
                 answer_scale=PRACTICE_SCALE,

@@ -110,8 +110,14 @@ def test_min_confidence_hides_low_confidence_findings(
     _run(app, target, "--json", "--min-confidence", "0.3")
     below_confidence = _json_output(capsys)
 
-    assert above_confidence == {"examined_files": [str(target)], "findings": []}
+    # A problem below the least confidence does not count in the roll-up either.
+    assert above_confidence == {
+        "examined_files": [str(target)],
+        "unit_id_to_roll_up_status": {str(target): "no_problem"},
+        "findings": [],
+    }
     assert below_confidence["findings"]
+    assert below_confidence["unit_id_to_roll_up_status"] == {str(target): "own_problem"}
 
 
 def test_pack_for_some_languages_is_asked_only_about_files_in_them(
@@ -354,7 +360,11 @@ def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
     exit_code = _run(_file_app(judge), named_pipe, "--json")
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert _json_output(capsys) == {"examined_files": [], "findings": []}
+    assert _json_output(capsys) == {
+        "examined_files": [],
+        "unit_id_to_roll_up_status": {},
+        "findings": [],
+    }
     assert judge.requests == []
 
 

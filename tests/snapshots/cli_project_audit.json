@@ -5,6 +5,12 @@
     "examples/mock_bad_project/domain",
     "examples/mock_bad_project/utils"
   ],
+  "unit_id_to_roll_up_status": {
+    "examples/mock_bad_project": "own_problem",
+    "examples/mock_bad_project/api": "own_problem",
+    "examples/mock_bad_project/domain": "own_problem",
+    "examples/mock_bad_project/utils": "own_problem"
+  },
   "findings": [
     {
       "rule_id": "acyclic_packages",
