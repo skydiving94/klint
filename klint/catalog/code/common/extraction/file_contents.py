@@ -1,8 +1,8 @@
 """Extracts what a file contents audit goes through: the units of each file."""
 
-from injector import inject
-
-from klint.catalog.common.extraction.whole_file import WholeFileExtractor
+from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+    TraitsBasedExtractionDelegator,
+)
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.klint_warning import leave_out_file_on_failure
 from klint.core.models.scanned_tree import ScannedFile, ScannedTarget
@@ -10,22 +10,16 @@ from klint.core.models.unit import AuditableUnit
 
 
 class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):
-    """Extracts each file of a target by the extractor that matches its traits.
+    """Extracts each file of a target by the extractor its traits pick.
 
-    A file is read by the extractor registered for the language in its
-    traits. A file with nothing registered for its language is read as one
-    whole file. A file the extractor fails on gives no unit, and a warning.
+    A file the extractor fails on gives no unit, and a warning.
     """
 
-    @inject
     def __init__(
-        self, language_to_unit_extractor: dict[str, BaseUnitExtractor[ScannedFile]]
+        self,
+        delegator: TraitsBasedExtractionDelegator[BaseUnitExtractor[ScannedFile]],
     ) -> None:
-        self._language_to_unit_extractor = {
-            language.lower(): extractor
-            for language, extractor in language_to_unit_extractor.items()
-        }
-        self._language_neutral_unit_extractor = WholeFileExtractor()
+        self._delegator = delegator
 
     async def extract(self, audit_input: ScannedTarget) -> list[AuditableUnit]:
         units: list[AuditableUnit] = []
@@ -37,14 +31,7 @@ class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):
         self, scanned_file: ScannedFile
     ) -> list[AuditableUnit]:
         """Return the units of one file; none when the extractor fails on it."""
-        extractor: BaseUnitExtractor[ScannedFile] = (
-            self._language_neutral_unit_extractor
-        )
-        language = scanned_file.traits.language
-        if language is not None:
-            extractor = self._language_to_unit_extractor.get(
-                language.lower(), extractor
-            )
+        extractor = self._delegator.select_extractor(scanned_file.traits)
         with leave_out_file_on_failure(scanned_file.path):
             return await extractor.extract(scanned_file)
         return []

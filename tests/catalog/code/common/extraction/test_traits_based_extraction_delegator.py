@@ -6,16 +6,19 @@ from pathlib import Path
 import pytest
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
+from klint.catalog.code.common.extraction.directory_factory import (
+    BaseDirectoryUnitFactory,
+)
 from klint.catalog.code.common.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
 from klint.catalog.code.common.extraction.language_neutral_directory_factory import (
     LanguageNeutralDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
-from klint.catalog.code.common.extraction.traits_based_extraction_delegator import (
-    TraitsBasedExtractionDelegator,
+from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
+    LanguageNeutralFileMetadataExtractor,
 )
+from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.extraction.file_metadata import (
@@ -25,6 +28,9 @@ from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+    TraitsBasedExtractionDelegator,
+)
 from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import (
     build_target_scanner,
@@ -48,10 +54,21 @@ class JavaMarkingExtractor(BaseFileMetadataExtractor):
 
 
 def _extract(
-    delegator: TraitsBasedExtractionDelegator, target: Path
+    target: Path,
+    language_to_file_metadata_extractor: dict[str, BaseFileMetadataExtractor],
+    language_to_directory_unit_factory: dict[str, BaseDirectoryUnitFactory],
 ) -> AuditableDirectoryUnit:
+    """Extract ``target`` with these bindings and the language-neutral fallbacks."""
+    extractor = RecursiveProjectExtractor(
+        TraitsBasedExtractionDelegator(
+            language_to_file_metadata_extractor, LanguageNeutralFileMetadataExtractor()
+        ),
+        TraitsBasedExtractionDelegator(
+            language_to_directory_unit_factory, LanguageNeutralDirectoryUnitFactory()
+        ),
+    )
     scanned_target = build_target_scanner().scan_directory(target)
-    return asyncio.run(RecursiveProjectExtractor(delegator).extract(scanned_target))
+    return asyncio.run(extractor.extract(scanned_target))
 
 
 def test_each_file_is_read_by_the_extractor_for_its_language(tmp_path: Path) -> None:
@@ -86,15 +103,14 @@ def test_extractor_registered_for_a_language_reads_that_languages_files(
 ) -> None:
     for name in ("a.py", "b.java"):
         write_text(tmp_path / "pkg" / name, "import os\n")
-    delegator = TraitsBasedExtractionDelegator(
+    files = _extract(
+        tmp_path / "pkg",
         language_to_file_metadata_extractor={
             "python": PythonFileMetadataExtractor(),
             "java": JavaMarkingExtractor(),
         },
         language_to_directory_unit_factory={},
-    )
-
-    files = _extract(delegator, tmp_path / "pkg").files
+    ).files
 
     assert [(f.file_name, f.imports, f.classes) for f in files] == [
         ("a.py", ["os"], []),
@@ -153,15 +169,14 @@ def test_directory_is_described_in_the_language_most_files_beneath_it_are_in(
 ) -> None:
     for name in file_names:
         write_text(tmp_path / "pkg" / "sub" / name, "x\n")
-    delegator = TraitsBasedExtractionDelegator(
+    root = _extract(
+        tmp_path / "pkg",
         language_to_file_metadata_extractor={},
         language_to_directory_unit_factory={
             "python": PythonPackageUnitFactory(),
             "java": LanguageNeutralDirectoryUnitFactory(),
         },
     )
-
-    root = _extract(delegator, tmp_path / "pkg")
     (sub,) = root.subdirectories
 
     assert (root.language, sub.language) == (language, language)
