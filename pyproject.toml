@@ -128,13 +128,20 @@ layers = [
 name = "Suites: app and core import no named suite"
 type = "forbidden"
 source_modules = ["klint.app", "klint.core"]
-forbidden_modules = ["klint.catalog.code"]
+forbidden_modules = ["klint.catalog.code", "klint.catalog.change_summary"]
 
 [[tool.importlinter.contracts]]
 name = "Catalog: shared suites do not import specific ones"
 type = "forbidden"
 source_modules = ["klint.catalog.common"]
-forbidden_modules = ["klint.catalog.code"]
+forbidden_modules = ["klint.catalog.code", "klint.catalog.change_summary"]
+
+# Each named suite stands alone: what two suites share belongs in
+# klint.catalog.common.
+[[tool.importlinter.contracts]]
+name = "Catalog: named suites do not import one another"
+type = "independence"
+modules = ["klint.catalog.code", "klint.catalog.change_summary"]
 
 [[tool.importlinter.contracts]]
 name = "Catalog: code shared across languages does not import one language"
