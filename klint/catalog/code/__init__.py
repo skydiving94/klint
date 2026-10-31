@@ -23,6 +23,7 @@ from klint.catalog.code.python.extractors.file_metadata import (
 from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
+from klint.catalog.common.renderers.whole_file import WholeFileRenderer
 from klint.catalog.common.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )
@@ -74,6 +75,7 @@ class CodeSuite(BaseSuite):
                 ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
+                unit_class_to_renderer={AuditableFileUnit: WholeFileRenderer()},
             ),
             AuditKind(
                 kind_id=PROJECT_STRUCTURE_KIND_ID,

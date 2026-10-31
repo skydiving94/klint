@@ -33,7 +33,7 @@ def test_unit_language_comes_from_its_traits(unit_class: type[AuditableUnit]) ->
 def test_unit_traits_are_keyword_only() -> None:
     # A positional second argument is still the unit's own first field.
     unit = AuditableFileUnit("a.py", "x = 1")
-    assert unit.get_content() == "x = 1"
+    assert unit.content == "x = 1"
     assert unit.traits == UnitTraits()
 
 

@@ -29,7 +29,7 @@ def test_whole_file_extractor_returns_one_unit_spanning_the_file(
     assert isinstance(unit, AuditableFileUnit)
     assert unit.unit_type == "file"
     assert unit.unit_id == str(target)
-    assert unit.get_content() == "x = 1\ny = 2\nz = 3\n"
+    assert unit.content == "x = 1\ny = 2\nz = 3\n"
     assert unit.get_location() == Location(source=str(target), start_line=1, end_line=3)
     assert unit.get_context() == UnitContext()
 

@@ -1,9 +1,13 @@
 """What a renderer is given to write the text the judge reads about a unit."""
 
 from dataclasses import dataclass
+from typing import TypeVar
 
 from klint.core.models.report import AuditFinding
 from klint.core.models.unit import AuditableUnit
+
+# The class of unit a renderer describes.
+UnitT = TypeVar("UnitT", bound=AuditableUnit)
 
 
 @dataclass(frozen=True)
@@ -18,3 +22,15 @@ class RenderInput:
 
     unit: AuditableUnit
     child_findings: tuple[AuditFinding, ...] = ()
+
+    def get_unit_as(self, unit_class: type[UnitT]) -> UnitT:
+        """Return the unit, as a ``unit_class``.
+
+        Raises TypeError when the unit is not a ``unit_class``.
+        """
+        if not isinstance(self.unit, unit_class):
+            raise TypeError(
+                f"Expected a {unit_class.__name__} unit, got "
+                f"{type(self.unit).__name__} '{self.unit.unit_id}'"
+            )
+        return self.unit
