@@ -353,8 +353,7 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
         rule_ids for rule_ids in judge.asked_rule_ids() if "for_directory" in rule_ids
     ]
     # Only the Python file is asked the file rule, and the directory its own rule.
-    (file_content,) = contents_asked_the_file_rule
-    assert "a.py" in file_content
+    assert contents_asked_the_file_rule == ["a.py (lines=1)"]
     assert len(calls_with_the_directory_rule) == 1
     assert len(judge.requests) == 2
     # Examined are the units the judge was asked about: here the directory

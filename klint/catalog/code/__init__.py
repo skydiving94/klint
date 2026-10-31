@@ -15,6 +15,7 @@ from klint.catalog.code.common.extractors.project_structure import (
 )
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.common.renderers.file_metadata import FileMetadataRenderer
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.extractors.file_metadata import (
@@ -36,6 +37,7 @@ from klint.core.models.audit_input import AuditInputKind
 from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.scanned_tree import ScannedFile
 from klint.core.registry import UnitRegistry
+from klint.core.unit_content_renderer import UnitContentRenderer
 
 # The kinds of audit this suite offers: each file's contents, and the
 # structure of a project's directories.
@@ -86,6 +88,10 @@ class CodeSuite(BaseSuite):
                 ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
+                unit_class_to_renderer={
+                    AuditableFileMetadataUnit: FileMetadataRenderer(),
+                    AuditableDirectoryUnit: UnitContentRenderer(),
+                },
             ),
         ]
 

@@ -77,7 +77,6 @@ def test_binary_file_is_listed_by_name_only_whatever_its_language(
 
     assert (blob.file_name, blob.line_count, blob.language) == ("blob.py", None, None)
     assert blob.imports == []
-    assert blob.get_content() == "blob.py (binary)"
 
 
 def test_extractor_registered_for_a_language_reads_that_languages_files(
