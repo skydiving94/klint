@@ -1,5 +1,8 @@
 from pathlib import Path, PurePath
 
+from klint.catalog.common.file_traits_identifiers.imports import (
+    find_imported_modules,
+)
 from klint.catalog.common.file_traits_identifiers.path_glob import (
     does_path_match_glob,
 )
@@ -12,8 +15,9 @@ class TagDetectingFileTraitsIdentifier(BaseFileTraitsIdentifier):
     """Adds to the traits another identifier gives the tags a file's path shows.
 
     The tags are those of the file's extension and of every path glob its
-    path matches, from the scanned target down. A file that shows none has
-    no tags.
+    path matches, from the scanned target down, and, once the start of the
+    file is read, of every module imported there. A file that shows none
+    has no tags.
     """
 
     def __init__(
@@ -36,6 +40,17 @@ class TagDetectingFileTraitsIdentifier(BaseFileTraitsIdentifier):
             if does_path_match_glob(path_in_target, glob):
                 tags.update(glob_tags)
         return UnitTraits(language=traits.language, tags=frozenset(tags))
+
+    def identify_from_file_start(
+        self, path: Path, traits: UnitTraits, file_start: str
+    ) -> UnitTraits:
+        del path
+        import_tags = {
+            tag
+            for module in find_imported_modules(file_start)
+            for tag in self._tag_detection_table.import_to_tags.get(module, ())
+        }
+        return UnitTraits(language=traits.language, tags=traits.tags | import_tags)
 
 
 def _find_path_in_target(path: Path, scan_root: Path | None) -> PurePath:

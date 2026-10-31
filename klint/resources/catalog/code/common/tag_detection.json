@@ -1,30 +1,194 @@
 {
   "extension_to_tags": {
-    ".tsx": ["frontend"],
-    ".jsx": ["frontend"],
-    ".vue": ["frontend"],
-    ".svelte": ["frontend"],
-    ".html": ["frontend"],
-    ".htm": ["frontend"],
-    ".css": ["frontend"],
-    ".scss": ["frontend"],
-    ".sass": ["frontend"],
-    ".less": ["frontend"],
-    ".sql": ["backend"]
+    ".tsx": [
+      "frontend"
+    ],
+    ".jsx": [
+      "frontend"
+    ],
+    ".vue": [
+      "frontend"
+    ],
+    ".svelte": [
+      "frontend"
+    ],
+    ".html": [
+      "frontend"
+    ],
+    ".htm": [
+      "frontend"
+    ],
+    ".css": [
+      "frontend"
+    ],
+    ".scss": [
+      "frontend"
+    ],
+    ".sass": [
+      "frontend"
+    ],
+    ".less": [
+      "frontend"
+    ],
+    ".sql": [
+      "backend"
+    ]
   },
   "path_glob_to_tags": {
-    "**/*backend*": ["backend"],
-    "**/*backend*/**": ["backend"],
-    "**/api/**": ["backend"],
-    "**/server/**": ["backend"],
-    "**/routes/**": ["backend"],
-    "**/controllers/**": ["backend"],
-    "**/migrations/**": ["backend"],
-    "**/*frontend*": ["frontend"],
-    "**/*frontend*/**": ["frontend"],
-    "**/components/**": ["frontend"],
-    "**/pages/**": ["frontend"],
-    "**/ui/**": ["frontend"],
-    "**/styles/**": ["frontend"]
+    "**/*backend*": [
+      "backend"
+    ],
+    "**/*backend*/**": [
+      "backend"
+    ],
+    "**/api/**": [
+      "backend"
+    ],
+    "**/server/**": [
+      "backend"
+    ],
+    "**/routes/**": [
+      "backend"
+    ],
+    "**/controllers/**": [
+      "backend"
+    ],
+    "**/migrations/**": [
+      "backend"
+    ],
+    "**/*frontend*": [
+      "frontend"
+    ],
+    "**/*frontend*/**": [
+      "frontend"
+    ],
+    "**/components/**": [
+      "frontend"
+    ],
+    "**/pages/**": [
+      "frontend"
+    ],
+    "**/ui/**": [
+      "frontend"
+    ],
+    "**/styles/**": [
+      "frontend"
+    ]
+  },
+  "import_to_tags": {
+    "react": [
+      "frontend"
+    ],
+    "react-dom": [
+      "frontend"
+    ],
+    "vue": [
+      "frontend"
+    ],
+    "svelte": [
+      "frontend"
+    ],
+    "@angular/core": [
+      "frontend"
+    ],
+    "jquery": [
+      "frontend"
+    ],
+    "@remix-run/react": [
+      "frontend"
+    ],
+    "solid-js": [
+      "frontend"
+    ],
+    "preact": [
+      "frontend"
+    ],
+    "django": [
+      "backend"
+    ],
+    "flask": [
+      "backend"
+    ],
+    "fastapi": [
+      "backend"
+    ],
+    "starlette": [
+      "backend"
+    ],
+    "sqlalchemy": [
+      "backend"
+    ],
+    "sqlite3": [
+      "backend"
+    ],
+    "psycopg": [
+      "backend"
+    ],
+    "psycopg2": [
+      "backend"
+    ],
+    "pymongo": [
+      "backend"
+    ],
+    "redis": [
+      "backend"
+    ],
+    "celery": [
+      "backend"
+    ],
+    "uvicorn": [
+      "backend"
+    ],
+    "gunicorn": [
+      "backend"
+    ],
+    "alembic": [
+      "backend"
+    ],
+    "express": [
+      "backend"
+    ],
+    "koa": [
+      "backend"
+    ],
+    "fastify": [
+      "backend"
+    ],
+    "@nestjs/core": [
+      "backend"
+    ],
+    "pg": [
+      "backend"
+    ],
+    "mysql2": [
+      "backend"
+    ],
+    "mongoose": [
+      "backend"
+    ],
+    "@prisma/client": [
+      "backend"
+    ],
+    "sequelize": [
+      "backend"
+    ],
+    "typeorm": [
+      "backend"
+    ],
+    "knex": [
+      "backend"
+    ],
+    "org.springframework": [
+      "backend"
+    ],
+    "javax.servlet": [
+      "backend"
+    ],
+    "jakarta.servlet": [
+      "backend"
+    ],
+    "java.sql": [
+      "backend"
+    ]
   }
 }

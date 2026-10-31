@@ -63,3 +63,13 @@ def test_built_in_tables_tag_both_sides() -> None:
 
     assert table.extension_to_tags[".tsx"] == frozenset({"frontend"})
     assert table.path_glob_to_tags["**/api/**"] == frozenset({"backend"})
+
+
+def test_import_table_is_read(tmp_path: Path) -> None:
+    path = write_json(
+        tmp_path / "tags.json", {"import_to_tags": {"@angular/core": ["frontend"]}}
+    )
+
+    assert load_tag_detection_table(path).import_to_tags == {
+        "@angular/core": frozenset({"frontend"})
+    }

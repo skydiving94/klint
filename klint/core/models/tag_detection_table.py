@@ -11,8 +11,11 @@ class TagDetectionTable:
     extension_to_tags gives the tags of a file extension, with its leading
     dot and in lower case, such as ".tsx". path_glob_to_tags gives the tags
     of a file whose path, from the scanned target down, matches a glob such
-    as "**/api/**". Tags are in lower case.
+    as "**/api/**". import_to_tags gives the tags of a file that imports a
+    module, by any name the module is known by, such as "sqlalchemy" or
+    "@angular/core". Tags are in lower case.
     """
 
     extension_to_tags: Mapping[str, frozenset[str]] = field(default_factory=dict)
     path_glob_to_tags: Mapping[str, frozenset[str]] = field(default_factory=dict)
+    import_to_tags: Mapping[str, frozenset[str]] = field(default_factory=dict)

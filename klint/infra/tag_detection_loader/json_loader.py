@@ -5,15 +5,15 @@ from pathlib import Path
 
 from klint.core.models.tag_detection_table import TagDetectionTable
 
-_TABLE_NAMES = frozenset({"extension_to_tags", "path_glob_to_tags"})
+_TABLE_NAMES = frozenset({"extension_to_tags", "path_glob_to_tags", "import_to_tags"})
 
 
 def load_tag_detection_table(path: Path) -> TagDetectionTable:
     """Return the tag detection tables in ``path``.
 
-    The file is an object holding "extension_to_tags" and
-    "path_glob_to_tags", each an object that maps a signal to a list of
-    tags; either may be left out. Extensions and tags are kept in lower
+    The file is an object holding "extension_to_tags", "path_glob_to_tags"
+    and "import_to_tags", each an object that maps a signal to a list of
+    tags; any may be left out. Extensions and tags are kept in lower
     case. Raises FileNotFoundError when the file is missing, and ValueError
     naming the file when its content is not valid.
     """
@@ -45,6 +45,7 @@ def load_tag_detection_table(path: Path) -> TagDetectionTable:
             extension.lower(): tags for extension, tags in extension_to_tags.items()
         },
         path_glob_to_tags=_read_signal_to_tags(raw, "path_glob_to_tags", path),
+        import_to_tags=_read_signal_to_tags(raw, "import_to_tags", path),
     )
 
 

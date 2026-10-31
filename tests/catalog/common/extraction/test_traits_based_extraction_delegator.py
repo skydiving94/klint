@@ -1,4 +1,4 @@
-"""Each file is checked once for being binary, and its extractor is told."""
+"""The start of each file is read once; its extractor is told if it is binary."""
 
 import asyncio
 from pathlib import Path
@@ -8,8 +8,8 @@ from injector import Binder
 
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.common.extraction import traits_based_extraction_delegator
-from klint.catalog.common.extraction.binary_check import is_likely_binary
 from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.common.extraction.file_start import read_file_start
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.unit import AuditableUnit
@@ -36,18 +36,18 @@ def _write_text_and_binary_files(folder: Path) -> list[Path]:
 @pytest.mark.parametrize(
     "audit_kind_id", [FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID]
 )
-def test_each_file_is_checked_once_for_being_binary(
+def test_the_start_of_each_file_is_read_once(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, audit_kind_id: str
 ) -> None:
     paths = _write_text_and_binary_files(tmp_path)
     checked_paths: list[Path] = []
 
-    def check_and_record(path: Path) -> bool:
+    def read_and_record(path: Path) -> bytes:
         checked_paths.append(path)
-        return is_likely_binary(path)
+        return read_file_start(path)
 
     monkeypatch.setattr(
-        traits_based_extraction_delegator, "is_likely_binary", check_and_record
+        traits_based_extraction_delegator, "read_file_start", read_and_record
     )
 
     list_judge_subjects(tmp_path / "pkg", audit_kind_id)
