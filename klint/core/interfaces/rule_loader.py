@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
 
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit_traits import UnitTraits
 
@@ -8,10 +8,10 @@ from klint.core.models.unit_traits import UnitTraits
 class BaseRuleLoader(ABC):
     @abstractmethod
     async def load_rules(
-        self, traits: UnitTraits, custom_rules_source: str | Path | None = None
+        self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None = None
     ) -> list[AuditRule]:
-        """Return the rules to ask about files with ``traits``.
+        """Return the rules to ask about units with ``traits``.
 
-        The rules in ``custom_rules_source``, when given, merge over them by
+        The rules in ``custom_rule_source``, when given, merge over them by
         rule ID.
         """

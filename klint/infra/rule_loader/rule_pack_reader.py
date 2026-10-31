@@ -2,15 +2,19 @@
 
 import json
 import warnings
-from dataclasses import dataclass
-from enum import Enum, auto
 from pathlib import Path
 from typing import TypeGuard
 
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import DEFAULT_TARGET_UNIT_TYPES
-from klint.infra.rule_loader.pack_scope import PackScope
+from klint.core.models.rule_pack import (
+    PackScope,
+    RulePackSpec,
+    RuleProblem,
+    RuleProblemSeverity,
+    RuleSpec,
+)
 
 RULE_FIELD_NAMES = frozenset(
     {"type", "instructions", "target_unit_types", "languages", "tags"}
@@ -18,55 +22,6 @@ RULE_FIELD_NAMES = frozenset(
 # The header of a pack: which files the pack is for.
 HEADER_KEY = "applies_to"
 _HEADER_FIELD_NAMES = frozenset({"languages"})
-
-
-@dataclass(frozen=True)
-class RuleSpec:
-    """One rule as its file writes it.
-
-    target_unit_types is the default when the rule names none. languages
-    are the rule's own, before its pack's header narrows them; empty when
-    it names none.
-    """
-
-    rule_id: str
-    question_type: QuestionType
-    instructions: str
-    target_unit_types: tuple[str, ...]
-    languages: tuple[str, ...]
-    tags: tuple[str, ...]
-
-
-class RuleProblemSeverity(Enum):
-    """What a problem in a rule does to the load."""
-
-    # The rule, or the field, is ignored and the load goes on.
-    WARNING = auto()
-    # The load stops.
-    ERROR = auto()
-
-
-@dataclass(frozen=True)
-class RuleProblem:
-    """A problem found in one rule, with a message naming the rule and the file."""
-
-    severity: RuleProblemSeverity
-    message: str
-
-
-@dataclass(frozen=True)
-class RulePackSpec:
-    """One rules file as read: where it is, the files it is for, and its rules.
-
-    rule_problems are the problems found in the rules, in file order. They
-    are kept rather than reported, so that a pack is reported on only when
-    it is used. A rule with an ERROR problem is not among rules.
-    """
-
-    path: Path
-    scope: PackScope
-    rules: tuple[RuleSpec, ...]
-    rule_problems: tuple[RuleProblem, ...]
 
 
 def read_rule_pack(path: Path) -> RulePackSpec:
@@ -96,7 +51,10 @@ def read_rule_pack(path: Path) -> RulePackSpec:
         if rule is not None:
             rules.append(rule)
     return RulePackSpec(
-        path=path, scope=scope, rules=tuple(rules), rule_problems=tuple(rule_problems)
+        origin=str(path),
+        scope=scope,
+        rules=tuple(rules),
+        rule_problems=tuple(rule_problems),
     )
 
 

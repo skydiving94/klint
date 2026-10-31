@@ -1,12 +1,12 @@
 """Prepares an audit: works out what will be audited before any rule is applied."""
 
 from dataclasses import dataclass
-from pathlib import Path
 
 from injector import inject
 
 from klint.app.pipeline.acquisition import UnitAcquisition
 from klint.app.pipeline.rule_selection import RuleSelection
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.audit_input import AuditInput
 from klint.core.models.audit_kind import AuditKind
@@ -48,20 +48,20 @@ class AuditPreparer:
         audit_input: AuditInput,
         audit_kind: AuditKind,
         *,
-        custom_rules_source: Path | None = None,
+        custom_rule_source: BaseRuleSource | None = None,
         scan_progress_listener: BaseScanProgressListener | None = None,
     ) -> PendingAuditPortfolio:
         """Read ``audit_input``, extract its units and load their rules.
 
-        Raises when the input or a rules file cannot be used. The rules in
-        ``custom_rules_source``, when given, merge over the loaded ones. The
+        Raises when the input or a rule source cannot be used. The rules of
+        ``custom_rule_source``, when given, merge over the loaded ones. The
         listener, when given, is told about each directory as it is scanned.
         """
         acquired_units = await self._unit_acquisition.acquire_units(
             audit_input, audit_kind, scan_progress_listener
         )
         rule_set = await self._rule_selection.select_rules(
-            acquired_units.units, audit_kind, custom_rules_source
+            acquired_units.units, audit_kind, custom_rule_source
         )
         return PendingAuditPortfolio(
             units=[

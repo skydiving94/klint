@@ -23,6 +23,7 @@ from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.audit_input import DiskPathInput
+from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 
 
 @dataclass(frozen=True)
@@ -195,7 +196,13 @@ class AuditCommandApp:
         request = AuditRequest(
             audit_input=DiskPathInput(path=arguments.target),
             audit_kind_id=command.audit_kind_id,
-            custom_rules_source=arguments.rules_source,
+            custom_rule_source=(
+                None
+                if arguments.rules_source is None
+                else JsonFileRuleSource(
+                    path=arguments.rules_source.resolve(), is_required=True
+                )
+            ),
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress
             ),

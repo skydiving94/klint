@@ -6,7 +6,7 @@ The suites an audit draws on are added by the caller; each one binds what
 it needs itself.
 """
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import NewType, assert_never
@@ -22,13 +22,15 @@ from klint.catalog.common.file_traits_identifiers.extension_identifier import (
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_loader import BaseRuleLoader
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_kind import AuditKind
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
-from klint.infra.rule_loader.json_rule_loader import JsonRuleLoader
+from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
+from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
 from klint.infra.system_one.remote import RemoteSystemOneJudge
 
 # The language each file extension stands for, loaded once per injector.
@@ -108,13 +110,13 @@ class KlintModule(Module):
         registry: UnitRegistry,
         file_extension_to_language: FileExtensionToLanguage,
     ) -> BaseRuleLoader:
-        # The built-in packs, chosen by the traits of each file.
-        return JsonRuleLoader(
-            settings.built_in_rule_packs,
-            settings.fallback_rule_packs,
+        # The built-in packs, chosen by the traits of each unit.
+        return RulePackLoader(
+            _create_rule_sources(settings.built_in_rule_packs),
+            _create_rule_sources(settings.fallback_rule_packs),
             registry,
             set(file_extension_to_language.values()),
-            project_rule_packs=settings.project_rule_packs,
+            project_rule_sources=_create_rule_sources(settings.project_rule_packs),
         )
 
     @singleton
@@ -134,14 +136,17 @@ class KlintModule(Module):
             )
             if rule_pack_override is None:
                 return audit_kind
+            override_sources = _create_rule_sources((rule_pack_override,))
             return replace(
                 audit_kind,
-                rule_loader=JsonRuleLoader(
-                    (rule_pack_override,),
-                    (rule_pack_override,),
+                rule_loader=RulePackLoader(
+                    override_sources,
+                    override_sources,
                     registry,
                     known_languages,
-                    project_rule_packs=settings.project_rule_packs,
+                    project_rule_sources=_create_rule_sources(
+                        settings.project_rule_packs
+                    ),
                 ),
             )
 
@@ -152,6 +157,11 @@ class KlintModule(Module):
                 for audit_kind in suite.list_audit_kinds()
             ]
         )
+
+
+def _create_rule_sources(rule_packs: Sequence[Path]) -> list[BaseRuleSource]:
+    """Return a source for each rules file; a file that does not exist has none."""
+    return [JsonFileRuleSource(path) for path in rule_packs]
 
 
 def create_injector(

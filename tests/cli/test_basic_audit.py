@@ -440,7 +440,7 @@ def test_missing_target_or_rules_file_exits_with_an_error(
     assert _run(app, tmp_path / "absent.py") == ExitCode.RUN_ERROR
     assert "Audit target does not exist" in capsys.readouterr().err
     assert _run(app, target, "--rules", tmp_path / "absent.json") == ExitCode.RUN_ERROR
-    assert "Custom rules file does not exist" in capsys.readouterr().err
+    assert "Rules file does not exist" in capsys.readouterr().err
     # The command stops before anything is audited.
     assert judge.requests == []
 

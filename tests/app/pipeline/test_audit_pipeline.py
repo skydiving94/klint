@@ -10,8 +10,15 @@ from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.models.audit_input import DiskPathInput, InMemoryBytesInput
 from klint.core.models.scale import AnswerChoice
-from tests.support.builders import FAIL, PASS, build_audit_pipeline, write_text
-from tests.support.fakes import FakeJudge, PickyJudge
+from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
+from tests.support.builders import (
+    FAIL,
+    PASS,
+    build_audit_pipeline,
+    build_rule_pack,
+    write_text,
+)
+from tests.support.fakes import FakeJudge, InMemoryRuleSource, PickyJudge
 
 
 class RecordingAuditProgressListener(BaseAuditProgressListener):
@@ -127,11 +134,32 @@ def test_rules_file_given_with_the_request_is_asked_too(
         AuditRequest(
             audit_input=DiskPathInput(target),
             audit_kind_id=FILE_CONTENTS_KIND_ID,
-            custom_rules_source=rules,
+            custom_rule_source=JsonFileRuleSource(rules),
         ),
     )
 
     assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+
+
+def test_rules_held_in_memory_are_asked_with_no_rules_file(
+    tmp_path: Path, fake_judge: type[FakeJudge]
+) -> None:
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge()
+
+    _run_audit(
+        judge,
+        AuditRequest(
+            audit_input=DiskPathInput(target),
+            audit_kind_id=FILE_CONTENTS_KIND_ID,
+            custom_rule_source=InMemoryRuleSource(
+                build_rule_pack("rules in memory", "typed")
+            ),
+        ),
+    )
+
+    assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["a.py"]
 
 
 @pytest.mark.parametrize(

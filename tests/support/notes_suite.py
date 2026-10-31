@@ -2,7 +2,6 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
 from typing import ClassVar
 
 from injector import Binder, inject
@@ -17,6 +16,7 @@ from klint.cli.runner import AuditCommand
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_input import AuditInputKind
 from klint.core.models.audit_kind import AuditKind, UnitSource
@@ -96,15 +96,15 @@ class NoteDocumentExtractor(BaseUnitExtractor[JsonValue]):
 
 
 class FixedRuleLoader(BaseRuleLoader):
-    """Gives the same rules for every file; a custom rules file is not read."""
+    """Gives the same rules for every unit; a custom rule source is not read."""
 
     def __init__(self, rules: list[AuditRule]) -> None:
         self._rules = rules
 
     async def load_rules(
-        self, traits: UnitTraits, custom_rules_source: str | Path | None = None
+        self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None = None
     ) -> list[AuditRule]:
-        del traits, custom_rules_source
+        del traits, custom_rule_source
         return list(self._rules)
 
 

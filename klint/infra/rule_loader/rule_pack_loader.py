@@ -1,116 +1,102 @@
 import asyncio
 import warnings
 from collections.abc import Collection, Iterator, Sequence
-from pathlib import Path
 
 from klint.core.interfaces.rule_loader import BaseRuleLoader
+from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.rule import AuditRule
+from klint.core.models.rule_pack import RulePackSpec, RuleProblemSeverity, RuleSpec
 from klint.core.models.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
-from klint.infra.rule_loader.rule_pack_reader import (
-    HEADER_KEY,
-    RulePackSpec,
-    RuleProblemSeverity,
-    RuleSpec,
-    read_rule_pack,
-)
+from klint.infra.rule_loader.rule_pack_reader import HEADER_KEY
 
 
-class JsonRuleLoader(BaseRuleLoader):
-    """Loads rules from JSON rule packs, choosing the packs by the traits of files.
+class RulePackLoader(BaseRuleLoader):
+    """Loads rules from the packs of rule sources, choosing packs by unit traits.
 
-    A file of an identified language is asked every pack whose applies_to
+    A unit of an identified language is asked every pack whose applies_to
     header matches its traits; a pack without a header matches every such
-    file. A file whose language is not identified is asked the fallback
-    packs instead. A rule inherits its pack's languages and may narrow them.
-    The rules of project_rule_packs, a project's own, merge over the chosen
-    packs for every file, and custom rules merge over them all.
-    Every pack file is read when the first load needs its header, but the
-    problems in its rules are reported only once the pack is chosen.
+    unit. A unit whose language is not identified is asked the packs of the
+    fallback sources instead. A rule inherits its pack's languages and may
+    narrow them. The rules of project_rule_sources, a project's own, merge
+    over the chosen packs for every unit, and custom rules merge over them
+    all. Each source is read when the first load needs its packs' headers,
+    but the problems in a pack's rules are reported only once it is chosen.
 
-    A file that cannot be read as rules stops the load with an error, as does
-    a rule with a field of the wrong kind or an unknown unit type. Any other
-    problem in one rule is reported as a KlintWarning and the load goes on.
-    A pack that does not exist gives no rules. known_languages are the
-    languages a file can be identified as.
+    A source that cannot be read as rules stops the load with an error, as
+    does a rule with a field of the wrong kind or an unknown unit type. Any
+    other problem in one rule is reported as a KlintWarning and the load goes
+    on. known_languages are the languages a unit can be identified as.
     """
 
     def __init__(
         self,
-        rule_packs: Sequence[Path],
-        fallback_rule_packs: Sequence[Path],
+        rule_sources: Sequence[BaseRuleSource],
+        fallback_rule_sources: Sequence[BaseRuleSource],
         unit_registry: UnitRegistry,
         known_languages: Collection[str],
-        project_rule_packs: Sequence[Path] = (),
+        project_rule_sources: Sequence[BaseRuleSource] = (),
     ) -> None:
-        self._rule_packs = list(rule_packs)
-        self._fallback_rule_packs = list(fallback_rule_packs)
-        self._project_rule_packs = list(project_rule_packs)
+        self._rule_sources = list(rule_sources)
+        self._fallback_rule_sources = list(fallback_rule_sources)
+        self._project_rule_sources = list(project_rule_sources)
         self._unit_registry = unit_registry
         self._known_languages = {language.lower() for language in known_languages}
-        # Each file is read and checked once, however many loads use it.
-        self._path_to_pack: dict[Path, RulePackSpec | None] = {}
-        self._path_to_rules: dict[Path, dict[str, AuditRule]] = {}
+        # Each source is read and each pack checked once, however many loads
+        # use them.
+        self._source_to_packs: dict[BaseRuleSource, list[RulePackSpec]] = {}
+        self._pack_to_rules: dict[RulePackSpec, dict[str, AuditRule]] = {}
         self._lock = asyncio.Lock()
 
     async def load_rules(
-        self, traits: UnitTraits, custom_rules_source: str | Path | None = None
+        self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None = None
     ) -> list[AuditRule]:
-        custom_path = (
-            None if custom_rules_source is None else Path(custom_rules_source).resolve()
-        )
         async with self._lock:
-            return await asyncio.to_thread(self._load_rules_sync, traits, custom_path)
+            return await asyncio.to_thread(
+                self._load_rules_sync, traits, custom_rule_source
+            )
 
     def _load_rules_sync(
-        self, traits: UnitTraits, custom_path: Path | None
+        self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None
     ) -> list[AuditRule]:
         """Merge the chosen packs, the project's, then the custom rules, by rule ID."""
         rules: dict[str, AuditRule] = {}
         for pack in self._choose_packs(traits):
             rules.update(self._load_pack_rules(pack))
-        for path in self._project_rule_packs:
-            project_pack = self._read_pack(path)
-            if project_pack is not None:
-                rules.update(self._load_pack_rules(project_pack))
-        if custom_path is not None:
-            rules.update(self._load_pack_rules(self._read_custom_pack(custom_path)))
+        sources_merged_last = list(self._project_rule_sources)
+        if custom_rule_source is not None:
+            sources_merged_last.append(custom_rule_source)
+        for source in sources_merged_last:
+            for pack in self._read_packs(source):
+                rules.update(self._load_pack_rules(pack))
         return list(rules.values())
 
     def _choose_packs(self, traits: UnitTraits) -> Iterator[RulePackSpec]:
-        if traits.language is None:
-            for path in self._fallback_rule_packs:
-                pack = self._read_pack(path)
-                if pack is not None:
-                    yield pack
+        language = traits.language
+        if language is None:
+            for source in self._fallback_rule_sources:
+                yield from self._read_packs(source)
             return
-        for path in self._rule_packs:
-            pack = self._read_pack(path)
-            if pack is not None and pack.scope.matches(traits.language):
-                yield pack
+        for source in self._rule_sources:
+            for pack in self._read_packs(source):
+                if pack.scope.matches(language):
+                    yield pack
 
-    def _read_pack(self, path: Path) -> RulePackSpec | None:
-        """Return the pack at ``path``; None when there is no such file."""
-        if path not in self._path_to_pack:
-            pack = read_rule_pack(path) if path.exists() else None
-            if pack is not None:
+    def _read_packs(self, source: BaseRuleSource) -> list[RulePackSpec]:
+        """Return the packs of ``source``, read the first time they are needed."""
+        if source not in self._source_to_packs:
+            packs = source.read_rule_packs()
+            for pack in packs:
                 self._warn_about_unknown_header_languages(pack)
-            self._path_to_pack[path] = pack
-        return self._path_to_pack[path]
-
-    def _read_custom_pack(self, path: Path) -> RulePackSpec:
-        if not path.is_file():
-            raise FileNotFoundError(f"Custom rules file does not exist: {path}")
-        pack = self._read_pack(path)
-        assert pack is not None
-        return pack
+            self._source_to_packs[source] = packs
+        return self._source_to_packs[source]
 
     def _warn_about_unknown_header_languages(self, pack: RulePackSpec) -> None:
         unknown_languages = self._find_unknown_languages(pack.scope.languages or ())
         if unknown_languages:
             warnings.warn(
-                f"The {HEADER_KEY} header in '{pack.path}' names unknown languages "
+                f"The {HEADER_KEY} header in '{pack.origin}' names unknown languages "
                 f"{unknown_languages}, so the pack never loads for them; known "
                 f"languages: {sorted(self._known_languages)}",
                 KlintWarning,
@@ -118,14 +104,14 @@ class JsonRuleLoader(BaseRuleLoader):
             )
 
     def _load_pack_rules(self, pack: RulePackSpec) -> dict[str, AuditRule]:
-        if pack.path not in self._path_to_rules:
+        if pack not in self._pack_to_rules:
             self._report_rule_problems(pack)
-            self._path_to_rules[pack.path] = {
+            self._pack_to_rules[pack] = {
                 rule.rule_id: rule
                 for rule in (self._build_rule(spec, pack) for spec in pack.rules)
                 if rule is not None
             }
-        return self._path_to_rules[pack.path]
+        return self._pack_to_rules[pack]
 
     def _report_rule_problems(self, pack: RulePackSpec) -> None:
         """Warn about each problem in the pack's rules; raise at the first error."""
@@ -136,10 +122,10 @@ class JsonRuleLoader(BaseRuleLoader):
 
     def _build_rule(self, spec: RuleSpec, pack: RulePackSpec) -> AuditRule | None:
         """Return the rule ``spec`` writes, in its pack; None when it never runs."""
-        self._check_unit_types(spec, pack.path)
-        self._warn_about_unknown_rule_languages(spec, pack.path)
+        self._check_unit_types(spec, pack.origin)
+        self._warn_about_unknown_rule_languages(spec, pack.origin)
         languages = pack.scope.narrow(spec.languages)
-        if not self._keeps_languages_of_its_pack(spec, languages, pack.path):
+        if not self._keeps_languages_of_its_pack(spec, languages, pack.origin):
             return None
         return AuditRule(
             rule_id=spec.rule_id,
@@ -151,7 +137,7 @@ class JsonRuleLoader(BaseRuleLoader):
         )
 
     def _keeps_languages_of_its_pack(
-        self, spec: RuleSpec, narrowed_languages: Sequence[str], path: Path
+        self, spec: RuleSpec, narrowed_languages: Sequence[str], origin: str
     ) -> bool:
         """Warn about rule languages its pack leaves out; False if none are left."""
         outside = [
@@ -162,19 +148,19 @@ class JsonRuleLoader(BaseRuleLoader):
         if not outside:
             return True
         warnings.warn(
-            f"Rule '{spec.rule_id}' in '{path}' names languages {outside} that the "
+            f"Rule '{spec.rule_id}' in '{origin}' names languages {outside} that the "
             f"{HEADER_KEY} header of its pack leaves out, so it never runs for them",
             KlintWarning,
             stacklevel=2,
         )
         return bool(narrowed_languages)
 
-    def _warn_about_unknown_rule_languages(self, spec: RuleSpec, path: Path) -> None:
-        """Warn about languages no file can be identified as."""
+    def _warn_about_unknown_rule_languages(self, spec: RuleSpec, origin: str) -> None:
+        """Warn about languages no unit can be identified as."""
         unknown = self._find_unknown_languages(spec.languages)
         if unknown:
             warnings.warn(
-                f"Rule '{spec.rule_id}' in '{path}' names unknown languages "
+                f"Rule '{spec.rule_id}' in '{origin}' names unknown languages "
                 f"{unknown}, so it never runs for them; known languages: "
                 f"{sorted(self._known_languages)}",
                 KlintWarning,
@@ -188,7 +174,7 @@ class JsonRuleLoader(BaseRuleLoader):
             if language.lower() not in self._known_languages
         ]
 
-    def _check_unit_types(self, spec: RuleSpec, path: Path) -> None:
+    def _check_unit_types(self, spec: RuleSpec, origin: str) -> None:
         """Raise when the rule names a unit type no suite registers."""
         known = set(self._unit_registry.known_unit_types())
         unknown = [
@@ -197,5 +183,5 @@ class JsonRuleLoader(BaseRuleLoader):
         if unknown:
             raise ValueError(
                 f"Rule '{spec.rule_id}' has unknown target_unit_types {unknown} "
-                f"in '{path}'; known: {sorted(known)}"
+                f"in '{origin}'; known: {sorted(known)}"
             )
