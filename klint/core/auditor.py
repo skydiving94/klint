@@ -74,14 +74,15 @@ class Auditor:
                 audit_progress_listener.report_unit_audited(unit.unit_id)
             return findings
 
-        unit_id_to_findings: dict[str, list[AuditFinding] | None] = {}
+        unit_findings: list[list[AuditFinding] | None] = [None] * len(units)
         for level in _order_levels(units, audit_order):
-            level_findings = await asyncio.gather(*(audit_one(unit) for unit in level))
-            for unit, findings in zip(level, level_findings, strict=True):
-                unit_id_to_findings[unit.unit_id] = findings
+            level_findings = await asyncio.gather(
+                *(audit_one(units[index]) for index in level)
+            )
+            for index, findings in zip(level, level_findings, strict=True):
+                unit_findings[index] = findings
         report = AuditReport()
-        for unit in units:
-            findings = unit_id_to_findings[unit.unit_id]
+        for unit, findings in zip(units, unit_findings, strict=True):
             if findings is None:
                 continue
             report.record_audited_unit(unit.unit_id)
@@ -124,24 +125,24 @@ class Auditor:
 
 def _order_levels(
     units: Sequence[AuditableUnit], audit_order: AuditOrder
-) -> list[list[AuditableUnit]]:
-    """Return the units in the groups to judge one after another.
+) -> list[list[int]]:
+    """Return the positions in ``units`` of the groups to judge one by one.
 
     The units of a group are judged together. With CHILDREN_FIRST, a group
     holds the units at one depth of nesting, the deepest group first.
     """
     match audit_order:
         case AuditOrder.ALL_AT_ONCE:
-            return [list(units)]
+            return [list(range(len(units)))]
         case AuditOrder.CHILDREN_FIRST:
             unit_id_to_parent_unit_id = map_unit_id_to_parent_unit_id(units)
-            depth_to_units: defaultdict[int, list[AuditableUnit]] = defaultdict(list)
-            for unit in units:
+            depth_to_indexes: defaultdict[int, list[int]] = defaultdict(list)
+            for index, unit in enumerate(units):
                 depth = len(
                     list_ancestor_unit_ids(unit.unit_id, unit_id_to_parent_unit_id)
                 )
-                depth_to_units[depth].append(unit)
-            return [depth_to_units[depth] for depth in sorted(depth_to_units)[::-1]]
+                depth_to_indexes[depth].append(index)
+            return [depth_to_indexes[depth] for depth in sorted(depth_to_indexes)[::-1]]
 
 
 def _build_request(

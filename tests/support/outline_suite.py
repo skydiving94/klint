@@ -120,7 +120,7 @@ def add_the_outline_suite(binder: Binder) -> None:
 
 
 # A three-level outline: the book, its chapters, and their sections.
-OUTLINE = {
+OUTLINE: JsonValue = {
     "id": "book",
     "text": "The book.",
     "sections": [
@@ -148,12 +148,14 @@ SUBJECT_TO_PARENT_SUBJECT = {
 }
 
 
-def run_outline_audit(judge: BaseJudge, min_confidence: float = 0.0) -> AuditOutcome:
-    """Audit the three-level outline, held in memory, with the outline suite."""
+def run_outline_audit(
+    judge: BaseJudge, min_confidence: float = 0.0, outline: JsonValue = OUTLINE
+) -> AuditOutcome:
+    """Audit ``outline``, held in memory, with the outline suite."""
     pipeline = build_audit_pipeline(judge, overrides=[add_the_outline_suite])
     request = AuditRequest(
         audit_input=InMemoryBytesInput(
-            content=json.dumps(OUTLINE).encode(), media_type="application/json"
+            content=json.dumps(outline).encode(), media_type="application/json"
         ),
         audit_kind_id=OUTLINE_KIND_ID,
         min_confidence=min_confidence,
