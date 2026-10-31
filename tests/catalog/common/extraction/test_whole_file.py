@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.common.extractors.whole_file import WholeFileExtractor
+from klint.catalog.common.extraction.whole_file import WholeFileExtractor
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.models.location import Location
 from klint.core.models.scanned_tree import ScannedFile

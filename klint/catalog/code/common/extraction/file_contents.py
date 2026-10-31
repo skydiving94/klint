@@ -2,7 +2,7 @@
 
 from injector import inject
 
-from klint.catalog.common.extractors.whole_file import WholeFileExtractor
+from klint.catalog.common.extraction.whole_file import WholeFileExtractor
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.klint_warning import leave_out_file_on_failure
 from klint.core.models.scanned_tree import ScannedFile, ScannedTarget

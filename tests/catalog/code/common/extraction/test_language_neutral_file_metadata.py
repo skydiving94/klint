@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from klint.catalog.code.common.extractors.language_neutral_file_metadata import (
+from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
     LanguageNeutralFileMetadataExtractor,
 )
 from klint.core.models.unit_traits import UnitTraits

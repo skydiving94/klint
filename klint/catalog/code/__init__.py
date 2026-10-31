@@ -3,14 +3,14 @@
 from injector import Binder, Module, ProviderOf, inject
 
 from klint.catalog.code import python
-from klint.catalog.code.common.extractors.directory_factory import (
+from klint.catalog.code.common.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extractors.file_contents import FileContentsExtractor
-from klint.catalog.code.common.extractors.file_metadata_base import (
+from klint.catalog.code.common.extraction.file_contents import FileContentsExtractor
+from klint.catalog.code.common.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.common.extractors.project_structure import (
+from klint.catalog.code.common.extraction.project_structure import (
     ProjectStructureExtractor,
 )
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
@@ -19,10 +19,10 @@ from klint.catalog.code.common.renderers.directory import DirectoryRenderer
 from klint.catalog.code.common.renderers.file_metadata import FileMetadataRenderer
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.code.python.extractors.file_metadata import (
+from klint.catalog.code.python.extraction.file_metadata import (
     PythonFileMetadataExtractor,
 )
-from klint.catalog.code.python.extractors.package_factory import (
+from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
 from klint.catalog.code.python.renderers.package import PythonPackageRenderer

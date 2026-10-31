@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 
-from klint.catalog.code.common.extractors.file_metadata_base import (
+from klint.catalog.code.common.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit

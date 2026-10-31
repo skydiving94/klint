@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.code.python.extractors.file_metadata import (
+from klint.catalog.code.python.extraction.file_metadata import (
     PythonFileMetadataExtractor,
 )
 from klint.core.klint_warning import KlintWarning

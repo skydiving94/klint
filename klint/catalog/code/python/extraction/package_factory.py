@@ -1,7 +1,7 @@
 from dataclasses import replace
 from pathlib import Path
 
-from klint.catalog.code.common.extractors.directory_factory import (
+from klint.catalog.code.common.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit

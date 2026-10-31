@@ -2,7 +2,7 @@ import asyncio
 
 from injector import inject
 
-from klint.catalog.code.common.extractors.traits_based_extraction_delegator import (
+from klint.catalog.code.common.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit

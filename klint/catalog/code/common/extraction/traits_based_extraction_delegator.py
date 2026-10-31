@@ -6,21 +6,21 @@ from pathlib import Path
 
 from injector import inject
 
-from klint.catalog.code.common.extractors.directory_factory import (
+from klint.catalog.code.common.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extractors.file_metadata_base import (
+from klint.catalog.code.common.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.common.extractors.language_neutral_directory_factory import (
+from klint.catalog.code.common.extraction.language_neutral_directory_factory import (
     LanguageNeutralDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extractors.language_neutral_file_metadata import (
+from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
     LanguageNeutralFileMetadataExtractor,
 )
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.common.extractors.binary_check import is_likely_binary
+from klint.catalog.common.extraction.binary_check import is_likely_binary
 from klint.core.models.scanned_tree import ScannedFile
 
 

@@ -1,6 +1,6 @@
 import asyncio
 
-from klint.catalog.common.extractors.binary_check import is_likely_binary
+from klint.catalog.common.extraction.binary_check import is_likely_binary
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.scanned_tree import ScannedFile
