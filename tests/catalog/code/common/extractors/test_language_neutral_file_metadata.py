@@ -20,6 +20,6 @@ def test_language_neutral_metadata_records_only_name_and_line_count(
 
     unit = LanguageNeutralFileMetadataExtractor().extract_file(target, traits)
 
-    assert unit.get_content() == "view.tsx (lines=2)"
+    assert (unit.file_name, unit.line_count) == ("view.tsx", 2)
     assert unit.imports == []
     assert unit.language == "typescript"

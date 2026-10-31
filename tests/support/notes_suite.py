@@ -15,6 +15,7 @@ from klint.catalog.common.sources.json_document_source import (
 from klint.cli.runner import AuditCommand
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
+from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.suite import BaseSuite
@@ -23,6 +24,7 @@ from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.ignored_names import IgnoredNames
 from klint.core.models.json_value import JsonValue
 from klint.core.models.question_type import QuestionType
+from klint.core.models.render_input import RenderInput
 from klint.core.models.rule import AuditRule
 from klint.core.models.scale import AnswerChoice, AnswerScale
 from klint.core.models.scanned_tree import ScannedTarget
@@ -68,8 +70,12 @@ class NoteUnit(AuditableUnit):
 
     text: str = ""
 
-    def get_content(self) -> str:
-        return self.text
+
+class NoteRenderer(BaseUnitRenderer):
+    """Shows the judge the text of a note."""
+
+    def render_subject(self, render_input: RenderInput) -> str:
+        return render_input.get_unit_as(NoteUnit).text
 
 
 class NoteExtractor(BaseUnitExtractor[ScannedTarget]):
@@ -128,6 +134,7 @@ class NotesSuite(BaseSuite):
                 ),
                 rule_loader=FixedRuleLoader([POLITE_RULE]),
                 answer_scale=POLITENESS_SCALE,
+                unit_class_to_renderer={NoteUnit: NoteRenderer()},
             )
         ]
 
@@ -150,6 +157,7 @@ class NotesDocumentSuite(BaseSuite):
                 ),
                 rule_loader=FixedRuleLoader([POLITE_RULE]),
                 answer_scale=POLITENESS_SCALE,
+                unit_class_to_renderer={NoteUnit: NoteRenderer()},
             )
         ]
 

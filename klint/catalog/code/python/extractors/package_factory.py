@@ -6,6 +6,7 @@ from klint.catalog.code.common.extractors.directory_factory import (
 )
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.python.module_names import collect_module_names
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.core.models.unit_traits import UnitTraits
 
@@ -37,7 +38,7 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
         """
         if not isinstance(root_unit, AuditablePythonPackageUnit):
             return root_unit
-        shared_modules = tuple(sorted(root_unit.internal_module_names()))
+        shared_modules = tuple(sorted(collect_module_names(root_unit)))
         return self._attach_project_modules(root_unit, shared_modules)
 
     def _attach_project_modules(

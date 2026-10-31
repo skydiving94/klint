@@ -7,7 +7,7 @@ document is the outermost section.
 import asyncio
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import ClassVar
 
 from injector import Binder
@@ -20,12 +20,14 @@ from klint.catalog.common.sources.json_document_source import (
 from klint.cli.runner import AuditCommand
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_input import AuditInputKind, InMemoryBytesInput
 from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.audit_order import AuditOrder
 from klint.core.models.json_value import JsonValue
 from klint.core.models.question_type import QuestionType
+from klint.core.models.render_input import RenderInput
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit import AuditableUnit
 from klint.core.registry import UnitRegistry
@@ -33,6 +35,9 @@ from tests.support.builders import build_audit_pipeline
 from tests.support.notes_suite import FixedRuleLoader
 
 OUTLINE_KIND_ID = "outline"
+# The same audit, with each section described with the findings on the
+# sections directly inside it.
+SUMMARIZED_OUTLINE_KIND_ID = "summarized_outline"
 OUTLINE_COMMAND = AuditCommand(
     name="klint-outline",
     description="Audits an outline",
@@ -57,9 +62,6 @@ class OutlineSectionUnit(AuditableUnit):
 
     text: str = ""
     sections: tuple["OutlineSectionUnit", ...] = ()
-
-    def get_content(self) -> str:
-        return self.text
 
     def children(self) -> Sequence[AuditableUnit]:
         return self.sections
@@ -94,21 +96,49 @@ def _yield_section_and_nested(
     return nested
 
 
+class OutlineSectionRenderer(BaseUnitRenderer):
+    """Shows the judge the text of a section."""
+
+    def render_subject(self, render_input: RenderInput) -> str:
+        return render_input.get_unit_as(OutlineSectionUnit).text
+
+
+class SummarizedSectionRenderer(BaseUnitRenderer):
+    """Shows a section's text, then one line per finding on its subsections."""
+
+    def render_subject(self, render_input: RenderInput) -> str:
+        lines = [render_input.get_unit_as(OutlineSectionUnit).text]
+        lines.extend(
+            f"{finding.unit_id}: {finding.rule_id} = {finding.answer.key}"
+            for finding in render_input.child_findings
+        )
+        return "\n".join(lines)
+
+
 class OutlineSuite(BaseSuite):
     """Judges each section of an outline after the sections nested in it."""
 
     def list_audit_kinds(self) -> list[AuditKind]:
+        outline_kind = AuditKind(
+            kind_id=OUTLINE_KIND_ID,
+            accepted_input_kinds=frozenset(
+                {AuditInputKind.DISK_PATH, AuditInputKind.IN_MEMORY_BYTES}
+            ),
+            unit_source=UnitSource(JsonDocumentSourceFactory(), OutlineExtractor()),
+            rule_loader=FixedRuleLoader([CLEAR_SECTION_RULE]),
+            answer_scale=PRACTICE_SCALE,
+            audit_order=AuditOrder.CHILDREN_FIRST,
+            unit_class_to_renderer={OutlineSectionUnit: OutlineSectionRenderer()},
+        )
         return [
-            AuditKind(
-                kind_id=OUTLINE_KIND_ID,
-                accepted_input_kinds=frozenset(
-                    {AuditInputKind.DISK_PATH, AuditInputKind.IN_MEMORY_BYTES}
-                ),
-                unit_source=UnitSource(JsonDocumentSourceFactory(), OutlineExtractor()),
-                rule_loader=FixedRuleLoader([CLEAR_SECTION_RULE]),
-                answer_scale=PRACTICE_SCALE,
-                audit_order=AuditOrder.CHILDREN_FIRST,
-            )
+            outline_kind,
+            replace(
+                outline_kind,
+                kind_id=SUMMARIZED_OUTLINE_KIND_ID,
+                unit_class_to_renderer={
+                    OutlineSectionUnit: SummarizedSectionRenderer()
+                },
+            ),
         ]
 
     def register_unit_types(self, registry: UnitRegistry) -> None:
@@ -149,15 +179,18 @@ SUBJECT_TO_PARENT_SUBJECT = {
 
 
 def run_outline_audit(
-    judge: BaseJudge, min_confidence: float = 0.0, outline: JsonValue = OUTLINE
+    judge: BaseJudge,
+    min_confidence: float = 0.0,
+    outline: JsonValue = OUTLINE,
+    audit_kind_id: str = OUTLINE_KIND_ID,
 ) -> AuditOutcome:
-    """Audit ``outline``, held in memory, with the outline suite."""
+    """Audit ``outline``, held in memory, with a kind of the outline suite."""
     pipeline = build_audit_pipeline(judge, overrides=[add_the_outline_suite])
     request = AuditRequest(
         audit_input=InMemoryBytesInput(
             content=json.dumps(outline).encode(), media_type="application/json"
         ),
-        audit_kind_id=OUTLINE_KIND_ID,
+        audit_kind_id=audit_kind_id,
         min_confidence=min_confidence,
     )
     return asyncio.run(pipeline.run_audit(request))

@@ -4,8 +4,13 @@ from pathlib import Path
 
 import pytest
 
+from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from tests.support.builders import extract_python_project, write_text
+from tests.support.builders import (
+    extract_python_project,
+    list_judge_subjects,
+    write_text,
+)
 from tests.support.paths import MOCK_PROJECT, SnapshotAsserter
 
 
@@ -41,7 +46,13 @@ def test_subdirectory_text_uses_module_names_from_the_whole_tree(
 ) -> None:
     inside_tree = _subdirectory(extract_python_project(MOCK_PROJECT), "api")
     alone = extract_python_project(MOCK_PROJECT / "api")
+    subjects = list_judge_subjects(MOCK_PROJECT, PROJECT_STRUCTURE_KIND_ID)
 
-    assert_snapshot("project_directory_api.txt", inside_tree.get_content())
+    (api_subject,) = [
+        subject
+        for subject in subjects
+        if subject.startswith(f"Target Directory Under Audit: {MOCK_PROJECT / 'api'} (")
+    ]
+    assert_snapshot("project_directory_api.txt", api_subject)
     assert "domain" in inside_tree.project_module_names
     assert "domain" not in alone.project_module_names

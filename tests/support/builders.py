@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from klint.app.judge_mode import JudgeMode
-from klint.app.pipeline.audit_pipeline import AuditPipeline
+from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override
 from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
@@ -23,13 +23,14 @@ from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.models import rule_pack
+from klint.core.models.audit_input import DiskPathInput
 from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.json_loader import (
     load_file_extension_to_language,
 )
-from tests.support.fakes import JudgeOverride
+from tests.support.fakes import FakeJudge, JudgeOverride
 from tests.support.paths import (
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     TIDY_RULE_PACK,
@@ -152,6 +153,20 @@ def build_audit_command_app(
     return AuditCommandApp(
         command, build_audit_pipeline(judge, settings, overrides=overrides)
     )
+
+
+def list_judge_subjects(target: Path, audit_kind_id: str) -> list[str]:
+    """Audit ``target`` with a fake judge; return each text the judge read.
+
+    The rules are the tests' own, so that every file and every directory is
+    asked one. There is a text per unit asked about, in the order asked.
+    """
+    judge = FakeJudge()
+    request = AuditRequest(
+        audit_input=DiskPathInput(path=target), audit_kind_id=audit_kind_id
+    )
+    asyncio.run(build_audit_pipeline(judge).run_audit(request))
+    return [judge_request.subject for judge_request in judge.requests]
 
 
 def build_target_scanner() -> TargetScanner:

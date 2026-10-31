@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import ClassVar
@@ -27,7 +27,9 @@ class AuditableUnit(ABC):
     its suite adds it to the UnitRegistry.
 
     traits are what is known about the unit from the outside, such as the
-    language its content is written in; rules can be limited by them.
+    language its content is written in; rules can be limited by them. A
+    unit holds data only: what the judge reads about it is written by the
+    renderer its kind of audit gives its class.
     """
 
     unit_id: str
@@ -39,11 +41,6 @@ class AuditableUnit(ABC):
     def language(self) -> str | None:
         """Return the language of this unit's content; None when it has none."""
         return self.traits.language
-
-    @abstractmethod
-    def get_content(self) -> str:
-        """Return the text of this unit (and any child units) for evaluation."""
-        pass
 
     def get_location(self) -> Location | None:
         """Return where this unit sits in its source, if it has a location."""

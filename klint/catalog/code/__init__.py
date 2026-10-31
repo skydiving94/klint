@@ -15,6 +15,8 @@ from klint.catalog.code.common.extractors.project_structure import (
 )
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.common.renderers.directory import DirectoryRenderer
+from klint.catalog.code.common.renderers.file_metadata import FileMetadataRenderer
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.extractors.file_metadata import (
@@ -23,6 +25,9 @@ from klint.catalog.code.python.extractors.file_metadata import (
 from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
+from klint.catalog.code.python.renderers.package import PythonPackageRenderer
+from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.renderers.whole_file import WholeFileRenderer
 from klint.catalog.common.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )
@@ -74,6 +79,7 @@ class CodeSuite(BaseSuite):
                 ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
+                unit_class_to_renderer={AuditableFileUnit: WholeFileRenderer()},
             ),
             AuditKind(
                 kind_id=PROJECT_STRUCTURE_KIND_ID,
@@ -84,6 +90,11 @@ class CodeSuite(BaseSuite):
                 ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
+                unit_class_to_renderer={
+                    AuditableFileMetadataUnit: FileMetadataRenderer(),
+                    AuditableDirectoryUnit: DirectoryRenderer(),
+                    AuditablePythonPackageUnit: PythonPackageRenderer(),
+                },
             ),
         ]
 
