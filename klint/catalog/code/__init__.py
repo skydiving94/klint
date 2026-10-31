@@ -23,11 +23,17 @@ from klint.catalog.code.python.extractors.file_metadata import (
 from klint.catalog.code.python.extractors.package_factory import (
     PythonPackageUnitFactory,
 )
+from klint.catalog.common.sources.directory_tree_source import (
+    DirectoryTreeSourceFactory,
+)
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_kind import AuditKind
+from klint.core.models.audit_input import AuditInputKind
+from klint.core.models.audit_kind import AuditKind, UnitSource
+from klint.core.models.scanned_tree import ScannedFile
 from klint.core.registry import UnitRegistry
 
 # The kinds of audit this suite offers: each file's contents, and the
@@ -42,10 +48,15 @@ class CodeSuite(BaseSuite):
     @inject
     def __init__(
         self,
+        file_traits_identifier: BaseFileTraitsIdentifier,
         file_contents_extractor: FileContentsExtractor,
         project_structure_extractor: ProjectStructureExtractor,
         rule_loader_provider: ProviderOf[BaseRuleLoader],
     ) -> None:
+        # Both kinds read a file or directory on disk.
+        self._directory_tree_source_factory = DirectoryTreeSourceFactory(
+            file_traits_identifier, CODE_IGNORED_NAMES
+        )
         self._file_contents_extractor = file_contents_extractor
         self._project_structure_extractor = project_structure_extractor
         # Asked for only when the kinds are listed: the rule loader checks
@@ -57,17 +68,22 @@ class CodeSuite(BaseSuite):
         return [
             AuditKind(
                 kind_id=FILE_CONTENTS_KIND_ID,
-                extractor=self._file_contents_extractor,
+                accepted_input_kinds=frozenset({AuditInputKind.DISK_PATH}),
+                unit_source=UnitSource(
+                    self._directory_tree_source_factory, self._file_contents_extractor
+                ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
-                ignored_names=CODE_IGNORED_NAMES,
             ),
             AuditKind(
                 kind_id=PROJECT_STRUCTURE_KIND_ID,
-                extractor=self._project_structure_extractor,
+                accepted_input_kinds=frozenset({AuditInputKind.DISK_PATH}),
+                unit_source=UnitSource(
+                    self._directory_tree_source_factory,
+                    self._project_structure_extractor,
+                ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
-                ignored_names=CODE_IGNORED_NAMES,
             ),
         ]
 
@@ -84,7 +100,7 @@ class CodeSuiteModule(Module):
         binder.multibind(list[BaseSuite], to=[CodeSuite])
         # What handles each language, looked up by the traits of each file. A
         # language not listed is handled in a language-neutral way.
-        binder.multibind(dict[str, BaseUnitExtractor], to={})
+        binder.multibind(dict[str, BaseUnitExtractor[ScannedFile]], to={})
         binder.multibind(
             dict[str, BaseFileMetadataExtractor],
             to={python.SUITE_LANGUAGE: PythonFileMetadataExtractor},

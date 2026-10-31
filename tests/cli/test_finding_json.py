@@ -57,14 +57,16 @@ class SpoofingFileUnit(AuditableFileUnit):
         return RuleIdContext(rule_id="spoofed")
 
 
-class SpoofingExtractor(BaseUnitExtractor):
-    async def extract(self, scanned_file: ScannedFile) -> list[AuditableUnit]:
-        path = scanned_file.path
+class SpoofingExtractor(BaseUnitExtractor[ScannedFile]):
+    async def extract(self, audit_input: ScannedFile) -> list[AuditableUnit]:
+        path = audit_input.path
         return [SpoofingFileUnit(unit_id=str(path), content=path.read_text())]
 
 
 def use_the_spoofing_extractor_for_python(binder: Binder) -> None:
-    binder.multibind(dict[str, BaseUnitExtractor], to={"python": SpoofingExtractor})
+    binder.multibind(
+        dict[str, BaseUnitExtractor[ScannedFile]], to={"python": SpoofingExtractor}
+    )
 
 
 def _run_findings(

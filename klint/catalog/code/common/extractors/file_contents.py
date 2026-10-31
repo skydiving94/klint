@@ -4,13 +4,12 @@ from injector import inject
 
 from klint.catalog.common.extractors.whole_file import WholeFileExtractor
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.interfaces.target_extractor import BaseTargetExtractor
 from klint.core.klint_warning import leave_out_file_on_failure
 from klint.core.models.scanned_tree import ScannedFile, ScannedTarget
 from klint.core.models.unit import AuditableUnit
 
 
-class FileContentsExtractor(BaseTargetExtractor):
+class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):
     """Extracts each file of a target by the extractor that matches its traits.
 
     A file is read by the extractor registered for the language in its
@@ -20,7 +19,7 @@ class FileContentsExtractor(BaseTargetExtractor):
 
     @inject
     def __init__(
-        self, language_to_unit_extractor: dict[str, BaseUnitExtractor]
+        self, language_to_unit_extractor: dict[str, BaseUnitExtractor[ScannedFile]]
     ) -> None:
         self._language_to_unit_extractor = {
             language.lower(): extractor
@@ -28,9 +27,9 @@ class FileContentsExtractor(BaseTargetExtractor):
         }
         self._language_neutral_unit_extractor = WholeFileExtractor()
 
-    async def extract_units(self, scanned_target: ScannedTarget) -> list[AuditableUnit]:
+    async def extract(self, audit_input: ScannedTarget) -> list[AuditableUnit]:
         units: list[AuditableUnit] = []
-        for scanned_file in scanned_target.files:
+        for scanned_file in audit_input.files:
             units.extend(await self._extract_file_units(scanned_file))
         return units
 
@@ -38,7 +37,9 @@ class FileContentsExtractor(BaseTargetExtractor):
         self, scanned_file: ScannedFile
     ) -> list[AuditableUnit]:
         """Return the units of one file; none when the extractor fails on it."""
-        extractor: BaseUnitExtractor = self._language_neutral_unit_extractor
+        extractor: BaseUnitExtractor[ScannedFile] = (
+            self._language_neutral_unit_extractor
+        )
         language = scanned_file.traits.language
         if language is not None:
             extractor = self._language_to_unit_extractor.get(
