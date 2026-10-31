@@ -10,7 +10,6 @@ from klint.catalog.code.common.extraction.file_metadata_base import (
 )
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.common.extraction.binary_check import is_likely_binary
 from klint.catalog.common.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
@@ -26,9 +25,8 @@ class RecursiveProjectExtractor:
     directory and, recursively, of every subdirectory. A file is read by
     the extractor its traits pick. A directory is described by the factory
     picked for the language that most files beneath it are written in,
-    among the languages with a factory of their own. A binary file is read
-    by no extractor: it is listed by name only. A file that cannot be read
-    or processed is left out, with a warning.
+    among the languages with a factory of their own. A file that cannot be
+    read or processed is left out, with a warning.
     """
 
     def __init__(
@@ -75,14 +73,9 @@ class RecursiveProjectExtractor:
         return factory.build(scanned_directory.path, files, subdirectories, language)
 
     def _extract_file(self, scanned_file: ScannedFile) -> AuditableFileMetadataUnit:
-        """Have the extractor that the file's traits pick read the file.
-
-        A binary file is read only as far as the check that finds it binary.
-        """
-        if is_likely_binary(scanned_file.path):
-            return _list_binary_file(scanned_file)
-        extractor = self._file_delegator.select_extractor(scanned_file.traits)
-        return extractor.extract_file(scanned_file.path, scanned_file.traits)
+        """Have the extractor that the file's traits pick read the file."""
+        dispatch = self._file_delegator.dispatch_file(scanned_file)
+        return dispatch.extractor.extract_file(dispatch.dispatched_file)
 
     def _identify_most_used_language(
         self,
@@ -106,17 +99,6 @@ class RecursiveProjectExtractor:
             language_to_file_count,
             key=lambda language: (-language_to_file_count[language], language),
         )
-
-
-def _list_binary_file(scanned_file: ScannedFile) -> AuditableFileMetadataUnit:
-    """Return the unit of a binary file: its name and path, with no line count.
-
-    Its content is not text, so it is given no language.
-    """
-    path = scanned_file.path
-    return AuditableFileMetadataUnit(
-        unit_id=str(path), file_name=path.name, file_path=str(path), line_count=None
-    )
 
 
 def _collect_languages_beneath(

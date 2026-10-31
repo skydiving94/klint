@@ -1,5 +1,6 @@
 """Extracts what a file contents audit goes through: the units of each file."""
 
+from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.catalog.common.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
@@ -17,7 +18,7 @@ class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):
 
     def __init__(
         self,
-        delegator: TraitsBasedExtractionDelegator[BaseUnitExtractor[ScannedFile]],
+        delegator: TraitsBasedExtractionDelegator[BaseUnitExtractor[DispatchedFile]],
     ) -> None:
         self._delegator = delegator
 
@@ -30,8 +31,8 @@ class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):
     async def _extract_file_units(
         self, scanned_file: ScannedFile
     ) -> list[AuditableUnit]:
-        """Return the units of one file; none when the extractor fails on it."""
-        extractor = self._delegator.select_extractor(scanned_file.traits)
+        """Return the units of one file; none when it cannot be extracted."""
         with leave_out_file_on_failure(scanned_file.path):
-            return await extractor.extract(scanned_file)
+            dispatch = self._delegator.dispatch_file(scanned_file)
+            return await dispatch.extractor.extract(dispatch.dispatched_file)
         return []

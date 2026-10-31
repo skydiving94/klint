@@ -34,6 +34,7 @@ from klint.catalog.code.python.extraction.package_factory import (
 )
 from klint.catalog.code.python.renderers.package import PythonPackageRenderer
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.catalog.common.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
@@ -49,7 +50,6 @@ from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_input import AuditInputKind
 from klint.core.models.audit_kind import AuditKind, UnitSource
-from klint.core.models.scanned_tree import ScannedFile
 from klint.core.registry import UnitRegistry
 
 # The kinds of audit this suite offers: each file's contents, and the
@@ -125,7 +125,7 @@ class CodeSuiteModule(Module):
 
     def configure(self, binder: Binder) -> None:
         binder.multibind(list[BaseSuite], to=[CodeSuite])
-        binder.multibind(dict[str, BaseUnitExtractor[ScannedFile]], to={})
+        binder.multibind(dict[str, BaseUnitExtractor[DispatchedFile]], to={})
         binder.multibind(
             dict[str, BaseFileMetadataExtractor],
             to={python.SUITE_LANGUAGE: PythonFileMetadataExtractor},
@@ -137,7 +137,7 @@ class CodeSuiteModule(Module):
 
     @provider
     def provide_file_contents_extractor(
-        self, language_to_unit_extractor: dict[str, BaseUnitExtractor[ScannedFile]]
+        self, language_to_unit_extractor: dict[str, BaseUnitExtractor[DispatchedFile]]
     ) -> FileContentsExtractor:
         return FileContentsExtractor(
             TraitsBasedExtractionDelegator(

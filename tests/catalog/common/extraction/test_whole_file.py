@@ -5,18 +5,22 @@ from pathlib import Path
 
 import pytest
 
+from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.catalog.common.extraction.whole_file import WholeFileExtractor
 from klint.catalog.common.units.file import AuditableFileUnit
 from klint.core.models.location import Location
-from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit import AuditableUnit, UnitContext
 from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 
-def _extract(path: Path, language: str | None = None) -> list[AuditableUnit]:
-    scanned_file = ScannedFile(path=path, traits=UnitTraits(language=language))
-    return asyncio.run(WholeFileExtractor().extract(scanned_file))
+def _extract(
+    path: Path, language: str | None = None, is_binary: bool = False
+) -> list[AuditableUnit]:
+    dispatched_file = DispatchedFile(
+        path=path, traits=UnitTraits(language=language), is_binary=is_binary
+    )
+    return asyncio.run(WholeFileExtractor().extract(dispatched_file))
 
 
 def test_whole_file_extractor_returns_one_unit_spanning_the_file(
@@ -46,8 +50,10 @@ def test_whole_file_unit_carries_the_language_in_the_traits_of_the_file(
     assert unit.language == language
 
 
-def test_whole_file_extractor_gives_no_unit_for_a_binary_file(tmp_path: Path) -> None:
+def test_whole_file_extractor_gives_no_unit_for_a_file_told_binary(
+    tmp_path: Path,
+) -> None:
     target = tmp_path / "blob.dat"
     target.write_bytes(b"\x00\x01\x02")
 
-    assert _extract(target) == []
+    assert _extract(target, is_binary=True) == []

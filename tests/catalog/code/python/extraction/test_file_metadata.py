@@ -4,14 +4,23 @@ from pathlib import Path
 
 import pytest
 
+from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
 from klint.catalog.code.python.extraction.file_metadata import (
     PythonFileMetadataExtractor,
 )
+from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 PYTHON = UnitTraits(language="python")
+
+
+def _extract(path: Path) -> AuditableFileMetadataUnit:
+    """Read ``path``, a text file, as Python."""
+    dispatched_file = DispatchedFile(path=path, traits=PYTHON, is_binary=False)
+    return PythonFileMetadataExtractor().extract_file(dispatched_file)
+
 
 MODULE_SOURCE = """\
 import os
@@ -43,7 +52,7 @@ def test_python_metadata_lists_imports_exports_classes_and_functions(
 ) -> None:
     target = write_text(tmp_path / "module.py", MODULE_SOURCE)
 
-    unit = PythonFileMetadataExtractor().extract_file(target, PYTHON)
+    unit = _extract(target)
 
     assert unit.unit_type == "file_metadata"
     assert unit.file_name == "module.py"
@@ -69,12 +78,8 @@ def test_python_metadata_lists_imports_exports_classes_and_functions(
 
 def test_init_file_exports_the_names_it_imports(tmp_path: Path) -> None:
     source = "from .a import Foo, bar as baz\n"
-    init_unit = PythonFileMetadataExtractor().extract_file(
-        write_text(tmp_path / "__init__.py", source), PYTHON
-    )
-    plain_unit = PythonFileMetadataExtractor().extract_file(
-        write_text(tmp_path / "plain.py", source), PYTHON
-    )
+    init_unit = _extract(write_text(tmp_path / "__init__.py", source))
+    plain_unit = _extract(write_text(tmp_path / "plain.py", source))
     assert init_unit.exports == ["Foo", "baz"]
     assert plain_unit.exports == []
 
@@ -97,7 +102,7 @@ def test_python_file_that_cannot_be_parsed_is_marked_with_a_warning(
     target = write_text(tmp_path / "broken.py", source)
 
     with pytest.warns(KlintWarning, match="it cannot be parsed") as caught:
-        unit = PythonFileMetadataExtractor().extract_file(target, PYTHON)
+        unit = _extract(target)
 
     assert len(caught) == 1
     assert unit.is_unparseable
