@@ -17,7 +17,7 @@ from klint.core.models.rule_pack import (
 )
 
 RULE_FIELD_NAMES = frozenset(
-    {"type", "instructions", "target_unit_types", "languages", "tags"}
+    {"type", "instructions", "target_unit_types", "languages", "tags", "unit_tags"}
 )
 # The header of a pack: which files the pack is for.
 HEADER_KEY = "applies_to"
@@ -139,6 +139,7 @@ def _read_rule(
             ),
             languages=_read_string_list(raw_rule, "languages", rule_id, path),
             tags=_read_string_list(raw_rule, "tags", rule_id, path),
+            unit_tags=_read_string_list(raw_rule, "unit_tags", rule_id, path),
         )
     except ValueError as error:
         rule_problems.append(RuleProblem(RuleProblemSeverity.ERROR, str(error)))

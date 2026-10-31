@@ -523,13 +523,18 @@ def test_missing_pack_is_skipped_among_several(tmp_path: Path) -> None:
     assert list(rules) == ["a"]
 
 
-def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
+def test_languages_tags_and_unit_tags_are_read_from_a_rule(tmp_path: Path) -> None:
     pack = write_json(
         tmp_path / "pack.json",
         {
-            "scoped": {**FILE_RULE, "languages": ["python"], "tags": ["security"]},
+            "scoped": {
+                **FILE_RULE,
+                "languages": ["python"],
+                "tags": ["security"],
+                "unit_tags": ["backend"],
+            },
             "plain": FILE_RULE,
-            "empty": {**FILE_RULE, "languages": [], "tags": []},
+            "empty": {**FILE_RULE, "languages": [], "tags": [], "unit_tags": []},
         },
     )
 
@@ -537,12 +542,17 @@ def test_languages_and_tags_are_read_from_a_rule(tmp_path: Path) -> None:
 
     assert rules["scoped"].languages == ["python"]
     assert rules["scoped"].tags == ["security"]
-    assert (rules["plain"].languages, rules["plain"].tags) == ([], [])
-    assert (rules["empty"].languages, rules["empty"].tags) == ([], [])
+    assert rules["scoped"].unit_tags == ["backend"]
+    for plain_rule in (rules["plain"], rules["empty"]):
+        assert (plain_rule.languages, plain_rule.tags, plain_rule.unit_tags) == (
+            [],
+            [],
+            [],
+        )
     assert rules["plain"].target_unit_types == ["file"]
 
 
-@pytest.mark.parametrize("field_name", ["languages", "tags"])
+@pytest.mark.parametrize("field_name", ["languages", "tags", "unit_tags"])
 @pytest.mark.parametrize("bad_value", ["python", ["python", 3], {"a": 1}, None])
 def test_malformed_languages_or_tags_are_rejected(
     tmp_path: Path, field_name: str, bad_value: object
