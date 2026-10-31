@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.code.common.extractors.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
@@ -28,6 +29,7 @@ from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import (
     build_target_scanner,
     extract_project,
+    list_judge_subjects,
     write_text,
 )
 
@@ -108,13 +110,16 @@ def test_directory_holding_no_python_is_not_described_as_a_python_package(
 
     root = extract_project(tmp_path / "docs")
     (guide,) = root.subdirectories
+    subjects = list_judge_subjects(tmp_path / "docs", PROJECT_STRUCTURE_KIND_ID)
 
     for unit in (root, guide):
         assert not isinstance(unit, AuditablePythonPackageUnit)
         assert unit.unit_type == "project_directory"
         assert unit.language is None
-        assert "Package Public API" not in unit.get_content()
-    assert "intro.md" in guide.get_content()
+    assert len(subjects) == 2
+    for subject in subjects:
+        assert "Package Public API" not in subject
+        assert "- intro.md (lines=1)" in subject
 
 
 def test_only_directories_holding_python_are_described_as_python_packages(
