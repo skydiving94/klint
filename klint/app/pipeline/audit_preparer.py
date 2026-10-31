@@ -1,6 +1,5 @@
 """Prepares an audit: works out what will be audited before any rule is applied."""
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from klint.app.pipeline.rule_selection import RuleSelection
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.models.audit_input import AuditInput
 from klint.core.models.audit_kind import AuditKind
-from klint.core.models.rule import AuditRule
+from klint.core.models.rule_set import RuleSet
 from klint.core.models.unit import AuditableUnit
 
 
@@ -21,13 +20,12 @@ class PendingAuditPortfolio:
 
     units are what the rules will be applied to: the units extracted from
     the input, nested ones included, that at least one rule applies to.
-    language_to_rules holds, for each language a unit is written in, the
-    rules to ask about it; the key None is for units whose language is not
-    identified. scanned_file_count is the number of files read.
+    rule_set chooses the rules to ask about each unit. scanned_file_count is
+    the number of files read.
     """
 
     units: list[AuditableUnit]
-    language_to_rules: dict[str | None, list[AuditRule]]
+    rule_set: RuleSet
     scanned_file_count: int
 
 
@@ -62,24 +60,13 @@ class AuditPreparer:
         acquired_units = await self._unit_acquisition.acquire_units(
             audit_input, audit_kind, scan_progress_listener
         )
-        language_to_rules = await self._rule_selection.select_rules(
+        rule_set = await self._rule_selection.select_rules(
             acquired_units.units, audit_kind, custom_rules_source
         )
         return PendingAuditPortfolio(
             units=[
-                unit
-                for unit in acquired_units.units
-                if _is_asked_any_rule(unit, language_to_rules)
+                unit for unit in acquired_units.units if rule_set.select_rules_for(unit)
             ],
-            language_to_rules=language_to_rules,
+            rule_set=rule_set,
             scanned_file_count=acquired_units.scanned_file_count,
         )
-
-
-def _is_asked_any_rule(
-    unit: AuditableUnit, language_to_rules: Mapping[str | None, list[AuditRule]]
-) -> bool:
-    """Return True when a rule loaded for the unit's language applies to it."""
-    return any(
-        rule.is_applicable_to(unit) for rule in language_to_rules.get(unit.language, [])
-    )

@@ -31,7 +31,7 @@ class UnitAuditing:
         """
         return await self._auditor.audit(
             portfolio.units,
-            portfolio.language_to_rules,
+            portfolio.rule_set,
             audit_kind.answer_scale,
             audit_progress_listener,
         )
