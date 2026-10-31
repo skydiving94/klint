@@ -7,5 +7,8 @@ def test_built_in_suites_register_their_unit_types() -> None:
     assert build_unit_registry().known_unit_types() == [
         "file",
         "file_metadata",
+        "file_summary",
+        "hunk_summary",
+        "package_summary",
         "project_directory",
     ]

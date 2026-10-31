@@ -2,13 +2,20 @@
 
 import asyncio
 import copy
+import json
 from typing import Any
 
+from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
+from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
 from klint.catalog.change_summary.extraction.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
+from klint.core.models.audit_input import InMemoryBytesInput
 from klint.core.models.json_value import JsonValue
+from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
 from klint.core.models.unit import AuditableUnit
+from tests.support.builders import build_audit_pipeline
+from tests.support.fakes import FakeJudge
 
 ChangeSummaryDocumentData = dict[str, Any]
 
@@ -92,3 +99,69 @@ def copy_greeting_document() -> ChangeSummaryDocumentData:
 def extract_summary_units(document: JsonValue) -> list[AuditableUnit]:
     """Return the units the change-summary extractor reads from ``document``."""
     return asyncio.run(ChangeSummaryExtractor().extract(document))
+
+
+# The line of a judge's subject that holds the summary judged.
+HYPOTHESIS_PREFIX = "Hypothesis: "
+
+
+class HypothesisJudge(FakeJudge):
+    """Answers by what the hypothesis, the summary judged, says.
+
+    For a hypothesis that holds a phrase in ``phrase_to_rule_id_to_choice``,
+    each rule named under it gets the choice given; every other question
+    is answered "accurate". A hypothesis that holds one of
+    ``refused_phrases`` makes the judge fail, as when it is down.
+    """
+
+    def __init__(
+        self,
+        phrase_to_rule_id_to_choice: dict[str, dict[str, str]] | None = None,
+        refused_phrases: frozenset[str] = frozenset(),
+    ) -> None:
+        super().__init__(default="accurate")
+        self.phrase_to_rule_id_to_choice = phrase_to_rule_id_to_choice or {}
+        self.refused_phrases = refused_phrases
+
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+        hypothesis = request.subject.rsplit(HYPOTHESIS_PREFIX, 1)[-1]
+        if any(phrase in hypothesis for phrase in self.refused_phrases):
+            self.requests.append(request)
+            raise RuntimeError("judge is down")
+        self.choices = {}
+        for phrase, rule_id_to_choice in self.phrase_to_rule_id_to_choice.items():
+            if phrase in hypothesis:
+                self.choices.update(rule_id_to_choice)
+        return await super().answer(request)
+
+    def list_hypotheses(self) -> list[str]:
+        """Return the summary judged in each request, in request order."""
+        return [
+            request.subject.rsplit(HYPOTHESIS_PREFIX, 1)[-1]
+            for request in self.requests
+        ]
+
+    def find_subject(self, hypothesis: str) -> str:
+        """Return the subject the judge read about the summary ``hypothesis``."""
+        (subject,) = [
+            request.subject
+            for request in self.requests
+            if request.subject.endswith(f"{HYPOTHESIS_PREFIX}{hypothesis}")
+        ]
+        return subject
+
+
+def run_change_summary_audit(
+    judge: FakeJudge,
+    document: JsonValue = GREETING_DOCUMENT,
+    min_confidence: float = 0.0,
+) -> AuditOutcome:
+    """Verify ``document``, held in memory, with klint's change-summary audit."""
+    request = AuditRequest(
+        audit_input=InMemoryBytesInput(
+            content=json.dumps(document).encode(), media_type="application/json"
+        ),
+        audit_kind_id=CHANGE_SUMMARY_KIND_ID,
+        min_confidence=min_confidence,
+    )
+    return asyncio.run(build_audit_pipeline(judge).run_audit(request))

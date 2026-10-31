@@ -15,7 +15,7 @@ class BaseUnitRenderer(ABC):
         """Return the text the judge reads about ``render_input.unit``.
 
         The text holds at most ``render_input.character_budget`` characters.
-        A renderer that leaves something out to stay within them ends the
-        text with a line saying what it left out. Raises TypeError when this
-        renderer cannot describe such a unit.
+        A renderer that leaves something out to stay within them says what
+        it left out in a line of the text, at the end of what was cut.
+        Raises TypeError when this renderer cannot describe such a unit.
         """
