@@ -1,5 +1,6 @@
 """A suite written in test code only: notes, judged polite or rude."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
@@ -8,6 +9,9 @@ from injector import Binder, inject
 
 from klint.catalog.common.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
+)
+from klint.catalog.common.sources.json_document_source import (
+    JsonDocumentSourceFactory,
 )
 from klint.cli.runner import AuditCommand
 from klint.core.interfaces.extractor import BaseUnitExtractor
@@ -18,6 +22,7 @@ from klint.core.models.audit_input import AuditInputKind
 from klint.core.models.audit_kind import AuditKind, UnitSource
 from klint.core.models.file_traits import FileTraits
 from klint.core.models.ignored_names import IgnoredNames
+from klint.core.models.json_value import JsonValue
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.models.scale import AnswerChoice, AnswerScale
@@ -26,6 +31,8 @@ from klint.core.models.unit import AuditableUnit
 from klint.core.registry import UnitRegistry
 
 NOTES_KIND_ID = "notes"
+# Notes held in one JSON document: {"notes": {"<note id>": "<text>", ...}}.
+NOTES_DOCUMENT_KIND_ID = "notes_document"
 POLITENESS_SCALE = AnswerScale(
     name="politeness",
     choices=(
@@ -76,6 +83,18 @@ class NoteExtractor(BaseUnitExtractor[ScannedTarget]):
         ]
 
 
+class NoteDocumentExtractor(BaseUnitExtractor[JsonValue]):
+    """Reads each entry under "notes" in a JSON document as one note."""
+
+    async def extract(self, audit_input: JsonValue) -> list[AuditableUnit]:
+        notes = audit_input.get("notes") if isinstance(audit_input, Mapping) else None
+        if not isinstance(notes, Mapping):
+            raise ValueError("A notes document holds an object under 'notes'")
+        return [
+            NoteUnit(unit_id=note_id, text=str(text)) for note_id, text in notes.items()
+        ]
+
+
 class FixedRuleLoader(BaseRuleLoader):
     """Gives the same rules for every file; a custom rules file is not read."""
 
@@ -116,5 +135,31 @@ class NotesSuite(BaseSuite):
         registry.register_unit(NoteUnit)
 
 
+class NotesDocumentSuite(BaseSuite):
+    """Audits the notes of one JSON document, from a file or from memory."""
+
+    def list_audit_kinds(self) -> list[AuditKind]:
+        return [
+            AuditKind(
+                kind_id=NOTES_DOCUMENT_KIND_ID,
+                accepted_input_kinds=frozenset(
+                    {AuditInputKind.DISK_PATH, AuditInputKind.IN_MEMORY_BYTES}
+                ),
+                unit_source=UnitSource(
+                    JsonDocumentSourceFactory(), NoteDocumentExtractor()
+                ),
+                rule_loader=FixedRuleLoader([POLITE_RULE]),
+                answer_scale=POLITENESS_SCALE,
+            )
+        ]
+
+    def register_unit_types(self, registry: UnitRegistry) -> None:
+        registry.register_unit(NoteUnit)
+
+
 def add_the_notes_suite(binder: Binder) -> None:
     binder.multibind(list[BaseSuite], to=[NotesSuite])
+
+
+def add_the_notes_document_suite(binder: Binder) -> None:
+    binder.multibind(list[BaseSuite], to=[NotesDocumentSuite])
