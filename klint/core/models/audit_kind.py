@@ -1,9 +1,11 @@
 """One kind of audit a suite offers."""
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
 from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.interfaces.source import BaseAuditSourceFactory
@@ -12,6 +14,8 @@ from klint.core.models.acquired_units import AcquiredUnits
 from klint.core.models.audit_input import AuditInput, AuditInputKind
 from klint.core.models.audit_order import AuditOrder
 from klint.core.models.scale import AnswerScale
+from klint.core.models.unit import AuditableUnit
+from klint.core.unit_content_renderer import UnitContentRenderer
 
 # What the source reads an audit input into, and the extractor takes.
 InputT = TypeVar("InputT")
@@ -53,7 +57,8 @@ class AuditKind:
     and rule_loader loads the rules asked about them. The judge answers each
     rule on answer_scale. ranked_tags are the rule tags whose findings a
     report lists first, most important first. audit_order is the order in
-    which the units are judged.
+    which the units are judged. unit_class_to_renderer gives the renderer
+    that writes what the judge reads about the units of each class.
     """
 
     kind_id: str
@@ -63,3 +68,21 @@ class AuditKind:
     answer_scale: AnswerScale
     ranked_tags: tuple[str, ...] = ()
     audit_order: AuditOrder = AuditOrder.ALL_AT_ONCE
+    unit_class_to_renderer: Mapping[type[AuditableUnit], BaseUnitRenderer] = field(
+        default_factory=lambda: {AuditableUnit: UnitContentRenderer()}
+    )
+
+    def find_renderer(self, unit: AuditableUnit) -> BaseUnitRenderer:
+        """Return the renderer for ``unit``.
+
+        That is the renderer given for its class, else for its nearest base
+        class that has one. Raises ValueError when there is none.
+        """
+        for unit_class in type(unit).__mro__:
+            for rendered_class, renderer in self.unit_class_to_renderer.items():
+                if rendered_class is unit_class:
+                    return renderer
+        raise ValueError(
+            f"Audit kind '{self.kind_id}' has no renderer for "
+            f"{type(unit).__name__} units"
+        )
