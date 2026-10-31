@@ -4,7 +4,7 @@ from collections.abc import Iterator
 
 from injector import inject
 
-from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.scanned_tree import ScannedTarget
 from klint.core.models.unit import AuditableUnit

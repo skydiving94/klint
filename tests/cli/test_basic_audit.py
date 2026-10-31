@@ -12,6 +12,7 @@ from injector import Binder
 
 from klint.app.settings import AppSettings
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.common.extraction.dispatched_file import DispatchedFile
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
@@ -19,7 +20,6 @@ from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.models.judge_exchange import JudgeQuestion
 from klint.core.models.question_type import QuestionType
-from klint.core.models.scanned_tree import ScannedFile
 from klint.core.models.unit import AuditableUnit
 from klint.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import (
@@ -314,16 +314,16 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     assert len(judge.requests) == 1
 
 
-class BrokenExtractor(BaseUnitExtractor[ScannedFile]):
+class BrokenExtractor(BaseUnitExtractor[DispatchedFile]):
     """Fails on every file, for a reason other than reading it."""
 
-    async def extract(self, audit_input: ScannedFile) -> list[AuditableUnit]:
+    async def extract(self, audit_input: DispatchedFile) -> list[AuditableUnit]:
         raise RuntimeError(f"the extractor is broken on {audit_input.path.name}")
 
 
 def use_the_broken_extractor_for_python(binder: Binder) -> None:
     binder.multibind(
-        dict[str, BaseUnitExtractor[ScannedFile]], to={"python": BrokenExtractor}
+        dict[str, BaseUnitExtractor[DispatchedFile]], to={"python": BrokenExtractor}
     )
 
 

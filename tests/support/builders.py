@@ -10,7 +10,7 @@ from klint.app.judge_mode import JudgeMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override
-from klint.catalog.code.common.extractors.project import RecursiveProjectExtractor
+from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
 from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
