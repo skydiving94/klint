@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from klint.core.klint_warning import KlintWarning
+from klint.core.models.file_traits_override import FileTraitsOverride
 
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 # The settings an environment variable, or the "env" block of a klint.json,
@@ -23,8 +24,11 @@ KNOWN_SETTING_NAMES = frozenset(
 _ENV_BLOCK_KEY = "env"
 # The key of a klint.json that replaces the built-in fallback packs.
 _FALLBACK_RULE_PACKS_KEY = "fallback_rule_packs"
+# The key of a klint.json that overrides the detected traits of some files.
+_FILE_TRAITS_KEY = "file_traits"
+_FILE_TRAITS_ENTRY_FIELD_NAMES = frozenset({"glob", "language", "tags"})
 # The keys of a klint.json that hold settings rather than rules.
-_SETTING_KEYS = frozenset({_ENV_BLOCK_KEY, _FALLBACK_RULE_PACKS_KEY})
+_SETTING_KEYS = frozenset({_ENV_BLOCK_KEY, _FALLBACK_RULE_PACKS_KEY, _FILE_TRAITS_KEY})
 
 
 @dataclass(frozen=True)
@@ -33,14 +37,16 @@ class ProjectConfig:
 
     setting_name_to_value holds what its "env" block sets. fallback_rule_packs
     are the packs it names in place of the built-in ones; None when it names
-    none. does_hold_rules is True when it also holds rules, under "rules" or
-    at its top level.
+    none. file_traits_overrides are its "file_traits" entries, in file
+    order. does_hold_rules is True when it also holds rules, under "rules"
+    or at its top level.
     """
 
     path: Path
     setting_name_to_value: dict[str, str]
     fallback_rule_packs: tuple[Path, ...] | None
     does_hold_rules: bool
+    file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
 
 
 def find_project_config(start_path: Path | None = None) -> Path | None:
@@ -69,6 +75,7 @@ def read_project_config(config_path: Path) -> ProjectConfig:
         setting_name_to_value=_load_env_block(config, config_path),
         fallback_rule_packs=_load_fallback_rule_packs(config, config_path),
         does_hold_rules=any(key not in _SETTING_KEYS for key in config),
+        file_traits_overrides=_load_file_traits_overrides(config, config_path),
     )
 
 
@@ -161,6 +168,72 @@ def _load_fallback_rule_packs(
                 f"'{raw_path}', which is not a file; it is left out"
             )
     return tuple(fallback_rule_packs)
+
+
+def _load_file_traits_overrides(
+    config: dict[object, object], config_path: Path
+) -> tuple[FileTraitsOverride, ...]:
+    """Return the "file_traits" entries of the config file, in file order.
+
+    Each entry is an object with a "glob", matched from the folder of the
+    config file, and a "language", "tags" or both. A value that is not a
+    list is ignored, an entry that cannot be used is left out, and an
+    unknown field is ignored; each is reported as a KlintWarning.
+    """
+    raw_entries = config.get(_FILE_TRAITS_KEY, [])
+    if not isinstance(raw_entries, list):
+        _warn(
+            f"The '{_FILE_TRAITS_KEY}' key in '{config_path}' is ignored: it must "
+            "be a list of objects"
+        )
+        return ()
+    overrides: list[FileTraitsOverride] = []
+    for index, raw_entry in enumerate(raw_entries):
+        override = _read_file_traits_override(raw_entry, index, config_path)
+        if override is not None:
+            overrides.append(override)
+    return tuple(overrides)
+
+
+def _read_file_traits_override(
+    raw_entry: object, index: int, config_path: Path
+) -> FileTraitsOverride | None:
+    """Return one "file_traits" entry; None, with a warning, when it is unusable."""
+    description = f"Entry {index} of '{_FILE_TRAITS_KEY}' in '{config_path}'"
+    if not isinstance(raw_entry, dict):
+        _warn(f"{description} is left out: it must be an object")
+        return None
+    unknown = sorted(
+        str(key) for key in set(raw_entry) - _FILE_TRAITS_ENTRY_FIELD_NAMES
+    )
+    if unknown:
+        _warn(
+            f"{description} has unknown fields {unknown}, which are ignored; "
+            f"known fields: {sorted(_FILE_TRAITS_ENTRY_FIELD_NAMES)}"
+        )
+    glob = raw_entry.get("glob")
+    language = raw_entry.get("language")
+    tags = raw_entry.get("tags")
+    if not isinstance(glob, str) or not glob:
+        _warn(f"{description} is left out: its 'glob' must be a non-empty string")
+        return None
+    if language is not None and (not isinstance(language, str) or not language):
+        _warn(f"{description} is left out: its 'language' must be a non-empty string")
+        return None
+    if tags is not None and not (
+        isinstance(tags, list) and all(isinstance(tag, str) and tag for tag in tags)
+    ):
+        _warn(f"{description} is left out: its 'tags' must be a list of strings")
+        return None
+    if language is None and tags is None:
+        _warn(f"{description} is left out: it sets neither 'language' nor 'tags'")
+        return None
+    return FileTraitsOverride(
+        base_directory=config_path.parent.resolve(),
+        glob=glob,
+        language=None if language is None else language.lower(),
+        tags=None if tags is None else frozenset(tag.lower() for tag in tags),
+    )
 
 
 def _warn(message: str) -> None:

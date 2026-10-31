@@ -11,6 +11,7 @@ from klint.app.project_config import (
     read_project_config,
     warn_about_settings_in_rules_file,
 )
+from klint.core.models.file_traits_override import FileTraitsOverride
 
 # The model and the server address the judge uses unless a setting names others.
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
@@ -150,6 +151,9 @@ class AppSettings:
     )
     # The file of tables that tell which side of a project a file belongs to.
     tag_detection_path: Path = field(default_factory=_locate_built_in_tag_detection)
+    # What the project's klint.json says about some files, over what is
+    # detected; the first entry whose glob matches a file decides.
+    file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
 
     @classmethod
     def from_env(
@@ -218,5 +222,8 @@ class AppSettings:
             discovered_config_path=config_path,
             project_rule_packs=(
                 (config.path,) if config is not None and config.does_hold_rules else ()
+            ),
+            file_traits_overrides=(
+                () if config is None else config.file_traits_overrides
             ),
         )
