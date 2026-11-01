@@ -14,11 +14,11 @@ Directory: examples/mock_bad_project
   Directory: examples/mock_bad_project/api
     Files:
       - __init__.py (lines=3; exports=[handle_checkout_request]; imports=[.checkout_routes, .checkout_routes.handle_checkout_request])
-      - checkout_routes.py (lines=50; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
+      - checkout_routes.py (lines=44; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
   Directory: examples/mock_bad_project/domain
     Files:
       - __init__.py (lines=3; exports=[OrderEntity]; imports=[.order_entity])
-      - order_entity.py (lines=29; imports=[sqlite3, urllib.request, api, api.checkout_routes, utils, utils.misc_helpers]; classes=[OrderEntity])
+      - order_entity.py (lines=25; imports=[sqlite3, urllib.request, api, api.checkout_routes, utils, utils.misc_helpers]; classes=[OrderEntity])
   Directory: examples/mock_bad_project/utils
     Files:
       - misc_helpers.py (lines=13; imports=[pathlib, domain.order_entity]; functions=[format_currency_and_temp_file])

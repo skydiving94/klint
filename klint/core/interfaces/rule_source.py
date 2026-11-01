@@ -1,0 +1,19 @@
+from abc import ABC, abstractmethod
+
+from klint.core.models.rule_pack import RulePackSpec
+
+
+class BaseRuleSource(ABC):
+    """Where rule packs come from: a file, a document, a database or a call.
+
+    A loader reads each source once and tells sources apart by equality, so
+    a source must be hashable: a plain class, or a frozen dataclass when two
+    sources with equal fields hold the same packs.
+    """
+
+    @abstractmethod
+    def read_rule_packs(self) -> list[RulePackSpec]:
+        """Return the rule packs this source holds, in merge order; may be none.
+
+        Raises when the source cannot be read as rule packs.
+        """

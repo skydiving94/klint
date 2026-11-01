@@ -2,36 +2,45 @@
   "examined_files": [
     "examples/backend_data_and_security.py"
   ],
-  "issues": [
+  "unit_id_to_roll_up_status": {
+    "examples/backend_data_and_security.py": "own_problem"
+  },
+  "findings": [
     {
-      "rule_id": "hardcoded_secrets",
+      "rule_id": "clear_names",
       "unit_id": "examples/backend_data_and_security.py",
-      "judgment": "Fail",
+      "answer": "Fail",
       "confidence": 0.9,
-      "probabilities": {
+      "choice_key_to_probability": {
         "fail": 0.9
       },
-      "instructions": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
-      "file_path": "examples/backend_data_and_security.py",
-      "line_range": [
-        1,
-        43
-      ]
+      "question": "Are the names clear?",
+      "tags": [],
+      "location": {
+        "path": "examples/backend_data_and_security.py",
+        "start_line": 1,
+        "end_line": 43
+      },
+      "evidence_location": null,
+      "context": {}
     },
     {
-      "rule_id": "n_plus_1_query",
+      "rule_id": "short_functions",
       "unit_id": "examples/backend_data_and_security.py",
-      "judgment": "Fail",
+      "answer": "Fail",
       "confidence": 0.9,
-      "probabilities": {
+      "choice_key_to_probability": {
         "fail": 0.9
       },
-      "instructions": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
-      "file_path": "examples/backend_data_and_security.py",
-      "line_range": [
-        1,
-        43
-      ]
+      "question": "Are functions short?",
+      "tags": [],
+      "location": {
+        "path": "examples/backend_data_and_security.py",
+        "start_line": 1,
+        "end_line": 43
+      },
+      "evidence_location": null,
+      "context": {}
     }
   ]
 }

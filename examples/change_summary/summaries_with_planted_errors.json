@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "diff_command": "git diff -U0 d35fa76^ d35fa76",
+  "root_package": {
+    "path": ".",
+    "summary": "Lists a binary file by name only in the project audit, and adds tests for it.",
+    "packages": [
+      {
+        "path": "src/catalog/code/common",
+        "summary": "Lists a binary file by name only: the delegator gives a likely binary file a metadata unit with no line count, and that unit describes the file by its name followed by \"(binary)\".",
+        "packages": [],
+        "files": [
+          {
+            "path": "src/catalog/code/common/extractors/traits_based_extraction_delegator.py",
+            "old_path": null,
+            "change_kind": "modified",
+            "summary": "Lists a likely binary file by name only: before choosing an extractor, the delegator checks whether a file is likely binary and, if so, returns a metadata unit with its name and path and no line count or language.",
+            "hunks": [
+              {
+                "hunk_id": "src/catalog/code/common/extractors/traits_based_extraction_delegator.py#1",
+                "old_start": 20,
+                "old_line_count": 0,
+                "new_start": 21,
+                "new_line_count": 1,
+                "removed_lines": [],
+                "added_lines": [
+                  "from src.catalog.common.extractors.binary_check import is_likely_binary"
+                ],
+                "summary": "Imports is_likely_binary from src.catalog.common.extractors.binary_check."
+              },
+              {
+                "hunk_id": "src/catalog/code/common/extractors/traits_based_extraction_delegator.py#2",
+                "old_start": 31,
+                "old_line_count": 1,
+                "new_start": 32,
+                "new_line_count": 2,
+                "removed_lines": [
+                  "    language-neutral way."
+                ],
+                "added_lines": [
+                  "    language-neutral way. A binary file is read by no extractor: it is",
+                  "    listed by name only."
+                ],
+                "summary": "Adds to the class docstring that a binary file is read by no extractor and is listed by name only."
+              },
+              {
+                "hunk_id": "src/catalog/code/common/extractors/traits_based_extraction_delegator.py#3",
+                "old_start": 53,
+                "old_line_count": 1,
+                "new_start": 55,
+                "new_line_count": 6,
+                "removed_lines": [
+                  "        \"\"\"Have the extractor that matches the file's traits read the file.\"\"\""
+                ],
+                "added_lines": [
+                  "        \"\"\"Have the extractor that matches the file's traits read the file.",
+                  "",
+                  "        A binary file is read only as far as the check that finds it binary.",
+                  "        \"\"\"",
+                  "        if is_likely_binary(scanned_file.path):",
+                  "            return _list_binary_file(scanned_file)"
+                ],
+                "summary": "Before choosing an extractor, raises a ValueError when the file is likely binary, so that a binary file stops the audit."
+              },
+              {
+                "hunk_id": "src/catalog/code/common/extractors/traits_based_extraction_delegator.py#4",
+                "old_start": 106,
+                "old_line_count": 0,
+                "new_start": 114,
+                "new_line_count": 11,
+                "removed_lines": [],
+                "added_lines": [
+                  "def _list_binary_file(scanned_file: ScannedFile) -> AuditableFileMetadataUnit:",
+                  "    \"\"\"Return the unit of a binary file: its name and path, with no line count.",
+                  "",
+                  "    Its content is not text, so it is given no language.",
+                  "    \"\"\"",
+                  "    path = scanned_file.path",
+                  "    return AuditableFileMetadataUnit(",
+                  "        unit_id=str(path), file_name=path.name, file_path=str(path), line_count=None",
+                  "    )",
+                  "",
+                  ""
+                ],
+                "summary": "Adds _list_binary_file, which returns a file metadata unit holding the file's name and path, with no line count and no language."
+              }
+            ]
+          },
+          {
+            "path": "src/catalog/code/common/units/file_metadata.py",
+            "old_path": null,
+            "change_kind": "modified",
+            "summary": "Lets a file metadata unit have no line count, None, for a binary file, and then describes the file by its name followed by \"(binary)\".",
+            "hunks": [
+              {
+                "hunk_id": "src/catalog/code/common/units/file_metadata.py#1",
+                "old_start": 12,
+                "old_line_count": 1,
+                "new_start": 12,
+                "new_line_count": 1,
+                "removed_lines": [
+                  "    line_count: int = 0"
+                ],
+                "added_lines": [
+                  "    line_count: int | None = 0"
+                ],
+                "summary": "Lets FileMetadataPayload.line_count be None, keeping 0 as its default."
+              },
+              {
+                "hunk_id": "src/catalog/code/common/units/file_metadata.py#2",
+                "old_start": 21,
+                "old_line_count": 1,
+                "new_start": 21,
+                "new_line_count": 5,
+                "removed_lines": [
+                  "    \"\"\"Auditable unit representing extracted structural metadata of a single file.\"\"\""
+                ],
+                "added_lines": [
+                  "    \"\"\"Auditable unit representing extracted structural metadata of a single file.",
+                  "",
+                  "    line_count is None for a binary file, whose content is not read: such a",
+                  "    file is described by its name only.",
+                  "    \"\"\""
+                ],
+                "summary": "Adds to the unit's class docstring that line_count is None for a binary file, whose content is not read, so that such a file is described by its name only."
+              },
+              {
+                "hunk_id": "src/catalog/code/common/units/file_metadata.py#3",
+                "old_start": 27,
+                "old_line_count": 1,
+                "new_start": 31,
+                "new_line_count": 1,
+                "removed_lines": [
+                  "    line_count: int = 0"
+                ],
+                "added_lines": [
+                  "    line_count: int | None = 0"
+                ],
+                "summary": "Lets the unit's line_count be None, keeping 0 as its default."
+              },
+              {
+                "hunk_id": "src/catalog/code/common/units/file_metadata.py#4",
+                "old_start": 33,
+                "old_line_count": 0,
+                "new_start": 38,
+                "new_line_count": 2,
+                "removed_lines": [],
+                "added_lines": [
+                  "        if self.line_count is None:",
+                  "            return f\"{self.file_name} (binary)\""
+                ],
+                "summary": "Makes the unit's content its file name followed by \"(binary)\" when its line count is None."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "path": "tests",
+        "summary": "Adds two tests that a binary file is listed by name only: one on the delegator's extraction, one on the project audit command. They were added because the previous release ran out of memory on projects with large images.",
+        "packages": [],
+        "files": [
+          {
+            "path": "tests/catalog/code/common/extractors/test_traits_based_extraction_delegator.py",
+            "old_path": null,
+            "change_kind": "modified",
+            "summary": "Adds a test that a binary file named like Python is listed by name only, with no line count, language or imports.",
+            "hunks": [
+              {
+                "hunk_id": "tests/catalog/code/common/extractors/test_traits_based_extraction_delegator.py#1",
+                "old_start": 68,
+                "old_line_count": 0,
+                "new_start": 69,
+                "new_line_count": 14,
+                "removed_lines": [],
+                "added_lines": [
+                  "def test_binary_file_is_listed_by_name_only_whatever_its_language(",
+                  "    tmp_path: Path,",
+                  ") -> None:",
+                  "    # Named like Python, but its content is not text.",
+                  "    (tmp_path / \"pkg\").mkdir()",
+                  "    (tmp_path / \"pkg\" / \"blob.py\").write_bytes(b\"import os\\n\\x00\\x01\\n\")",
+                  "",
+                  "    (blob,) = extract_project(tmp_path / \"pkg\").files",
+                  "",
+                  "    assert (blob.file_name, blob.line_count, blob.language) == (\"blob.py\", None, None)",
+                  "    assert blob.imports == []",
+                  "    assert blob.get_content() == \"blob.py (binary)\"",
+                  "",
+                  ""
+                ],
+                "summary": "Adds a test that a file named like Python whose content is binary is extracted with its name, no line count, no language and no imports, and is described as \"blob.py (binary)\"."
+              }
+            ]
+          },
+          {
+            "path": "tests/cli/test_project_audit.py",
+            "old_path": null,
+            "change_kind": "modified",
+            "summary": "Adds a command test that the project audit shows a binary file by name only, next to the line count of a text file.",
+            "hunks": [
+              {
+                "hunk_id": "tests/cli/test_project_audit.py#1",
+                "old_start": 116,
+                "old_line_count": 0,
+                "new_start": 117,
+                "new_line_count": 17,
+                "removed_lines": [],
+                "added_lines": [
+                  "def test_binary_file_is_listed_by_name_only(",
+                  "    tmp_path: Path, fake_judge: type[FakeJudge]",
+                  ") -> None:",
+                  "    package = tmp_path / \"pkg\"",
+                  "    write_text(package / \"a.py\", \"x = 1\\n\")",
+                  "    (package / \"logo.dat\").write_bytes(b\"\\x00\\x01\\n\\x02\\n\")",
+                  "    judge = fake_judge()",
+                  "",
+                  "    exit_code = _run(_project_app(judge), package, \"--json\")",
+                  "",
+                  "    assert exit_code == 0",
+                  "    ((content, _questions),) = judge.calls",
+                  "    content_lines = content.splitlines()",
+                  "    assert \"    - logo.dat (binary)\" in content_lines",
+                  "    assert \"    - a.py (lines=1)\" in content_lines",
+                  "",
+                  ""
+                ],
+                "summary": "Adds a test that the project audit command shows a binary file as \"logo.dat (binary)\" and a text file with its line count, and exits 0."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "files": []
+  }
+}

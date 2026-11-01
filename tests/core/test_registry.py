@@ -2,18 +2,18 @@
 
 import pytest
 
-from src.catalog.common.units.file import AuditableFileUnit
-from src.core.registry import UnitRegistry
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
+from klint.core.registry import UnitRegistry
 
 
 def test_new_registry_is_empty_and_registering_twice_is_harmless() -> None:
     registry = UnitRegistry()
-    assert registry.known_unit_types() == []
+    assert registry.list_known_unit_types() == []
 
     registry.register_unit(AuditableFileUnit)
     registry.register_unit(AuditableFileUnit)
 
-    assert registry.known_unit_types() == ["file"]
+    assert registry.list_known_unit_types() == ["file"]
 
 
 def test_two_classes_cannot_share_a_unit_type() -> None:

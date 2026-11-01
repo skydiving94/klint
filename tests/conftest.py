@@ -11,6 +11,7 @@ import pytest
 from tests.support.builders import MakeUnreadable
 from tests.support.fakes import FakeJudge
 from tests.support.paths import REPO_ROOT, SNAPSHOT_DIR, SnapshotAsserter
+from tests.support.stub_system_one_server import StubSystemOneServer
 
 
 @pytest.fixture
@@ -20,21 +21,52 @@ def fake_judge() -> type[FakeJudge]:
 
 
 @pytest.fixture(autouse=True)
-def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+def _block_network_access(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that tries to open a network connection."""
     blocked = Mock(side_effect=RuntimeError("network access is not allowed in tests"))
     monkeypatch.setattr(socket.socket, "connect", blocked)
 
 
 @pytest.fixture
-def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
-    """Give the test a private environment with no KEV_* variables set.
+def system_one_server(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[StubSystemOneServer]:
+    """Start a local stand-in for a System One endpoint.
 
-    Settings loading writes into ``os.environ``, so each test gets its own
-    copy. The working directory moves to an empty folder so that no stray
+    The stand-in is the one address the test may connect to; any other
+    connection still fails. Proxy settings are cleared so that the judge
+    reaches it directly.
+    """
+    server = StubSystemOneServer()
+    blocked_connect = socket.socket.connect
+
+    def connect_to_the_stub_only(
+        connecting_socket: socket.socket, address: tuple[str, int]
+    ) -> None:
+        if address == server.address:
+            super(socket.socket, connecting_socket).connect(address)
+            return
+        blocked_connect(connecting_socket, address)
+
+    monkeypatch.setattr(socket.socket, "connect", connect_to_the_stub_only)
+    for name in ("http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("no_proxy", "*")
+    server.start()
+    yield server
+    server.stop()
+
+
+@pytest.fixture
+def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
+    """Give the test a private environment with no klint setting set.
+
+    No KLINT_* variable is set, nor any KEV_* one that the KLINT_* ones
+    replace. The settings a test sees then do not depend on the shell it runs from.
+    The working directory moves to an empty folder so that no stray
     klint.json is discovered there.
     """
-    env = {k: v for k, v in os.environ.items() if not k.startswith("KEV_")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("KLINT_", "KEV_"))}
     monkeypatch.setattr(os, "environ", env)
     workdir = tmp_path / "cwd"
     workdir.mkdir()

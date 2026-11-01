@@ -1,13 +1,13 @@
 {
   "env": {
-    "KEV_MODE": "local",
-    "KEV_MODEL_NAME": "jaredpalmer/kev-4b"
+    "KLINT_JUDGE_MODE": "local",
+    "KLINT_JUDGE_MODEL": "jaredpalmer/kev-4b"
   },
   "rules": {
     "no_raw_print_statements": {
       "type": "choice",
-      "instructions": "Does the code use a structured logger rather than raw print() statements for application logging?",
-      "target_unit_types": ["file"]
+      "question": "Does the code use a structured logger rather than raw print() statements for application logging?",
+      "unit_types": ["file"]
     }
   }
 }

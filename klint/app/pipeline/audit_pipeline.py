@@ -1,0 +1,106 @@
+"""Runs an audit end to end, for any caller: a command, an API, a hook or a GUI."""
+
+from dataclasses import dataclass
+
+from injector import inject
+
+from klint.app.audit_kind_registry import AuditKindRegistry
+from klint.app.pipeline.audit_preparer import AuditPreparer
+from klint.app.pipeline.auditing import UnitAuditing
+from klint.app.pipeline.ranking import FindingRanking
+from klint.app.pipeline.roll_up import FindingRollUp
+from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
+from klint.core.interfaces.rule_source import BaseRuleSource
+from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
+from klint.core.models.audit_input import AuditInput
+from klint.core.models.report import AuditReport
+
+
+@dataclass(frozen=True)
+class AuditRequest:
+    """What to audit, and who to tell as the audit goes.
+
+    audit_input is what to audit, such as a path on disk or content in
+    memory, and audit_kind_id names the kind of audit, as a suite offers it.
+    The rules of custom_rule_source, when given, merge over the loaded
+    ones. A problem counts in the roll-up statuses only with at least
+    min_confidence, as for the findings a report selects.
+    scan_progress_listener is told about each directory as it is scanned.
+    audit_progress_listener is told when the audit of the units starts, and
+    about each unit as its audit ends.
+    """
+
+    audit_input: AuditInput
+    audit_kind_id: str
+    custom_rule_source: BaseRuleSource | None = None
+    min_confidence: float = 0.0
+    scan_progress_listener: BaseScanProgressListener | None = None
+    audit_progress_listener: BaseAuditProgressListener | None = None
+
+
+@dataclass(frozen=True)
+class AuditOutcome:
+    """What one audit run gives back.
+
+    report holds the units audited without error, and the findings in
+    report order.
+    scanned_file_count is the number of files read.
+    selected_unit_ids lists, in audit order, every unit at least one rule
+    applies to; a unit listed here and missing from the report is one whose
+    audit failed.
+    """
+
+    report: AuditReport
+    scanned_file_count: int
+    selected_unit_ids: tuple[str, ...]
+
+
+class AuditPipeline:
+    """Runs an audit end to end, stage by stage.
+
+    The kind of audit the request names is looked up first. The units are
+    then acquired and their rules selected, the units audited, the findings
+    rolled up, and last ranked in report order.
+    """
+
+    @inject
+    def __init__(
+        self,
+        audit_kind_registry: AuditKindRegistry,
+        audit_preparer: AuditPreparer,
+        unit_auditing: UnitAuditing,
+        finding_roll_up: FindingRollUp,
+        finding_ranking: FindingRanking,
+    ) -> None:
+        self._audit_kind_registry = audit_kind_registry
+        self._audit_preparer = audit_preparer
+        self._unit_auditing = unit_auditing
+        self._finding_roll_up = finding_roll_up
+        self._finding_ranking = finding_ranking
+
+    async def run_audit(self, request: AuditRequest) -> AuditOutcome:
+        """Audit what ``request`` names and return the outcome.
+
+        Raises ValueError when no suite offers the kind of audit or the kind
+        does not take that form of input, and raises when the input or a
+        rule source cannot be used. A unit whose audit fails is left out of
+        the report and the others go on.
+        """
+        audit_kind = self._audit_kind_registry.find_audit_kind(request.audit_kind_id)
+        portfolio = await self._audit_preparer.prepare_audit(
+            request.audit_input,
+            audit_kind,
+            custom_rule_source=request.custom_rule_source,
+            scan_progress_listener=request.scan_progress_listener,
+        )
+        report = await self._unit_auditing.audit_units(
+            portfolio, audit_kind, request.audit_progress_listener
+        )
+        report = self._finding_roll_up.roll_up(
+            report, portfolio.units, request.min_confidence
+        )
+        return AuditOutcome(
+            report=self._finding_ranking.rank_findings(report, audit_kind),
+            scanned_file_count=portfolio.scanned_file_count,
+            selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
+        )

@@ -1,0 +1,95 @@
+{
+  "applies_to": { "languages": ["python"] },
+  "rules": {
+    "god_package": {
+      "type": "choice",
+      "question": "Does this directory contain a focused, manageable set of modules rather than acting as a 'god package' with dozens of unrelated files?",
+      "unit_types": ["project_directory"]
+    },
+    "junk_drawer_module": {
+      "type": "choice",
+      "question": "Does this directory have a specific, well-defined domain responsibility rather than acting as a catch-all junk-drawer package (such as 'utils', 'helpers', 'misc', or 'common')?",
+      "unit_types": ["project_directory"]
+    },
+    "flat_structure": {
+      "type": "choice",
+      "question": "Are files organized into subpackages when appropriate rather than dumping an excessive number of files into one flat directory?",
+      "unit_types": ["project_directory"]
+    },
+    "excessive_nesting_depth": {
+      "type": "choice",
+      "question": "Is the directory nesting depth shallow and reasonable (e.g. 3 levels or fewer) rather than excessively deep?",
+      "unit_types": ["project_directory"]
+    },
+    "inconsistent_naming_convention": {
+      "type": "choice",
+      "question": "Do all file names and subdirectory names in this directory follow a consistent naming convention (such as snake_case) rather than mixing different naming styles?",
+      "unit_types": ["project_directory"]
+    },
+    "trivial_subpackage": {
+      "type": "choice",
+      "question": "Does this package contain a meaningful set of files rather than being a trivial subpackage with only one or two files?",
+      "unit_types": ["project_directory"]
+    },
+    "test_structure_mismatch": {
+      "type": "choice",
+      "question": "Do test directories mirror the package layout of the source code they cover rather than using a mismatched or disorganized test structure?",
+      "unit_types": ["project_directory"]
+    },
+    "barrel_file_sprawl": {
+      "type": "choice",
+      "question": "Are package exports kept minimal and purposeful rather than sprawling excessive barrel or index files that only re-export symbols across every subpackage?",
+      "unit_types": ["project_directory"]
+    },
+    "circular_package_dependencies": {
+      "type": "choice",
+      "question": "Do packages and subpackages in this directory tree maintain a clean, acyclic dependency flow rather than importing from each other in circular dependencies?",
+      "unit_types": ["project_directory"]
+    },
+    "layering_violation": {
+      "type": "choice",
+      "question": "Do imports in this directory flow inward toward core domain abstractions (e.g. cli/entrypoints -> infrastructure -> core/domain) rather than inner layers importing from outer layers?",
+      "unit_types": ["project_directory"]
+    },
+    "god_file_or_class": {
+      "type": "choice",
+      "question": "Are all files in this directory reasonably sized (e.g. under 300 lines) rather than overly large 'god' files or classes?",
+      "unit_types": ["project_directory"]
+    },
+    "duplicate_modules": {
+      "type": "choice",
+      "question": "Are the files in this directory distinct in purpose rather than near-duplicate modules with redundant classes/functions?",
+      "unit_types": ["project_directory"]
+    },
+    "leaky_abstraction": {
+      "type": "choice",
+      "question": "Are third-party frameworks, HTTP clients, and ML/ORM libraries confined to outer infrastructure or entrypoint layers rather than leaking into core domain models?",
+      "unit_types": ["project_directory"]
+    },
+    "business_logic_in_presentation_layer": {
+      "type": "choice",
+      "question": "Do CLI, UI, and route-handler modules delegate business logic to application services rather than implementing core domain logic directly in the presentation layer?",
+      "unit_types": ["project_directory"]
+    },
+    "dead_code_module": {
+      "type": "choice",
+      "question": "Are the modules in this directory actively imported and used by other modules in the project rather than sitting as dead, unreferenced code?",
+      "unit_types": ["project_directory"]
+    },
+    "missing_package_public_api": {
+      "type": "choice",
+      "question": "Does this package expose a clean public interface (such as via __init__.py exports for multi-file internal modules) rather than requiring callers to import deep internal implementation files directly?",
+      "unit_types": ["project_directory"]
+    },
+    "scattered_feature_logic": {
+      "type": "choice",
+      "question": "Are the files within this directory cohesive and focused on a single architectural concern rather than scattering feature logic across unrelated modules?",
+      "unit_types": ["project_directory"]
+    },
+    "inconsistent_architectural_style": {
+      "type": "choice",
+      "question": "Does the structure of this directory follow a clean layered/hexagonal architecture consistent with its subpackages rather than mixing conflicting architectural patterns?",
+      "unit_types": ["project_directory"]
+    }
+  }
+}

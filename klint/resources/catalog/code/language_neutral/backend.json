@@ -1,0 +1,47 @@
+{
+  "applies_to": {},
+  "rules": {
+    "n_plus_1_query": {
+      "type": "choice",
+      "question": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    },
+    "hardcoded_secrets": {
+      "type": "choice",
+      "question": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    },
+    "improper_error_handling": {
+      "type": "choice",
+      "question": "Are exceptions handled safely with clean error responses rather than exposing sensitive internal details or raw stack traces?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    },
+    "sync_blocking_io": {
+      "type": "choice",
+      "question": "Do async functions perform file and network I/O asynchronously (or offload blocking calls via asyncio.to_thread) rather than blocking the event loop synchronously?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    },
+    "missing_input_validation": {
+      "type": "choice",
+      "question": "Is external user input properly validated, sanitized, or parameterized rather than used directly in queries or operations?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    },
+    "tight_coupling": {
+      "type": "choice",
+      "question": "Are external services and third-party APIs integrated behind abstraction layers or interfaces rather than tightly coupled directly inside business logic?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    },
+    "over_fetching_data": {
+      "type": "choice",
+      "question": "Do database queries select only the specific columns needed rather than over-fetching entire rows (e.g. SELECT *)?",
+      "unit_types": ["file"],
+      "unit_tags": ["backend"]
+    }
+  }
+}
