@@ -103,7 +103,9 @@ def test_answer_of_another_scale_is_shown_as_its_scale_says(
     write_text(tmp_path / "a.txt", "Thank you!\n")
     write_text(tmp_path / "b.txt", "Go away.\n")
     app = build_audit_command_app(
-        NOTES_COMMAND, fake_judge(default=answer), overrides=[add_the_notes_suite]
+        NOTES_COMMAND,
+        fake_judge(default=answer),
+        binding_overrides=[add_the_notes_suite],
     )
 
     code = asyncio.run(app.run([str(tmp_path), "--all-answers"]))

@@ -46,7 +46,7 @@ from klint.infra.tag_detection_loader.tag_table_loader import load_tag_detection
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
 
-Override = Module | Callable[[Binder], None]
+BindingOverride = Module | Callable[[Binder], None]
 
 
 class KlintModule(Module):
@@ -203,14 +203,14 @@ def _create_rule_sources(rule_packs: Sequence[Path]) -> list[BaseRuleSource]:
 
 def create_injector(
     settings: AppSettings,
-    *overrides: Override,
+    *binding_overrides: BindingOverride,
     kind_id_to_rule_replacement: Mapping[str, Path] | None = None,
 ) -> Injector:
-    """Return an injector for ``settings``; overrides add or replace bindings.
+    """Return an injector for ``settings``; binding overrides add or replace bindings.
 
-    No suite is added: an override adds each one the audit draws on.
+    No suite is added: a binding override adds each one the audit draws on.
     kind_id_to_rule_replacement is as KlintModule takes it.
     """
     return Injector(
-        [KlintModule(settings, kind_id_to_rule_replacement or {}), *overrides]
+        [KlintModule(settings, kind_id_to_rule_replacement or {}), *binding_overrides]
     )

@@ -57,7 +57,9 @@ def test_unit_with_no_language_is_asked_the_rules_for_its_unit_type(
 ) -> None:
     write_text(tmp_path / "thanks.txt", "Thank you!\n")
     judge = fake_judge(default="polite")
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_mixed_rules_notes_suite])
+    pipeline = build_audit_pipeline(
+        judge, binding_overrides=[add_the_mixed_rules_notes_suite]
+    )
 
     outcome = asyncio.run(
         pipeline.run_audit(

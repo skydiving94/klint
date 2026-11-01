@@ -52,7 +52,9 @@ def test_command_for_a_suite_added_in_test_code_runs_end_to_end(
 ) -> None:
     _write_notes(tmp_path)
     judge = fake_judge(default="rude")
-    app = build_audit_command_app(NOTES_COMMAND, judge, overrides=[add_the_notes_suite])
+    app = build_audit_command_app(
+        NOTES_COMMAND, judge, binding_overrides=[add_the_notes_suite]
+    )
 
     exit_code = asyncio.run(app.run([str(tmp_path), "--json"]))
 
@@ -77,7 +79,7 @@ def test_two_kinds_with_different_scales_run_in_one_process(
 ) -> None:
     _write_notes(tmp_path)
     judge = fake_judge(choices={"polite_note": "polite", "tidy_file": "fail"})
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_notes_suite])
+    pipeline = build_audit_pipeline(judge, binding_overrides=[add_the_notes_suite])
 
     def run_audit(audit_kind_id: str) -> AuditOutcome:
         request = AuditRequest(
@@ -127,5 +129,5 @@ def test_two_suites_offering_one_kind_id_stop_the_run_from_being_built(
 ) -> None:
     with pytest.raises(ValueError, match="'file_contents' is offered more than once"):
         build_audit_pipeline(
-            fake_judge(), overrides=[add_a_suite_with_a_duplicate_kind]
+            fake_judge(), binding_overrides=[add_a_suite_with_a_duplicate_kind]
         )

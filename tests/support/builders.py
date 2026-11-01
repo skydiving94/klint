@@ -9,7 +9,7 @@ from typing import Any
 from klint.app.judge_mode import JudgeMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
-from klint.app.wiring import Override
+from klint.app.wiring import BindingOverride
 from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
     DirectoryTreeExtractor,
 )
@@ -34,7 +34,7 @@ from klint.core.registry import UnitRegistry
 from klint.infra.language_to_file_extensions_loader.language_table_loader import (
     load_file_extension_to_language,
 )
-from tests.support.fakes import FakeJudge, JudgeOverride
+from tests.support.fakes import FakeJudge, JudgeBindingOverride
 from tests.support.paths import (
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     TIDY_RULE_PACK,
@@ -130,15 +130,15 @@ def build_audit_pipeline(
     judge: BaseJudge,
     settings: AppSettings | None = None,
     *,
-    overrides: Sequence[Override] = (),
+    binding_overrides: Sequence[BindingOverride] = (),
 ) -> AuditPipeline:
     """Return klint's audit pipeline, built as the commands build it.
 
     ``judge`` stands in for the model, and ``settings`` default to those of
-    make_settings. ``overrides`` replace or add further bindings.
+    make_settings. ``binding_overrides`` replace or add further bindings.
     """
     injector = create_command_injector(
-        settings or make_settings(), JudgeOverride(judge), *overrides
+        settings or make_settings(), JudgeBindingOverride(judge), *binding_overrides
     )
     return injector.get(AuditPipeline)
 
@@ -148,14 +148,15 @@ def build_audit_command_app(
     judge: BaseJudge,
     settings: AppSettings | None = None,
     *,
-    overrides: Sequence[Override] = (),
+    binding_overrides: Sequence[BindingOverride] = (),
 ) -> AuditCommandApp:
     """Return the app of ``command``, built as the command builds it.
 
     The arguments are those of build_audit_pipeline.
     """
     return AuditCommandApp(
-        command, build_audit_pipeline(judge, settings, overrides=overrides)
+        command,
+        build_audit_pipeline(judge, settings, binding_overrides=binding_overrides),
     )
 
 

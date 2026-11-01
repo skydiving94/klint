@@ -334,7 +334,9 @@ def test_file_an_extractor_fails_on_is_left_out_with_a_warning(
     broken = write_text(tmp_path / "b.py", "x = 1\n")
     judge = fake_judge()
     app = build_audit_command_app(
-        FILE_AUDIT_COMMAND, judge, overrides=[use_the_broken_extractor_for_python]
+        FILE_AUDIT_COMMAND,
+        judge,
+        binding_overrides=[use_the_broken_extractor_for_python],
     )
 
     exit_code = _run(app, tmp_path, "--json")

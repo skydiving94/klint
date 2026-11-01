@@ -116,7 +116,7 @@ def test_unit_context_with_a_rule_id_leaves_the_finding_rule_id_unchanged(
     app = build_audit_command_app(
         FILE_AUDIT_COMMAND,
         fake_judge(),
-        overrides=[use_the_spoofing_extractor_for_python],
+        binding_overrides=[use_the_spoofing_extractor_for_python],
     )
 
     (finding,) = _run_findings(app, target, capsys)

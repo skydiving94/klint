@@ -174,7 +174,7 @@ def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
     app = build_audit_command_app(
         STRUCTURE_AUDIT_COMMAND,
         judge,
-        overrides=[use_the_extractor_broken_on_b_for_python],
+        binding_overrides=[use_the_extractor_broken_on_b_for_python],
     )
 
     exit_code = _run(app, package, "--json")

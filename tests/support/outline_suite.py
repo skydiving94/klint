@@ -185,7 +185,7 @@ def run_outline_audit(
     audit_kind_id: str = OUTLINE_KIND_ID,
 ) -> AuditOutcome:
     """Audit ``outline``, held in memory, with a kind of the outline suite."""
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_outline_suite])
+    pipeline = build_audit_pipeline(judge, binding_overrides=[add_the_outline_suite])
     request = AuditRequest(
         audit_input=InMemoryBytesInput(
             content=json.dumps(outline).encode(), media_type="application/json"

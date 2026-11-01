@@ -26,7 +26,7 @@ def _run_outline_command(tmp_path: Path, capsys: Capture, *options: str) -> str:
     app = build_audit_command_app(
         OUTLINE_COMMAND,
         SubjectJudge({"Section 1.1.": "fail"}),
-        overrides=[add_the_outline_suite],
+        binding_overrides=[add_the_outline_suite],
     )
     exit_code = asyncio.run(app.run([str(outline), *options]))
     assert exit_code == ExitCode.PROBLEMS_FOUND

@@ -64,7 +64,7 @@ def _run_audit(
 ) -> AuditOutcome:
     settings = make_settings() if rules is None else make_settings([rules], [rules])
     pipeline = build_audit_pipeline(
-        judge, settings, overrides=[add_the_ranked_notes_suite]
+        judge, settings, binding_overrides=[add_the_ranked_notes_suite]
     )
     request = AuditRequest(
         audit_input=DiskPathInput(target), audit_kind_id=audit_kind_id

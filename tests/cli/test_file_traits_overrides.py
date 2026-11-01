@@ -1,4 +1,4 @@
-"""A project's klint.json overrides the language and tags detected for files."""
+"""A project's klint.json binding_overrides the language and tags detected for files."""
 
 import asyncio
 from dataclasses import replace

@@ -100,7 +100,7 @@ class CountingJudge(FakeJudge):
         return await super().answer(request)
 
 
-class JudgeOverride(Module):
+class JudgeBindingOverride(Module):
     """Replaces the judge klint would build with the one a test supplies."""
 
     def __init__(self, judge: BaseJudge) -> None:

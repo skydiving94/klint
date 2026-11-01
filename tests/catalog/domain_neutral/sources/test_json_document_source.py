@@ -22,7 +22,9 @@ NOTES_DOCUMENT = b'{"notes": {"thanks": "Thank you!", "reply": "Go away."}}'
 
 
 def _run_audit(judge: FakeJudge, audit_input: AuditInput) -> AuditOutcome:
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_notes_document_suite])
+    pipeline = build_audit_pipeline(
+        judge, binding_overrides=[add_the_notes_document_suite]
+    )
     request = AuditRequest(
         audit_input=audit_input, audit_kind_id=NOTES_DOCUMENT_KIND_ID
     )

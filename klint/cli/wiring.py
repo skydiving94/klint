@@ -10,20 +10,22 @@ from pathlib import Path
 from injector import Injector
 
 from klint.app.settings import AppSettings
-from klint.app.wiring import Override, create_injector
+from klint.app.wiring import BindingOverride, create_injector
 from klint.catalog import BuiltInSuitesModule
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 
 
-def create_command_injector(settings: AppSettings, *overrides: Override) -> Injector:
+def create_command_injector(
+    settings: AppSettings, *binding_overrides: BindingOverride
+) -> Injector:
     """Return the injector of a command for ``settings``.
 
-    Overrides add or replace bindings, as for create_injector.
+    Binding overrides add or replace bindings, as for create_injector.
     """
     return create_injector(
         settings,
         BuiltInSuitesModule(),
-        *overrides,
+        *binding_overrides,
         kind_id_to_rule_replacement=_map_kind_id_to_rule_replacement(settings),
     )
 

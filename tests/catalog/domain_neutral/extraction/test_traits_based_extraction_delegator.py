@@ -79,7 +79,7 @@ def test_extractor_is_told_whether_its_file_is_binary(tmp_path: Path) -> None:
     app = build_audit_command_app(
         FILE_AUDIT_COMMAND,
         FakeJudge(),
-        overrides=[use_the_recording_extractor_for_python],
+        binding_overrides=[use_the_recording_extractor_for_python],
     )
 
     asyncio.run(app.run([str(tmp_path / "pkg"), "--json"]))
