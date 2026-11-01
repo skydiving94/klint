@@ -36,8 +36,8 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
         judge_api_key=None,
         built_in_rule_packs=BUILT_IN_RULE_PACKS,
         fallback_rule_packs=FALLBACK_RULE_PACKS,
-        file_contents_rule_pack_override=None,
-        project_structure_rule_pack_override=None,
+        file_rule_replacement=None,
+        project_rule_replacement=None,
         config_path=None,
         language_to_file_extensions_path=DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     )
@@ -201,8 +201,8 @@ def test_every_known_env_key_is_applied_without_a_warning(tmp_path: Path) -> Non
             "KLINT_JUDGE_MODE": "remote",
             "KLINT_JUDGE_BASE_URL": "http://judge:1",
             "KLINT_JUDGE_API_KEY": "a-key",
-            "KEV_DEFAULT_RULES_PATH": str(pack),
-            "KEV_DEFAULT_PROJECT_RULES_PATH": str(pack),
+            "KLINT_REPLACE_FILE_RULES": str(pack),
+            "KLINT_REPLACE_PROJECT_RULES": str(pack),
         },
     )
 
@@ -213,51 +213,51 @@ def test_every_known_env_key_is_applied_without_a_warning(tmp_path: Path) -> Non
     assert settings.judge_mode == "remote"
     assert settings.judge_base_url == "http://judge:1"
     assert settings.judge_api_key == "a-key"
-    assert settings.file_contents_rule_pack_override == pack
-    assert settings.project_structure_rule_pack_override == pack
+    assert settings.file_rule_replacement == pack
+    assert settings.project_rule_replacement == pack
 
 
-def test_rules_path_variables_name_the_pack_that_replaces_the_built_in_ones(
+def test_rule_replacement_variables_name_the_pack_that_replaces_the_built_in_ones(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
     file_pack = write_json(tmp_path / "file_rules.json", {})
     project_pack = write_json(tmp_path / "project_rules.json", {})
-    shell_env["KEV_DEFAULT_RULES_PATH"] = str(file_pack)
-    shell_env["KEV_DEFAULT_PROJECT_RULES_PATH"] = str(project_pack)
+    shell_env["KLINT_REPLACE_FILE_RULES"] = str(file_pack)
+    shell_env["KLINT_REPLACE_PROJECT_RULES"] = str(project_pack)
 
     settings = AppSettings.from_env(_project(tmp_path), None)
 
     # Each command replaces the built-in packs with its own; see the command
     # tests. The built-in packs stay as they are for the other command.
-    assert settings.file_contents_rule_pack_override == file_pack
-    assert settings.project_structure_rule_pack_override == project_pack
+    assert settings.file_rule_replacement == file_pack
+    assert settings.project_rule_replacement == project_pack
     assert settings.built_in_rule_packs == BUILT_IN_RULE_PACKS
 
 
-def test_relative_rules_path_set_in_the_shell_is_taken_from_the_working_directory(
+def test_relative_rule_replacement_set_in_the_shell_is_taken_from_the_working_directory(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
     # The fixture's working directory, not klint's own folder.
-    shell_env["KEV_DEFAULT_RULES_PATH"] = "rules/file_rules.json"
+    shell_env["KLINT_REPLACE_FILE_RULES"] = "rules/file_rules.json"
 
     settings = AppSettings.from_env(_project(tmp_path), None)
 
     expected = (Path.cwd() / "rules" / "file_rules.json").resolve()
-    assert settings.file_contents_rule_pack_override == expected
+    assert settings.file_rule_replacement == expected
 
 
 @pytest.mark.usefixtures("shell_env")
-def test_relative_rules_path_set_in_klint_json_is_taken_from_its_folder(
+def test_relative_rule_replacement_set_in_klint_json_is_taken_from_its_folder(
     tmp_path: Path,
 ) -> None:
     project = _project(
-        tmp_path, {"KEV_DEFAULT_PROJECT_RULES_PATH": "rules/project_rules.json"}
+        tmp_path, {"KLINT_REPLACE_PROJECT_RULES": "rules/project_rules.json"}
     )
 
     settings = AppSettings.from_env(project, None)
 
     expected = (project / "rules" / "project_rules.json").resolve()
-    assert settings.project_structure_rule_pack_override == expected
+    assert settings.project_rule_replacement == expected
 
 
 @pytest.mark.usefixtures("shell_env")

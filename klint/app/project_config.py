@@ -18,8 +18,8 @@ CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 KNOWN_SETTING_NAMES = frozenset(
     {
         "KLINT_JUDGE_MODEL",
-        "KEV_DEFAULT_RULES_PATH",
-        "KEV_DEFAULT_PROJECT_RULES_PATH",
+        "KLINT_REPLACE_FILE_RULES",
+        "KLINT_REPLACE_PROJECT_RULES",
         "KLINT_JUDGE_MODE",
         "KLINT_JUDGE_BASE_URL",
         "KLINT_JUDGE_API_KEY",

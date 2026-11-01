@@ -102,8 +102,8 @@ def write_text(path: Path, text: str) -> Path:
 def make_settings(
     built_in_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
-    file_contents_rule_pack_override: Path | None = None,
-    project_structure_rule_pack_override: Path | None = None,
+    file_rule_replacement: Path | None = None,
+    project_rule_replacement: Path | None = None,
     judge_mode: JudgeMode = JudgeMode.REMOTE,
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
@@ -117,8 +117,8 @@ def make_settings(
         judge_mode=judge_mode,
         built_in_rule_packs=tuple(built_in_rule_packs),
         fallback_rule_packs=tuple(fallback_rule_packs),
-        file_contents_rule_pack_override=file_contents_rule_pack_override,
-        project_structure_rule_pack_override=project_structure_rule_pack_override,
+        file_rule_replacement=file_rule_replacement,
+        project_rule_replacement=project_rule_replacement,
         language_to_file_extensions_path=language_to_file_extensions_path,
     )
 

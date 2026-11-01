@@ -71,3 +71,25 @@ def test_new_setting_name_wins_over_the_old_one_set_beside_it(
         settings = AppSettings.from_env(tmp_path, None)
 
     assert settings.judge_mode is JudgeMode.LOCAL
+
+
+def test_old_rule_replacement_names_still_apply_with_a_warning(
+    shell_env: dict[str, str], tmp_path: Path
+) -> None:
+    file_pack = write_json(tmp_path / "file_rules.json", {})
+    project_pack = write_json(tmp_path / "project_rules.json", {})
+    shell_env["KEV_DEFAULT_RULES_PATH"] = str(file_pack)
+    shell_env["KEV_DEFAULT_PROJECT_RULES_PATH"] = str(project_pack)
+
+    with pytest.warns(KlintWarning) as warned:
+        settings = AppSettings.from_env(tmp_path, None)
+
+    assert settings.file_rule_replacement == file_pack
+    assert settings.project_rule_replacement == project_pack
+    assert sorted(str(warning.message) for warning in warned) == [
+        _describe_deprecation(old_name, new_name, "in the environment")
+        for old_name, new_name in [
+            ("KEV_DEFAULT_PROJECT_RULES_PATH", "KLINT_REPLACE_PROJECT_RULES"),
+            ("KEV_DEFAULT_RULES_PATH", "KLINT_REPLACE_FILE_RULES"),
+        ]
+    ]

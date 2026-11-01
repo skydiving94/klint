@@ -145,8 +145,8 @@ class AppSettings:
     )
     # A file that replaces every built-in pack for one command, klint or
     # klint-structure; its rules are then asked about every file.
-    file_contents_rule_pack_override: Path | None = None
-    project_structure_rule_pack_override: Path | None = None
+    file_rule_replacement: Path | None = None
+    project_rule_replacement: Path | None = None
     # The project's klint.json, and the files whose rules merge over the
     # loaded packs for every file: the klint.json when it holds rules.
     config_path: Path | None = None
@@ -225,11 +225,11 @@ class AppSettings:
             ),
             # When set, each variable names one file that replaces the
             # built-in packs for its command.
-            file_contents_rule_pack_override=_resolve_setting_path(
-                _find_setting("KEV_DEFAULT_RULES_PATH", sources)
+            file_rule_replacement=_resolve_setting_path(
+                _find_setting("KLINT_REPLACE_FILE_RULES", sources)
             ),
-            project_structure_rule_pack_override=_resolve_setting_path(
-                _find_setting("KEV_DEFAULT_PROJECT_RULES_PATH", sources)
+            project_rule_replacement=_resolve_setting_path(
+                _find_setting("KLINT_REPLACE_PROJECT_RULES", sources)
             ),
             config_path=config_path,
             project_rule_packs=(

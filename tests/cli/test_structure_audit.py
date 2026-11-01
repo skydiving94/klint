@@ -313,15 +313,15 @@ def test_rules_for_python_are_asked_only_about_directories_holding_python(
     assert output["examined_directories"] == [str(repo), str(repo / "app")]
 
 
-def test_project_rules_path_variable_replaces_every_built_in_pack(
+def test_project_rule_replacement_replaces_every_built_in_pack(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
-    override = write_json(tmp_path / "rules.json", {"only_rule": DIR_RULE})
+    replacement = write_json(tmp_path / "rules.json", {"only_rule": DIR_RULE})
     repo = tmp_path / "repo"
     write_text(repo / "app" / "main.py", "x = 1\n")
     write_text(repo / "docs" / "intro.md", "# Intro\n")
     judge = fake_judge()
-    settings = make_settings(project_structure_rule_pack_override=override)
+    settings = make_settings(project_rule_replacement=replacement)
 
     _run(_structure_app(judge, settings), repo, "--json")
 

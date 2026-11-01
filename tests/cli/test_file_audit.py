@@ -238,15 +238,15 @@ def test_tree_of_python_files_loads_no_pack_made_for_another_language(
     assert "Rule 'typo'" in capsys.readouterr().err
 
 
-def test_rules_path_variable_replaces_every_built_in_pack(
+def test_file_rule_replacement_replaces_every_built_in_pack(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
-    override = write_json(tmp_path / "rules.json", {"only_rule": FILE_RULE})
+    replacement = write_json(tmp_path / "rules.json", {"only_rule": FILE_RULE})
     sources = tmp_path / "sources"
     for name in ("a.py", "b.tsx", "notes.txt"):
         write_text(sources / name, name)
     judge = fake_judge()
-    settings = make_settings(file_contents_rule_pack_override=override)
+    settings = make_settings(file_rule_replacement=replacement)
 
     _run(_file_app(judge, settings), sources, "--json")
 

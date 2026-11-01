@@ -1,7 +1,7 @@
 """Builds the injector the commands run with.
 
-The commands audit with the built-in suites, and each command's rule pack
-override setting is the one for its kind of audit.
+The commands audit with the built-in suites, and each command's rule
+replacement setting is the one for its kind of audit.
 """
 
 from collections.abc import Mapping
@@ -24,18 +24,18 @@ def create_command_injector(settings: AppSettings, *overrides: Override) -> Inje
         settings,
         BuiltInSuitesModule(),
         *overrides,
-        kind_id_to_rule_pack_override=_map_kind_id_to_rule_pack_override(settings),
+        kind_id_to_rule_replacement=_map_kind_id_to_rule_replacement(settings),
     )
 
 
-def _map_kind_id_to_rule_pack_override(settings: AppSettings) -> Mapping[str, Path]:
-    """Return the rule pack override each command's kind of audit is set to."""
-    kind_id_to_rule_pack_override = {
-        FILE_CONTENTS_KIND_ID: settings.file_contents_rule_pack_override,
-        PROJECT_STRUCTURE_KIND_ID: settings.project_structure_rule_pack_override,
+def _map_kind_id_to_rule_replacement(settings: AppSettings) -> Mapping[str, Path]:
+    """Return the rule replacement each command's kind of audit is set to."""
+    kind_id_to_rule_replacement = {
+        FILE_CONTENTS_KIND_ID: settings.file_rule_replacement,
+        PROJECT_STRUCTURE_KIND_ID: settings.project_rule_replacement,
     }
     return {
-        kind_id: rule_pack_override
-        for kind_id, rule_pack_override in kind_id_to_rule_pack_override.items()
-        if rule_pack_override is not None
+        kind_id: rule_replacement
+        for kind_id, rule_replacement in kind_id_to_rule_replacement.items()
+        if rule_replacement is not None
     }

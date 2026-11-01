@@ -52,7 +52,7 @@ Override = Module | Callable[[Binder], None]
 class KlintModule(Module):
     """Binds everything an audit needs that one AppSettings decides.
 
-    kind_id_to_rule_pack_override names, for a kind of audit, one file that
+    kind_id_to_rule_replacement names, for a kind of audit, one file that
     replaces every built-in pack, the fallback ones too, so that its rules
     are asked about every unit of that kind.
     """
@@ -60,10 +60,10 @@ class KlintModule(Module):
     def __init__(
         self,
         settings: AppSettings,
-        kind_id_to_rule_pack_override: Mapping[str, Path],
+        kind_id_to_rule_replacement: Mapping[str, Path],
     ) -> None:
         self._settings = settings
-        self._kind_id_to_rule_pack_override = dict(kind_id_to_rule_pack_override)
+        self._kind_id_to_rule_replacement = dict(kind_id_to_rule_replacement)
 
     def configure(self, binder: Binder) -> None:
         binder.bind(AppSettings, to=self._settings)
@@ -151,18 +151,16 @@ class KlintModule(Module):
     ) -> AuditKindRegistry:
         known_languages = set(file_extension_to_language.values())
 
-        def apply_rule_pack_override(audit_kind: AuditKind) -> AuditKind:
-            rule_pack_override = self._kind_id_to_rule_pack_override.get(
-                audit_kind.kind_id
-            )
-            if rule_pack_override is None:
+        def apply_rule_replacement(audit_kind: AuditKind) -> AuditKind:
+            rule_replacement = self._kind_id_to_rule_replacement.get(audit_kind.kind_id)
+            if rule_replacement is None:
                 return audit_kind
-            override_sources = _create_rule_sources((rule_pack_override,))
+            replacement_sources = _create_rule_sources((rule_replacement,))
             return replace(
                 audit_kind,
                 rule_loader=RulePackLoader(
-                    override_sources,
-                    override_sources,
+                    replacement_sources,
+                    replacement_sources,
                     registry,
                     known_languages,
                     project_rule_sources=_create_rule_sources(
@@ -173,7 +171,7 @@ class KlintModule(Module):
 
         return AuditKindRegistry(
             [
-                apply_rule_pack_override(audit_kind)
+                apply_rule_replacement(audit_kind)
                 for suite in suites
                 for audit_kind in suite.list_audit_kinds()
             ]
@@ -204,13 +202,13 @@ def _create_rule_sources(rule_packs: Sequence[Path]) -> list[BaseRuleSource]:
 def create_injector(
     settings: AppSettings,
     *overrides: Override,
-    kind_id_to_rule_pack_override: Mapping[str, Path] | None = None,
+    kind_id_to_rule_replacement: Mapping[str, Path] | None = None,
 ) -> Injector:
     """Return an injector for ``settings``; overrides add or replace bindings.
 
     No suite is added: an override adds each one the audit draws on.
-    kind_id_to_rule_pack_override is as KlintModule takes it.
+    kind_id_to_rule_replacement is as KlintModule takes it.
     """
     return Injector(
-        [KlintModule(settings, kind_id_to_rule_pack_override or {}), *overrides]
+        [KlintModule(settings, kind_id_to_rule_replacement or {}), *overrides]
     )
