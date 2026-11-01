@@ -11,22 +11,22 @@ from klint.core.models.rule_pack import RulePackSpec
 
 
 class FakeJudge(BaseJudge):
-    """Stands in for the model: answers from canned choices, records each request."""
+    """Stands in for the model: answers from canned answers, records each request."""
 
     def __init__(
         self,
-        choices: dict[str, str | None] | None = None,
+        rule_id_to_answer: dict[str, str | None] | None = None,
         default: str | None = "pass",
         confidence: float = 0.9,
         rule_id_to_confidence: dict[str, float] | None = None,
     ) -> None:
-        """Answer ``choices[rule_id]`` per rule, else ``default``.
+        """Answer ``rule_id_to_answer[rule_id]`` per rule, else ``default``.
 
-        A choice of ``None`` means the model returned no answer for that rule.
+        An answer of ``None`` means the model returned no answer for that rule.
         Each answer has the confidence ``rule_id_to_confidence`` gives its
         rule, else ``confidence``.
         """
-        self.choices: dict[str, str | None] = choices or {}
+        self.rule_id_to_answer: dict[str, str | None] = rule_id_to_answer or {}
         self.default = default
         self.confidence = confidence
         self.rule_id_to_confidence = rule_id_to_confidence or {}
@@ -36,7 +36,7 @@ class FakeJudge(BaseJudge):
         self.requests.append(request)
         answers: list[JudgeAnswer] = []
         for question in request.questions:
-            choice = self.choices.get(question.question_id, self.default)
+            choice = self.rule_id_to_answer.get(question.question_id, self.default)
             if choice is None:
                 continue
             confidence = self.rule_id_to_confidence.get(
@@ -52,14 +52,14 @@ class FakeJudge(BaseJudge):
             )
         return answers
 
-    def asked_rule_ids(self) -> list[list[str]]:
+    def list_asked_rule_ids(self) -> list[list[str]]:
         """Return the rule ids asked in each request, sorted, in request order."""
         return [
             sorted(question.question_id for question in request.questions)
             for request in self.requests
         ]
 
-    def subject_to_asked_rule_ids(self) -> dict[str, set[str]]:
+    def map_subject_to_asked_rule_ids(self) -> dict[str, set[str]]:
         """Return the rule ids asked about each subject.
 
         Meant for tests whose subjects all differ: a later request about the
@@ -100,7 +100,7 @@ class CountingJudge(FakeJudge):
         return await super().answer(request)
 
 
-class JudgeOverride(Module):
+class JudgeBindingOverride(Module):
     """Replaces the judge klint would build with the one a test supplies."""
 
     def __init__(self, judge: BaseJudge) -> None:
@@ -146,5 +146,7 @@ class SubjectJudge(FakeJudge):
             self.requests.append(request)
             raise RuntimeError("judge is down")
         choice = self.subject_to_choice.get(request.subject, self.default)
-        self.choices = {question.question_id: choice for question in request.questions}
+        self.rule_id_to_answer = {
+            question.question_id: choice for question in request.questions
+        }
         return await super().answer(request)

@@ -13,8 +13,8 @@ from typing import ClassVar
 from injector import Binder
 
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
-from klint.catalog.common.sources.json_document_source import (
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.domain_neutral.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.cli.runner import AuditCommand
@@ -44,13 +44,13 @@ OUTLINE_COMMAND = AuditCommand(
     target_argument_name="outline",
     target_argument_help="Outline JSON file",
     audit_kind_id=OUTLINE_KIND_ID,
-    json_key="examined_sections",
+    audited_units_json_key="examined_sections",
 )
 CLEAR_SECTION_RULE = AuditRule(
     rule_id="clear_section",
     question_type=QuestionType.CHOICE,
-    instructions="Is the section clear?",
-    target_unit_types=["outline_section"],
+    question="Is the section clear?",
+    unit_types=["outline_section"],
 )
 
 
@@ -63,7 +63,7 @@ class OutlineSectionUnit(AuditableUnit):
     text: str = ""
     sections: tuple["OutlineSectionUnit", ...] = ()
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         return self.sections
 
 
@@ -185,7 +185,7 @@ def run_outline_audit(
     audit_kind_id: str = OUTLINE_KIND_ID,
 ) -> AuditOutcome:
     """Audit ``outline``, held in memory, with a kind of the outline suite."""
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_outline_suite])
+    pipeline = build_audit_pipeline(judge, binding_overrides=[add_the_outline_suite])
     request = AuditRequest(
         audit_input=InMemoryBytesInput(
             content=json.dumps(outline).encode(), media_type="application/json"

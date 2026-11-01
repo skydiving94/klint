@@ -4,9 +4,11 @@ from dataclasses import asdict
 
 import pytest
 
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+    AuditableFileMetadataUnit,
+)
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.models.unit import AuditableUnit
 from klint.core.models.unit_traits import UnitTraits
 
@@ -52,5 +54,5 @@ def test_unit_language_is_not_in_the_context() -> None:
 
 
 def test_a_unit_has_no_children_unless_it_says_so() -> None:
-    assert AuditableFileUnit(unit_id="a.py").children() == ()
-    assert AuditableFileMetadataUnit(unit_id="a.py").children() == ()
+    assert AuditableFileUnit(unit_id="a.py").list_children() == ()
+    assert AuditableFileMetadataUnit(unit_id="a.py").list_children() == ()

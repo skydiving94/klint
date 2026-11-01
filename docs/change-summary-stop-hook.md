@@ -41,7 +41,7 @@ a single retry.
    `KLINT_CHANGE_SUMMARY_COMMAND` to the command to run, for example
    `uv run --project /path/to/klint klint-change-summary`.
 2. Start the judge (see the "Live judge" section of klint's `CLAUDE.md`), and
-   set `KEV_MODE=remote` in the environment Claude Code runs in.
+   set `KLINT_JUDGE_MODE=remote` in the environment Claude Code runs in.
 3. Add `.klint/` to the project's `.gitignore`, so that the summaries file is
    not itself part of the change it summarizes.
 4. Save the script below as `.claude/hooks/verify_change_summary.py`.

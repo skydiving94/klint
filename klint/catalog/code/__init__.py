@@ -3,47 +3,61 @@
 from injector import Binder, Module, ProviderOf, inject, provider
 
 from klint.catalog.code import python
-from klint.catalog.code.common.extraction.directory_factory import (
+from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extraction.file_contents import FileContentsExtractor
-from klint.catalog.code.common.extraction.file_metadata_base import (
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.file_contents import (
+    FileContentsExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.common.extraction.language_neutral_directory_factory import (
+from klint.catalog.code.language_neutral.extraction.language_neutral_directory_factory import (  # noqa: E501
     LanguageNeutralDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
+from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
-from klint.catalog.code.common.extraction.project_structure import (
+from klint.catalog.code.language_neutral.extraction.project_structure import (
     ProjectStructureExtractor,
 )
-from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.common.renderers.directory import DirectoryRenderer
-from klint.catalog.code.common.renderers.file_metadata import FileMetadataRenderer
-from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.code.python.extraction.file_metadata import (
+from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.renderers.directory_renderer import (
+    DirectoryRenderer,
+)
+from klint.catalog.code.language_neutral.renderers.file_metadata_renderer import (
+    FileMetadataRenderer,
+)
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+    AuditableFileMetadataUnit,
+)
+from klint.catalog.code.python.extraction.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
 from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.code.python.renderers.package import PythonPackageRenderer
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
-from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+from klint.catalog.code.python.renderers.package_renderer import PythonPackageRenderer
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
-from klint.catalog.common.extraction.whole_file import WholeFileExtractor
-from klint.catalog.common.renderers.whole_file import WholeFileRenderer
-from klint.catalog.common.sources.directory_tree_source import (
+from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
+    WholeFileExtractor,
+)
+from klint.catalog.domain_neutral.renderers.whole_file_renderer import WholeFileRenderer
+from klint.catalog.domain_neutral.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader
@@ -150,13 +164,13 @@ class CodeSuiteModule(Module):
         )
 
     @provider
-    def provide_project_extractor(
+    def provide_directory_tree_extractor(
         self,
         language_to_file_metadata_extractor: dict[str, BaseFileMetadataExtractor],
         language_to_directory_unit_factory: dict[str, BaseDirectoryUnitFactory],
         file_traits_identifier: BaseFileTraitsIdentifier,
-    ) -> RecursiveProjectExtractor:
-        return RecursiveProjectExtractor(
+    ) -> DirectoryTreeExtractor:
+        return DirectoryTreeExtractor(
             TraitsBasedExtractionDelegator(
                 language_to_file_metadata_extractor,
                 fallback_extractor=LanguageNeutralFileMetadataExtractor(),

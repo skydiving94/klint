@@ -41,7 +41,7 @@ def _run_audit(judge: FakeJudge, request: AuditRequest) -> AuditOutcome:
     return asyncio.run(build_audit_pipeline(judge).run_audit(request))
 
 
-def _judgments(outcome: AuditOutcome) -> list[tuple[str, str, AnswerChoice]]:
+def _list_answers(outcome: AuditOutcome) -> list[tuple[str, str, AnswerChoice]]:
     return [
         (finding.unit_id, finding.rule_id, finding.answer)
         for finding in outcome.report.select_findings(should_include_non_problems=True)
@@ -53,7 +53,7 @@ def test_file_contents_audit_returns_the_findings_on_each_file(
 ) -> None:
     write_text(tmp_path / "a.py", "x = 1\n")
     write_text(tmp_path / "b.md", "# Notes\n")
-    judge = fake_judge(choices={"tidy_file": "fail"})
+    judge = fake_judge(rule_id_to_answer={"tidy_file": "fail"})
 
     outcome = _run_audit(
         judge,
@@ -65,8 +65,8 @@ def test_file_contents_audit_returns_the_findings_on_each_file(
     files = (str(tmp_path / "a.py"), str(tmp_path / "b.md"))
     assert outcome.scanned_file_count == 2
     assert outcome.selected_unit_ids == files
-    assert outcome.report.audited_unit_ids() == list(files)
-    assert _judgments(outcome) == [
+    assert outcome.report.list_audited_unit_ids() == list(files)
+    assert _list_answers(outcome) == [
         (files[0], "tidy_file", FAIL),
         (files[1], "tidy_file", FAIL),
     ]
@@ -87,7 +87,7 @@ def test_project_structure_audit_returns_the_findings_on_each_directory(
     directories = (str(tmp_path), str(tmp_path / "docs"))
     assert outcome.scanned_file_count == 1
     assert outcome.selected_unit_ids == directories
-    assert _judgments(outcome) == [
+    assert _list_answers(outcome) == [
         (directories[0], "tidy_directory", PASS),
         (directories[1], "tidy_directory", PASS),
     ]
@@ -111,7 +111,7 @@ def test_unit_whose_audit_fails_is_selected_but_left_out_of_the_report(
 
     a_file, b_file = str(tmp_path / "a.py"), str(tmp_path / "b.py")
     assert outcome.selected_unit_ids == (a_file, b_file)
-    assert outcome.report.audited_unit_ids() == [a_file]
+    assert outcome.report.list_audited_unit_ids() == [a_file]
     assert listener.events[0] == "started 2"
     assert sorted(listener.events[1:]) == [
         f"audited {a_file}",
@@ -125,7 +125,7 @@ def test_rules_file_given_with_the_request_is_asked_too(
     target = write_text(tmp_path / "a.py", "x = 1\n")
     rules = write_text(
         tmp_path / "rules.json",
-        '{"typed": {"type": "choice", "instructions": "Is it typed?"}}',
+        '{"typed": {"type": "choice", "question": "Is it typed?"}}',
     )
     judge = fake_judge()
 
@@ -138,7 +138,7 @@ def test_rules_file_given_with_the_request_is_asked_too(
         ),
     )
 
-    assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+    assert judge.list_asked_rule_ids() == [["tidy_file", "typed"]]
 
 
 def test_rules_held_in_memory_are_asked_with_no_rules_file(
@@ -158,7 +158,7 @@ def test_rules_held_in_memory_are_asked_with_no_rules_file(
         ),
     )
 
-    assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+    assert judge.list_asked_rule_ids() == [["tidy_file", "typed"]]
     assert sorted(path.name for path in tmp_path.iterdir()) == ["a.py"]
 
 

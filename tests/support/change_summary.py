@@ -128,10 +128,10 @@ class HypothesisJudge(FakeJudge):
         if any(phrase in hypothesis for phrase in self.refused_phrases):
             self.requests.append(request)
             raise RuntimeError("judge is down")
-        self.choices = {}
+        self.rule_id_to_answer = {}
         for phrase, rule_id_to_choice in self.phrase_to_rule_id_to_choice.items():
             if phrase in hypothesis:
-                self.choices.update(rule_id_to_choice)
+                self.rule_id_to_answer.update(rule_id_to_choice)
         return await super().answer(request)
 
     def list_hypotheses(self) -> list[str]:

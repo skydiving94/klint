@@ -47,7 +47,7 @@ class FindingRollUp:
                 unit_id, unit_id_to_parent_unit_id
             )
         }
-        for unit_id in report.audited_unit_ids():
+        for unit_id in report.list_audited_unit_ids():
             if unit_id in own_problem_unit_ids:
                 status = RollUpStatus.OWN_PROBLEM
             elif unit_id in descendant_problem_unit_ids:

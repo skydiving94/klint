@@ -61,16 +61,16 @@ class RulePackLoader(BaseRuleLoader):
         self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None
     ) -> list[AuditRule]:
         """Merge the chosen packs, the project's, then the custom rules, by rule ID."""
-        rules: dict[str, AuditRule] = {}
+        rule_id_to_rule: dict[str, AuditRule] = {}
         for pack in self._choose_packs(traits):
-            rules.update(self._load_pack_rules(pack))
+            rule_id_to_rule.update(self._load_pack_rules(pack))
         sources_merged_last = list(self._project_rule_sources)
         if custom_rule_source is not None:
             sources_merged_last.append(custom_rule_source)
         for source in sources_merged_last:
             for pack in self._read_packs(source):
-                rules.update(self._load_pack_rules(pack))
-        return list(rules.values())
+                rule_id_to_rule.update(self._load_pack_rules(pack))
+        return list(rule_id_to_rule.values())
 
     def _choose_packs(self, traits: UnitTraits) -> Iterator[RulePackSpec]:
         language = traits.language
@@ -80,7 +80,7 @@ class RulePackLoader(BaseRuleLoader):
             return
         for source in self._rule_sources:
             for pack in self._read_packs(source):
-                if pack.scope.matches(language):
+                if pack.scope.is_for_language(language):
                     yield pack
 
     def _read_packs(self, source: BaseRuleSource) -> list[RulePackSpec]:
@@ -125,19 +125,19 @@ class RulePackLoader(BaseRuleLoader):
         self._check_unit_types(spec, pack.origin)
         self._warn_about_unknown_rule_languages(spec, pack.origin)
         languages = pack.scope.narrow(spec.languages)
-        if not self._keeps_languages_of_its_pack(spec, languages, pack.origin):
+        if not self._does_keep_languages_of_its_pack(spec, languages, pack.origin):
             return None
         return AuditRule(
             rule_id=spec.rule_id,
             question_type=spec.question_type,
-            instructions=spec.instructions,
-            target_unit_types=list(spec.target_unit_types),
+            question=spec.question,
+            unit_types=list(spec.unit_types),
             languages=languages,
             tags=list(spec.tags),
             unit_tags=list(spec.unit_tags),
         )
 
-    def _keeps_languages_of_its_pack(
+    def _does_keep_languages_of_its_pack(
         self, spec: RuleSpec, narrowed_languages: Sequence[str], origin: str
     ) -> bool:
         """Warn about rule languages its pack leaves out; False if none are left."""
@@ -177,12 +177,10 @@ class RulePackLoader(BaseRuleLoader):
 
     def _check_unit_types(self, spec: RuleSpec, origin: str) -> None:
         """Raise when the rule names a unit type no suite registers."""
-        known = set(self._unit_registry.known_unit_types())
-        unknown = [
-            unit_type for unit_type in spec.target_unit_types if unit_type not in known
-        ]
+        known = set(self._unit_registry.list_known_unit_types())
+        unknown = [unit_type for unit_type in spec.unit_types if unit_type not in known]
         if unknown:
             raise ValueError(
-                f"Rule '{spec.rule_id}' has unknown target_unit_types {unknown} "
+                f"Rule '{spec.rule_id}' has unknown unit_types {unknown} "
                 f"in '{origin}'; known: {sorted(known)}"
             )

@@ -183,7 +183,9 @@ def test_kind_with_no_renderer_for_a_unit_fails_before_the_judge_is_asked(
     def add_the_unrendered_outline_suite(binder: Binder) -> None:
         binder.multibind(list[BaseSuite], to=[UnrenderedOutlineSuite])
 
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_unrendered_outline_suite])
+    pipeline = build_audit_pipeline(
+        judge, binding_overrides=[add_the_unrendered_outline_suite]
+    )
     request = AuditRequest(
         audit_input=InMemoryBytesInput(
             content=json.dumps(OUTLINE).encode(), media_type="application/json"
@@ -220,4 +222,4 @@ def test_children_sharing_an_id_give_their_parents_their_own_findings() -> None:
         "\nintro: clear_section = fail",
         "\nintro: clear_section = pass",
     ]
-    assert len(outcome.report.audited_unit_ids()) == 5
+    assert len(outcome.report.list_audited_unit_ids()) == 5

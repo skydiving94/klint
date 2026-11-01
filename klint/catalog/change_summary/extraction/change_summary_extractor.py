@@ -6,7 +6,9 @@ from klint.catalog.change_summary.document_reader import (
     read_change_summary_document,
 )
 from klint.catalog.change_summary.units.file_summary import AuditableFileSummaryUnit
-from klint.catalog.change_summary.units.hunk_summary import AuditableHunkSummaryUnit
+from klint.catalog.change_summary.units.hunk_summary_unit import (
+    AuditableHunkSummaryUnit,
+)
 from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
@@ -81,21 +83,21 @@ def _build_file_unit(file: FileSummary) -> AuditableFileSummaryUnit:
 def _list_unit_and_nested(unit: AuditableUnit) -> list[AuditableUnit]:
     """Return ``unit``, then each unit nested in it, each before its own."""
     units = [unit]
-    for child in unit.children():
+    for child in unit.list_children():
         units.extend(_list_unit_and_nested(child))
     return units
 
 
 def _check_unit_ids_differ(units: list[AuditableUnit]) -> None:
     """Raise ValueError naming the first unit ID two units share."""
-    unit_id_to_location: dict[str, str] = {}
+    unit_id_to_path: dict[str, str] = {}
     for unit in units:
         location = unit.get_location()
-        source = "" if location is None else location.source
-        earlier_source = unit_id_to_location.setdefault(unit.unit_id, source)
-        if earlier_source != source:
+        path = "" if location is None else location.path
+        earlier_path = unit_id_to_path.setdefault(unit.unit_id, path)
+        if earlier_path != path:
             raise ValueError(
-                f"Change-summary document: {source} has the ID '{unit.unit_id}', "
-                f"as {earlier_source} does; each hunk ID, file path and package "
+                f"Change-summary document: {path} has the ID '{unit.unit_id}', "
+                f"as {earlier_path} does; each hunk ID, file path and package "
                 "path appears once"
             )

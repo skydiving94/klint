@@ -38,7 +38,7 @@ def test_every_summary_is_judged_after_the_summaries_nested_in_it() -> None:
     }
     assert sorted(hypotheses) == sorted(unit_id_to_summary.values())
     for unit in units:
-        for child in unit.children():
+        for child in unit.list_children():
             assert hypotheses.index(unit_id_to_summary[child.unit_id]) < (
                 hypotheses.index(unit_id_to_summary[unit.unit_id])
             )
@@ -51,7 +51,7 @@ def test_each_level_is_asked_its_checks() -> None:
 
     hunk_checks = sorted([*_ACCURACY_CHECKS, *_COMPLETENESS_CHECKS])
     upper_level_checks = sorted([*hunk_checks, "no_contradiction_with_level_below"])
-    assert sorted(map(tuple, judge.asked_rule_ids())) == sorted(
+    assert sorted(map(tuple, judge.list_asked_rule_ids())) == sorted(
         [tuple(hunk_checks)] * 3 + [tuple(upper_level_checks)] * 4
     )
 
@@ -131,7 +131,7 @@ def test_a_problem_below_the_least_confidence_rolls_up_to_no_one() -> None:
 def test_custom_rules_are_asked_beside_the_summary_checks() -> None:
     judge = HypothesisJudge()
     custom_rules = InMemoryRuleSource(
-        build_rule_pack("custom", "names_a_ticket", target_unit_types=("file_summary",))
+        build_rule_pack("custom", "names_a_ticket", unit_types=("file_summary",))
     )
     request = AuditRequest(
         audit_input=InMemoryBytesInput(
@@ -144,7 +144,7 @@ def test_custom_rules_are_asked_beside_the_summary_checks() -> None:
 
     asyncio.run(build_audit_pipeline(judge).run_audit(request))
 
-    asked_rule_ids = judge.subject_to_asked_rule_ids()
+    asked_rule_ids = judge.map_subject_to_asked_rule_ids()
     assert (
         sum("names_a_ticket" in rule_ids for rule_ids in asked_rule_ids.values()) == 2
     )

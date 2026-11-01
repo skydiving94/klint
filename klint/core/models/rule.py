@@ -4,17 +4,15 @@ from klint.core.models.question_type import QuestionType
 from klint.core.models.unit import AuditableUnit
 
 # The unit types a rule is asked about when it names none.
-DEFAULT_TARGET_UNIT_TYPES = ("file",)
+DEFAULT_UNIT_TYPES = ("file",)
 
 
 @dataclass(frozen=True)
 class AuditRule:
     rule_id: str
     question_type: QuestionType
-    instructions: str
-    target_unit_types: list[str] = field(
-        default_factory=lambda: list(DEFAULT_TARGET_UNIT_TYPES)
-    )
+    question: str
+    unit_types: list[str] = field(default_factory=lambda: list(DEFAULT_UNIT_TYPES))
     # Languages the rule is limited to; empty means any language, or none.
     languages: list[str] = field(default_factory=list)
     # Labels for what the rule is about, such as "security".
@@ -30,7 +28,7 @@ class AuditRule:
         unit tags applies to a unit with any of them, and to a unit with no
         tags at all, since nothing tells which side such a unit belongs to.
         """
-        if unit.unit_type not in self.target_unit_types:
+        if unit.unit_type not in self.unit_types:
             return False
         return self._is_language_allowed(unit.traits.language) and (
             self._are_tags_allowed(unit.traits.tags)

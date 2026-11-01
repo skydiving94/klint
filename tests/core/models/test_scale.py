@@ -2,7 +2,7 @@
 
 import pytest
 
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
 from klint.core.models.scale import AnswerChoice, AnswerScale
 
 
