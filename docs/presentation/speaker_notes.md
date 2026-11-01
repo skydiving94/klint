@@ -35,7 +35,7 @@ Where: pyproject.toml, [tool.importlinter] holds five contracts. The first is th
 
 Check: uv run lint-imports prints 'Contracts: 5 kept, 0 broken' on wave-6.
 
-Layer contents: cli/file_audit.py, structure_audit.py, change_summary_audit.py and runner.py (AuditCommandApp); app/pipeline/audit_pipeline.py (AuditPipeline) with acquisition.py, rule_selection.py, auditing.py, roll_up.py, ranking.py; app/settings.py (AppSettings), app/wiring.py (KlintModule); catalog/domain_neutral, catalog/code, catalog/change_summary; infra/rule_loader (RulePackLoader), infra/system_one (HttpSystemOneJudge, InProcessSystemOneJudge); core/interfaces (ports), core/models, core/auditor.py (Auditor).
+Layer contents: cli/file_audit.py, structure_audit.py, change_summary_audit.py and runner.py (AuditCommandApp), plus cli/klint_project_alias.py, which keeps the old klint-project name working for one release; app/pipeline/audit_pipeline.py (AuditPipeline) with acquisition.py, rule_selection.py, auditing.py, roll_up.py, ranking.py; app/settings.py (AppSettings), app/wiring.py (KlintModule); catalog/domain_neutral, catalog/code, catalog/change_summary; infra/rule_loader (RulePackLoader), infra/system_one (HttpSystemOneJudge, InProcessSystemOneJudge); core/interfaces (ports), core/models, core/auditor.py (Auditor).
 
 Before (review of Oct 18): the same chain existed, but app imported a code-suite class (D1). That import is gone, and the second contract now forbids it.
 
