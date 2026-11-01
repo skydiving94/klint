@@ -79,19 +79,19 @@ def read_project_config(config_path: Path) -> ProjectConfig:
     )
 
 
-def warn_about_settings_in_rules_file(rules_path: Path) -> None:
-    """Warn about each setting in the rules file at ``rules_path``; none applies.
+def warn_about_settings_in_rules_file(custom_rules_path: Path) -> None:
+    """Warn about each setting in the rules file at ``custom_rules_path``; none applies.
 
     Settings come only from the environment and the project's klint.json. A
     file that cannot be read is left for the rule loader to report.
     """
     try:
-        rules_file = _read_json_object(rules_path)
+        rules_file = _read_json_object(custom_rules_path)
     except (OSError, ValueError):
         return
     for key in sorted(_SETTING_KEYS & set(map(str, rules_file))):
         _warn(
-            f"The '{key}' key in '{rules_path}' is ignored: settings come from "
+            f"The '{key}' key in '{custom_rules_path}' is ignored: settings come from "
             "environment variables and the project's klint.json, not from a "
             "--rules file"
         )

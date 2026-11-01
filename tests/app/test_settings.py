@@ -38,7 +38,7 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
         fallback_rule_packs=FALLBACK_RULE_PACKS,
         file_contents_rule_pack_override=None,
         project_structure_rule_pack_override=None,
-        discovered_config_path=None,
+        config_path=None,
         language_to_file_extensions_path=DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     )
     assert settings.language_to_file_extensions_path.is_file()
@@ -56,7 +56,7 @@ def test_klint_json_overrides_the_defaults(tmp_path: Path) -> None:
     assert settings.kev_base_url == "http://json:1"
     assert settings.kev_api_key is None  # set nowhere, so the default
     assert settings.kev_mode == "local"  # set nowhere, so the default
-    assert settings.discovered_config_path == project / "klint.json"
+    assert settings.config_path == project / "klint.json"
 
 
 def test_shell_variable_overrides_klint_json(
@@ -81,7 +81,7 @@ def test_config_is_discovered_next_to_a_file_target(tmp_path: Path, name: str) -
 
     settings = AppSettings.from_env(target, None)
 
-    assert settings.discovered_config_path == project / name
+    assert settings.config_path == project / name
     assert settings.model_name == "found"
 
 
@@ -102,7 +102,7 @@ def test_settings_in_a_rules_file_are_ignored_with_a_warning(tmp_path: Path) -> 
 
     # The project's klint.json is still found and applies.
     assert settings.model_name == "discovered"
-    assert settings.discovered_config_path == project / "klint.json"
+    assert settings.config_path == project / "klint.json"
     assert settings.fallback_rule_packs == FALLBACK_RULE_PACKS
     assert [str(warning.message) for warning in caught] == [
         f"The '{key}' key in '{rules_file}' is ignored: settings come from "

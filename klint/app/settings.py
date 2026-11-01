@@ -145,7 +145,7 @@ class AppSettings:
     project_structure_rule_pack_override: Path | None = None
     # The project's klint.json, and the files whose rules merge over the
     # loaded packs for every file: the klint.json when it holds rules.
-    discovered_config_path: Path | None = None
+    config_path: Path | None = None
     project_rule_packs: tuple[Path, ...] = ()
     # The file that lists each language's file extensions.
     language_to_file_extensions_path: Path = field(
@@ -161,7 +161,7 @@ class AppSettings:
     def from_env(
         cls,
         target_path: Path | None = None,
-        rules_path: Path | None = None,
+        custom_rules_path: Path | None = None,
     ) -> "AppSettings":
         """Load the settings for an audit of ``target_path``.
 
@@ -169,16 +169,16 @@ class AppSettings:
         shell's environment variables, the "env" block of the project's
         klint.json, the built-in default. A relative path is taken from the
         working directory when the shell sets it, and from the folder of the
-        klint.json when the file does. ``rules_path``, the file given with
+        klint.json when the file does. ``custom_rules_path``, the file given with
         --rules, holds rules only: a setting in it is ignored with a warning.
         Nothing outside the returned value is changed.
         """
         config_path = find_project_config(target_path)
         config = None if config_path is None else read_project_config(config_path)
-        if rules_path is not None and (
-            config_path is None or rules_path.resolve() != config_path.resolve()
+        if custom_rules_path is not None and (
+            config_path is None or custom_rules_path.resolve() != config_path.resolve()
         ):
-            warn_about_settings_in_rules_file(rules_path)
+            warn_about_settings_in_rules_file(custom_rules_path)
         sources = [
             _SettingSource(
                 description="the environment",
@@ -221,7 +221,7 @@ class AppSettings:
             project_structure_rule_pack_override=_resolve_setting_path(
                 _find_setting("KEV_DEFAULT_PROJECT_RULES_PATH", sources)
             ),
-            discovered_config_path=config_path,
+            config_path=config_path,
             project_rule_packs=(
                 (config.path,) if config is not None and config.does_hold_rules else ()
             ),

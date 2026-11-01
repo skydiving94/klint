@@ -51,14 +51,14 @@ class AuditCommand:
 class CommandArguments:
     """A command line, parsed.
 
-    target is the path to audit, and rules_source the file given with
+    target is the path to audit, and custom_rules_path the file given with
     --rules. should_show_all_answers asks for every answer instead of failures
     only, and min_confidence is the least confidence a finding needs to be
     reported. should_print_json asks for JSON instead of the terminal report.
     """
 
     target: Path
-    rules_source: Path | None
+    custom_rules_path: Path | None
     should_show_all_answers: bool
     min_confidence: float
     should_print_json: bool
@@ -172,7 +172,7 @@ def parse_command_arguments(
         warn_about_deprecated_name("--all", "--all-answers")
     return CommandArguments(
         target=namespace.target,
-        rules_source=namespace.rules,
+        custom_rules_path=namespace.rules,
         should_show_all_answers=(
             namespace.all_answers or namespace.all_answers_under_old_name
         ),
@@ -208,9 +208,9 @@ class AuditCommandApp:
             audit_kind_id=command.audit_kind_id,
             custom_rule_source=(
                 None
-                if arguments.rules_source is None
+                if arguments.custom_rules_path is None
                 else JsonFileRuleSource(
-                    path=arguments.rules_source.resolve(), is_required=True
+                    path=arguments.custom_rules_path.resolve(), is_required=True
                 )
             ),
             min_confidence=arguments.min_confidence,
@@ -278,7 +278,7 @@ async def run_command_from_shell(command: AuditCommand) -> ExitCode:
         with _print_klint_warnings_raised_inside(command):
             arguments = parse_command_arguments(command, sys.argv[1:])
             settings = await asyncio.to_thread(
-                AppSettings.from_env, arguments.target, arguments.rules_source
+                AppSettings.from_env, arguments.target, arguments.custom_rules_path
             )
             injector = create_command_injector(settings)
             audit_pipeline = injector.get(AuditPipeline)

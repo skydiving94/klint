@@ -31,9 +31,9 @@ TAGGED_RULES = {
 
 
 def _audit_files(
-    target: Path, rules_path: Path, command: AuditCommand = FILE_AUDIT_COMMAND
+    target: Path, custom_rules_path: Path, command: AuditCommand = FILE_AUDIT_COMMAND
 ) -> dict[str, set[str]]:
-    """Run ``command`` on ``target`` with only the rules in ``rules_path``.
+    """Run ``command`` on ``target`` with only the rules in ``custom_rules_path``.
 
     Return the rule IDs asked about each unit, by what the judge read.
     """
@@ -41,7 +41,7 @@ def _audit_files(
     # No rule but the custom ones.
     settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
     app = build_audit_command_app(command, judge, settings)
-    asyncio.run(app.run([str(target), "--json", "--rules", str(rules_path)]))
+    asyncio.run(app.run([str(target), "--json", "--rules", str(custom_rules_path)]))
     return judge.subject_to_asked_rule_ids()
 
 
