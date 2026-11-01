@@ -15,7 +15,7 @@ from klint.core.models.unit_traits import UnitTraits
 class LanguageNeutralDirectoryUnitFactory(BaseDirectoryUnitFactory):
     """Describes a directory by what it holds, whatever language that is in."""
 
-    def build(
+    def build_directory_unit(
         self,
         directory_path: Path,
         files: list[AuditableFileMetadataUnit],

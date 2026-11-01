@@ -18,7 +18,7 @@ from klint.core.models.unit_traits import UnitTraits
 class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
     """Builds Python package units and tells each one the project's module names."""
 
-    def build(
+    def build_directory_unit(
         self,
         directory_path: Path,
         files: list[AuditableFileMetadataUnit],

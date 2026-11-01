@@ -50,7 +50,7 @@ class DirectoryTreeExtractor:
     def _extract_tree(
         self, scanned_directory: ScannedDirectory
     ) -> AuditableDirectoryUnit:
-        root_unit = self._build_directory_unit(scanned_directory)
+        root_unit = self._extract_directory(scanned_directory)
         # Each factory of its own makes the changes that had to wait.
         for language in self._directory_delegator.list_languages():
             factory = self._directory_delegator.select_extractor(
@@ -59,7 +59,7 @@ class DirectoryTreeExtractor:
             root_unit = factory.update_units_after_full_walk(root_unit)
         return root_unit
 
-    def _build_directory_unit(
+    def _extract_directory(
         self, scanned_directory: ScannedDirectory
     ) -> AuditableDirectoryUnit:
         files: list[AuditableFileMetadataUnit] = []
@@ -67,14 +67,16 @@ class DirectoryTreeExtractor:
             with leave_out_file_on_failure(scanned_file.path):
                 files.append(self._extract_file(scanned_file))
         subdirectories = [
-            self._build_directory_unit(scanned_subdirectory)
+            self._extract_directory(scanned_subdirectory)
             for scanned_subdirectory in scanned_directory.subdirectories
         ]
         language = self._identify_most_used_language(files, subdirectories)
         factory = self._directory_delegator.select_extractor(
             UnitTraits(language=language)
         )
-        return factory.build(scanned_directory.path, files, subdirectories, language)
+        return factory.build_directory_unit(
+            scanned_directory.path, files, subdirectories, language
+        )
 
     def _extract_file(self, scanned_file: ScannedFile) -> AuditableFileMetadataUnit:
         """Have the extractor that the file's traits pick read the file."""

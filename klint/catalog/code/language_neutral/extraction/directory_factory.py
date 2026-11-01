@@ -13,7 +13,7 @@ class BaseDirectoryUnitFactory(ABC):
     """Turns a walked directory into the unit that describes it."""
 
     @abstractmethod
-    def build(
+    def build_directory_unit(
         self,
         directory_path: Path,
         files: list[AuditableFileMetadataUnit],
