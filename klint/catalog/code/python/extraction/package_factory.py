@@ -10,7 +10,7 @@ from klint.catalog.code.language_neutral.units.directory_unit import (
 from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.module_names import collect_module_names
+from klint.catalog.code.python.project_module_names import list_project_module_names
 from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.core.models.unit_traits import UnitTraits
 
@@ -42,14 +42,14 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
         """
         if not isinstance(root_unit, AuditablePythonPackageUnit):
             return root_unit
-        shared_modules = tuple(sorted(collect_module_names(root_unit)))
-        return self._attach_project_modules(root_unit, shared_modules)
+        project_module_names = tuple(sorted(list_project_module_names(root_unit)))
+        return self._attach_project_modules(root_unit, project_module_names)
 
     def _attach_project_modules(
-        self, unit: AuditableDirectoryUnit, shared_modules: tuple[str, ...]
+        self, unit: AuditableDirectoryUnit, project_module_names: tuple[str, ...]
     ) -> AuditableDirectoryUnit:
         updated_subdirs = [
-            self._attach_project_modules(sub, shared_modules)
+            self._attach_project_modules(sub, project_module_names)
             for sub in unit.subdirectories
         ]
         if not isinstance(unit, AuditablePythonPackageUnit):
@@ -57,5 +57,5 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
         return replace(
             unit,
             subdirectories=updated_subdirs,
-            project_module_names=shared_modules,
+            project_module_names=project_module_names,
         )

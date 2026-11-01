@@ -5,7 +5,7 @@ from pathlib import Path
 from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 
 
-def collect_module_names(package: AuditablePythonPackageUnit) -> set[str]:
+def list_project_module_names(package: AuditablePythonPackageUnit) -> set[str]:
     """Return the names the modules of ``package``'s project are imported by.
 
     They are the package's name, the module names its project was found to
@@ -22,5 +22,5 @@ def collect_module_names(package: AuditablePythonPackageUnit) -> set[str]:
             names.add(stem)
     for subdirectory in package.subdirectories:
         if isinstance(subdirectory, AuditablePythonPackageUnit):
-            names.update(collect_module_names(subdirectory))
+            names.update(list_project_module_names(subdirectory))
     return names

@@ -22,7 +22,7 @@ def _subdirectory(
     return match
 
 
-def test_python_factory_gives_every_package_the_same_module_names(
+def test_python_factory_gives_every_package_the_same_project_module_names(
     tmp_path: Path,
 ) -> None:
     write_text(tmp_path / "app" / "api" / "routes.py", "from domain import models\n")

@@ -7,7 +7,7 @@ from klint.catalog.code.language_neutral.renderers.directory_renderer import (
 from klint.catalog.code.language_neutral.units.directory_unit import (
     AuditableDirectoryUnit,
 )
-from klint.catalog.code.python.module_names import collect_module_names
+from klint.catalog.code.python.project_module_names import list_project_module_names
 from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.renderers.character_budget import (
     join_lines_within_budget,
@@ -28,13 +28,13 @@ class PythonPackageRenderer(BaseUnitRenderer):
 
     def render_subject(self, render_input: RenderInput) -> str:
         package = render_input.get_unit_as(AuditablePythonPackageUnit)
-        module_names = collect_module_names(package)
+        project_module_names = list_project_module_names(package)
         imports = _collect_imports_beneath(package)
-        internal_imports = sorted(
-            imp for imp in imports if _is_internal_import(imp, module_names)
+        project_imports = sorted(
+            imp for imp in imports if _is_project_import(imp, project_module_names)
         )
         external_imports = sorted(
-            imp for imp in imports if not _is_internal_import(imp, module_names)
+            imp for imp in imports if not _is_project_import(imp, project_module_names)
         )
         non_init_files = [
             f.file_name for f in package.files if f.file_name != "__init__.py"
@@ -47,7 +47,7 @@ class PythonPackageRenderer(BaseUnitRenderer):
             f"{len(package.subdirectories)} immediate subdirectories",
             f"Package Public API Status: {_describe_public_api(package)}",
             "Internal Project Imports in Tree: "
-            f"[{', '.join(internal_imports) if internal_imports else 'none'}]",
+            f"[{', '.join(project_imports) if project_imports else 'none'}]",
             "External / Third-Party / Stdlib Imports in Tree: "
             f"[{', '.join(external_imports) if external_imports else 'none'}]",
         ]
@@ -58,7 +58,7 @@ class PythonPackageRenderer(BaseUnitRenderer):
                 f"[{', '.join(unparseable_files)}] (their imports are unknown; "
                 "the import lists and cycle check here leave them out)"
             )
-        lines.extend(_list_dependency_roll_up_lines(package, module_names))
+        lines.extend(_list_dependency_roll_up_lines(package, project_module_names))
         lines.extend(list_tree_lines(package))
         return join_lines_within_budget(
             lines, render_input.character_budget, "the tree"
@@ -73,13 +73,17 @@ def _collect_imports_beneath(directory: AuditableDirectoryUnit) -> set[str]:
     return imports
 
 
-def _is_internal_import(imp: str, module_names: set[str]) -> bool:
+def _is_project_import(imp: str, project_module_names: set[str]) -> bool:
     """Return True when ``imp`` imports one of the project's own modules."""
     if imp.startswith("."):
         return True
     parts = [p for p in imp.split(".") if p]
     return bool(
-        parts and (parts[0] in module_names or any(p in module_names for p in parts))
+        parts
+        and (
+            parts[0] in project_module_names
+            or any(p in project_module_names for p in parts)
+        )
     )
 
 
@@ -102,7 +106,7 @@ def _describe_public_api(package: AuditablePythonPackageUnit) -> str:
 
 
 def _list_dependency_roll_up_lines(
-    package: AuditablePythonPackageUnit, module_names: set[str]
+    package: AuditablePythonPackageUnit, project_module_names: set[str]
 ) -> list[str]:
     """Return the lines on what each subpackage imports, and mutual cycles.
 
@@ -122,18 +126,18 @@ def _list_dependency_roll_up_lines(
     names = list(subpackage_name_to_imports)
     for i, a in enumerate(names):
         for b in names[i + 1 :]:
-            a_internal = [
+            a_project_imports = [
                 imp
                 for imp in subpackage_name_to_imports[a]
-                if _is_internal_import(imp, module_names)
+                if _is_project_import(imp, project_module_names)
             ]
-            b_internal = [
+            b_project_imports = [
                 imp
                 for imp in subpackage_name_to_imports[b]
-                if _is_internal_import(imp, module_names)
+                if _is_project_import(imp, project_module_names)
             ]
-            does_a_import_b = any(b in imp.split(".") for imp in a_internal)
-            does_b_import_a = any(a in imp.split(".") for imp in b_internal)
+            does_a_import_b = any(b in imp.split(".") for imp in a_project_imports)
+            does_b_import_a = any(a in imp.split(".") for imp in b_project_imports)
             if does_a_import_b and does_b_import_a:
                 cycles.append(f"{a} <-> {b}")
     lines.append(
