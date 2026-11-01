@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 

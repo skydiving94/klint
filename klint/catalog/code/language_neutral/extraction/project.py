@@ -9,7 +9,7 @@ from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
 from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (

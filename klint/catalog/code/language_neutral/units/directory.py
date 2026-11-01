@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar
 
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.core.models.location import Location

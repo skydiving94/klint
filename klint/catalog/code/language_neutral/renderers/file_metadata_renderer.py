@@ -1,4 +1,4 @@
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.domain_neutral.renderers.character_budget import (

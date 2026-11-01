@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.extraction.file_metadata import (
+from klint.catalog.code.python.extraction.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile

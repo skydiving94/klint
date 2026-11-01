@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit

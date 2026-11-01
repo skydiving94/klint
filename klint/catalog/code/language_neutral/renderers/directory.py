@@ -1,4 +1,4 @@
-from klint.catalog.code.language_neutral.renderers.file_metadata import (
+from klint.catalog.code.language_neutral.renderers.file_metadata_renderer import (
     describe_file_metadata,
 )
 from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit

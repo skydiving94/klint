@@ -4,7 +4,7 @@ from dataclasses import asdict
 
 import pytest
 
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit

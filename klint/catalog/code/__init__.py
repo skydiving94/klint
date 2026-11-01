@@ -27,14 +27,14 @@ from klint.catalog.code.language_neutral.extraction.project_structure import (
 from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
 from klint.catalog.code.language_neutral.renderers.directory import DirectoryRenderer
-from klint.catalog.code.language_neutral.renderers.file_metadata import (
+from klint.catalog.code.language_neutral.renderers.file_metadata_renderer import (
     FileMetadataRenderer,
 )
 from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.language_neutral.units.file_metadata import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.extraction.file_metadata import (
+from klint.catalog.code.python.extraction.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
 from klint.catalog.code.python.extraction.package_factory import (
