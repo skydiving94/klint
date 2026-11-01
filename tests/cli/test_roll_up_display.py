@@ -64,7 +64,7 @@ def test_terminal_shows_every_ancestor_of_a_problem_with_its_status(
     assert report.count("A problem was found in a unit nested in it") == 2
 
 
-def test_terminal_shows_no_problem_on_units_shown_with_all_judgments(
+def test_terminal_shows_no_problem_on_units_shown_with_all_answers(
     tmp_path: Path, capsys: Capture
 ) -> None:
     report = _ANSI_CODE.sub("", _run_outline_command(tmp_path, capsys, "--all"))

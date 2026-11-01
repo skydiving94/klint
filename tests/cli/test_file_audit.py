@@ -78,7 +78,7 @@ def test_file_audit_json_matches_snapshot(
     assert_snapshot("cli_file_audit.json", capsys.readouterr().out)
 
 
-def test_all_flag_reports_every_judgment(
+def test_all_flag_reports_every_answer(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
     pack = write_json(

@@ -55,16 +55,16 @@ def test_both_commands_take_the_same_options(
     argv = [str(target), "--json", "--rules", str(custom), "--all"]
 
     asyncio.run(app.run(argv))
-    every_judgment = json.loads(capsys.readouterr().out)
+    every_answer = json.loads(capsys.readouterr().out)
     asyncio.run(app.run([*argv, "--min-confidence", "0.5"]))
-    confident_judgments = json.loads(capsys.readouterr().out)
+    confident_answers = json.loads(capsys.readouterr().out)
 
     audited = str(target.joinpath(*audited_path_parts))
-    assert every_judgment[command.audited_units_json_key] == [audited]
-    assert [(i["rule_id"], i["answer"]) for i in every_judgment["findings"]] == [
+    assert every_answer[command.audited_units_json_key] == [audited]
+    assert [(i["rule_id"], i["answer"]) for i in every_answer["findings"]] == [
         (rule_id, "Pass")
     ]
-    assert confident_judgments == {
+    assert confident_answers == {
         command.audited_units_json_key: [audited],
         "unit_id_to_roll_up_status": {audited: "no_problem"},
         "findings": [],

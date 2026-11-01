@@ -52,7 +52,7 @@ class CommandArguments:
     """A command line, parsed.
 
     target is the path to audit, and rules_source the file given with
-    --rules. should_show_all asks for every judgment instead of failures
+    --rules. should_show_all asks for every answer instead of failures
     only, and min_confidence is the least confidence a finding needs to be
     reported. should_print_json asks for JSON instead of the terminal report.
     """
@@ -148,7 +148,7 @@ def parse_command_arguments(
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Output every judgment, not only the problems",
+        help="Output every answer, not only the problems",
     )
     parser.add_argument(
         "--min-confidence",

@@ -41,7 +41,7 @@ def _run_audit(judge: FakeJudge, request: AuditRequest) -> AuditOutcome:
     return asyncio.run(build_audit_pipeline(judge).run_audit(request))
 
 
-def _judgments(outcome: AuditOutcome) -> list[tuple[str, str, AnswerChoice]]:
+def _list_answers(outcome: AuditOutcome) -> list[tuple[str, str, AnswerChoice]]:
     return [
         (finding.unit_id, finding.rule_id, finding.answer)
         for finding in outcome.report.select_findings(should_include_non_problems=True)
@@ -66,7 +66,7 @@ def test_file_contents_audit_returns_the_findings_on_each_file(
     assert outcome.scanned_file_count == 2
     assert outcome.selected_unit_ids == files
     assert outcome.report.audited_unit_ids() == list(files)
-    assert _judgments(outcome) == [
+    assert _list_answers(outcome) == [
         (files[0], "tidy_file", FAIL),
         (files[1], "tidy_file", FAIL),
     ]
@@ -87,7 +87,7 @@ def test_project_structure_audit_returns_the_findings_on_each_directory(
     directories = (str(tmp_path), str(tmp_path / "docs"))
     assert outcome.scanned_file_count == 1
     assert outcome.selected_unit_ids == directories
-    assert _judgments(outcome) == [
+    assert _list_answers(outcome) == [
         (directories[0], "tidy_directory", PASS),
         (directories[1], "tidy_directory", PASS),
     ]
