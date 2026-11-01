@@ -41,7 +41,7 @@ def test_python_factory_gives_every_package_the_same_project_module_names(
 
 
 @pytest.mark.usefixtures("in_repo_root")
-def test_subdirectory_text_uses_module_names_from_the_whole_tree(
+def test_subdirectory_text_uses_the_module_names_of_the_audited_project(
     assert_snapshot: SnapshotAsserter,
 ) -> None:
     inside_tree = _subdirectory(extract_python_project(MOCK_PROJECT), "api")
