@@ -1,6 +1,8 @@
 import asyncio
 import json
+import urllib.error
 import urllib.request
+from http import HTTPStatus
 
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
@@ -8,6 +10,12 @@ from klint.infra.system_one.system_one_format import (
     build_system_one_questions,
     read_system_one_answers,
 )
+
+_ACCESS_REFUSED_STATUSES = frozenset({HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN})
+
+
+class JudgeAccessRefusedError(PermissionError):
+    """The judge's endpoint refused the request: its API key is missing or wrong."""
 
 
 class HttpSystemOneJudge(BaseJudge):
@@ -45,6 +53,23 @@ class HttpSystemOneJudge(BaseJudge):
             headers=headers,
             method="POST",
         )
-        with urllib.request.urlopen(http_request, timeout=self._timeout) as response:
-            response_data: object = json.loads(response.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(
+                http_request, timeout=self._timeout
+            ) as response:
+                response_data: object = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            if error.code in _ACCESS_REFUSED_STATUSES:
+                raise JudgeAccessRefusedError(self._describe_refusal(error)) from error
+            raise
         return response_data
+
+    def _describe_refusal(self, error: urllib.error.HTTPError) -> str:
+        """Say why the endpoint refused the request, without the key itself."""
+        status = f"HTTP {error.code}: {error.reason}"
+        if not self._api_key:
+            return (
+                f"the judge at {self._endpoint} needs an API key, and none was "
+                f"given ({status})"
+            )
+        return f"the judge at {self._endpoint} did not accept the API key ({status})"
