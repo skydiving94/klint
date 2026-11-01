@@ -80,7 +80,7 @@ class RulePackLoader(BaseRuleLoader):
             return
         for source in self._rule_sources:
             for pack in self._read_packs(source):
-                if pack.scope.matches(language):
+                if pack.scope.is_for_language(language):
                     yield pack
 
     def _read_packs(self, source: BaseRuleSource) -> list[RulePackSpec]:
@@ -125,7 +125,7 @@ class RulePackLoader(BaseRuleLoader):
         self._check_unit_types(spec, pack.origin)
         self._warn_about_unknown_rule_languages(spec, pack.origin)
         languages = pack.scope.narrow(spec.languages)
-        if not self._keeps_languages_of_its_pack(spec, languages, pack.origin):
+        if not self._does_keep_languages_of_its_pack(spec, languages, pack.origin):
             return None
         return AuditRule(
             rule_id=spec.rule_id,
@@ -137,7 +137,7 @@ class RulePackLoader(BaseRuleLoader):
             unit_tags=list(spec.unit_tags),
         )
 
-    def _keeps_languages_of_its_pack(
+    def _does_keep_languages_of_its_pack(
         self, spec: RuleSpec, narrowed_languages: Sequence[str], origin: str
     ) -> bool:
         """Warn about rule languages its pack leaves out; False if none are left."""
@@ -177,7 +177,7 @@ class RulePackLoader(BaseRuleLoader):
 
     def _check_unit_types(self, spec: RuleSpec, origin: str) -> None:
         """Raise when the rule names a unit type no suite registers."""
-        known = set(self._unit_registry.known_unit_types())
+        known = set(self._unit_registry.list_known_unit_types())
         unknown = [unit_type for unit_type in spec.unit_types if unit_type not in known]
         if unknown:
             raise ValueError(

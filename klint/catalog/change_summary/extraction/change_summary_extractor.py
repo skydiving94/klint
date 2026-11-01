@@ -83,7 +83,7 @@ def _build_file_unit(file: FileSummary) -> AuditableFileSummaryUnit:
 def _list_unit_and_nested(unit: AuditableUnit) -> list[AuditableUnit]:
     """Return ``unit``, then each unit nested in it, each before its own."""
     units = [unit]
-    for child in unit.children():
+    for child in unit.list_children():
         units.extend(_list_unit_and_nested(child))
     return units
 

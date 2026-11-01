@@ -31,7 +31,7 @@ def _run_audit(judge: FakeJudge, audit_input: AuditInput) -> AuditOutcome:
     return asyncio.run(pipeline.run_audit(request))
 
 
-def _answers(outcome: AuditOutcome) -> list[tuple[str, str]]:
+def _list_answers(outcome: AuditOutcome) -> list[tuple[str, str]]:
     return [
         (finding.unit_id, finding.answer.label)
         for finding in outcome.report.select_findings(should_include_non_problems=True)
@@ -52,9 +52,9 @@ def test_json_document_held_in_memory_is_audited_with_no_file(
     )
 
     assert outcome.scanned_file_count == 0
-    assert outcome.report.audited_unit_ids() == ["thanks", "reply"]
-    assert _answers(outcome) == [("thanks", "Rude"), ("reply", "Rude")]
-    assert judge.subject_to_asked_rule_ids() == {
+    assert outcome.report.list_audited_unit_ids() == ["thanks", "reply"]
+    assert _list_answers(outcome) == [("thanks", "Rude"), ("reply", "Rude")]
+    assert judge.map_subject_to_asked_rule_ids() == {
         "Thank you!": {"polite_note"},
         "Go away.": {"polite_note"},
     }
@@ -72,7 +72,7 @@ def test_json_document_on_disk_gives_the_same_findings_as_in_memory(
     in_memory_outcome = _run_audit(fake_judge(), in_memory)
 
     assert on_disk_outcome.scanned_file_count == 1
-    assert _answers(on_disk_outcome) == _answers(in_memory_outcome)
+    assert _list_answers(on_disk_outcome) == _list_answers(in_memory_outcome)
 
 
 def test_content_in_memory_of_another_media_type_is_refused(

@@ -17,9 +17,9 @@ class PackScope:
 
     languages: tuple[str, ...] | None = None
 
-    def matches(self, language: str) -> bool:
+    def is_for_language(self, language: str) -> bool:
         """Return True when the pack is for units written in ``language``."""
-        return self.languages is None or language.lower() in self._lowered_languages()
+        return self.languages is None or language.lower() in self._lower_languages()
 
     def narrow(self, rule_languages: Sequence[str]) -> list[str]:
         """Return the languages a rule of this pack is limited to.
@@ -34,10 +34,10 @@ class PackScope:
         return [
             language
             for language in rule_languages
-            if language.lower() in self._lowered_languages()
+            if language.lower() in self._lower_languages()
         ]
 
-    def _lowered_languages(self) -> set[str]:
+    def _lower_languages(self) -> set[str]:
         return {language.lower() for language in self.languages or ()}
 
 

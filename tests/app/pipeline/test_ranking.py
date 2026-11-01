@@ -72,7 +72,7 @@ def _run_audit(
     return asyncio.run(pipeline.run_audit(request))
 
 
-def _ranked(outcome: AuditOutcome) -> list[tuple[str, str]]:
+def _list_ranked_findings(outcome: AuditOutcome) -> list[tuple[str, str]]:
     return [
         (Path(finding.unit_id).name, finding.rule_id)
         for finding in outcome.report.select_findings(should_include_non_problems=True)
@@ -108,7 +108,7 @@ def test_findings_come_by_answer_then_confidence_then_rule_id(
 
     outcome = _run_audit(judge, target, FILE_CONTENTS_KIND_ID, rules)
 
-    assert [rule_id for _, rule_id in _ranked(outcome)] == [
+    assert [rule_id for _, rule_id in _list_ranked_findings(outcome)] == [
         "f_a",
         "f_b",
         "f_low",
@@ -129,7 +129,7 @@ def test_findings_on_one_unit_stay_together_in_audit_order(
 
     outcome = _run_audit(judge, target, FILE_CONTENTS_KIND_ID, rules)
 
-    assert _ranked(outcome) == [
+    assert _list_ranked_findings(outcome) == [
         ("a.py", "r2"),
         ("a.py", "r1"),
         ("b.py", "r2"),
@@ -147,7 +147,7 @@ def test_kind_ranks_findings_by_its_tags_within_an_answer(
 
     # A ranked tag counts by the best one a finding has; findings with none
     # come after; a problem comes before any other answer, whatever its tags.
-    assert [rule_id for _, rule_id in _ranked(outcome)] == [
+    assert [rule_id for _, rule_id in _list_ranked_findings(outcome)] == [
         "b_secret",
         "a_tone",
         "c_plain",

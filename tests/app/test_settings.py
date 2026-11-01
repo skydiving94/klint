@@ -16,7 +16,7 @@ from tests.support.paths import (
 )
 
 
-def _project(tmp_path: Path, env_block: dict[str, str] | None = None) -> Path:
+def _create_project(tmp_path: Path, env_block: dict[str, str] | None = None) -> Path:
     """Create a project folder, with a klint.json when ``env_block`` is given."""
     project = tmp_path / "project"
     project.mkdir()
@@ -27,7 +27,7 @@ def _project(tmp_path: Path, env_block: dict[str, str] | None = None) -> Path:
 
 @pytest.mark.usefixtures("shell_env")
 def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> None:
-    settings = AppSettings.from_env(_project(tmp_path), None)
+    settings = AppSettings.from_env(_create_project(tmp_path), None)
 
     assert settings == AppSettings(
         model_name="jaredpalmer/kev-4b",
@@ -46,7 +46,7 @@ def test_built_in_defaults_apply_when_nothing_is_configured(tmp_path: Path) -> N
 
 @pytest.mark.usefixtures("shell_env")
 def test_klint_json_overrides_the_defaults(tmp_path: Path) -> None:
-    project = _project(
+    project = _create_project(
         tmp_path,
         {"KLINT_JUDGE_MODEL": "from-json", "KLINT_JUDGE_BASE_URL": "http://json:1"},
     )
@@ -64,7 +64,7 @@ def test_shell_variable_overrides_klint_json(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
     shell_env["KLINT_JUDGE_MODEL"] = "from-shell"
-    project = _project(
+    project = _create_project(
         tmp_path, {"KLINT_JUDGE_MODEL": "from-json", "KLINT_JUDGE_MODE": "remote"}
     )
 
@@ -77,7 +77,7 @@ def test_shell_variable_overrides_klint_json(
 @pytest.mark.usefixtures("shell_env")
 @pytest.mark.parametrize("name", ["klint.json", ".klintrc.json", ".klintrc"])
 def test_config_is_discovered_next_to_a_file_target(tmp_path: Path, name: str) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     write_json(project / name, {"env": {"KLINT_JUDGE_MODEL": "found"}})
     target = project / "module.py"
     target.write_text("x = 1\n", encoding="utf-8")
@@ -90,7 +90,7 @@ def test_config_is_discovered_next_to_a_file_target(tmp_path: Path, name: str) -
 
 @pytest.mark.usefixtures("shell_env")
 def test_settings_in_a_rules_file_are_ignored_with_a_warning(tmp_path: Path) -> None:
-    project = _project(tmp_path, {"KLINT_JUDGE_MODEL": "discovered"})
+    project = _create_project(tmp_path, {"KLINT_JUDGE_MODEL": "discovered"})
     rules_file = write_json(
         tmp_path / "custom.json",
         {
@@ -119,7 +119,7 @@ def test_settings_in_a_rules_file_are_ignored_with_a_warning(tmp_path: Path) -> 
 def test_klint_json_given_as_the_rules_file_too_is_not_warned_about(
     tmp_path: Path,
 ) -> None:
-    project = _project(tmp_path, {"KLINT_JUDGE_MODEL": "discovered"})
+    project = _create_project(tmp_path, {"KLINT_JUDGE_MODEL": "discovered"})
 
     # An unexpected warning fails the test.
     settings = AppSettings.from_env(project, project / "klint.json")
@@ -140,7 +140,7 @@ def test_klint_json_given_as_the_rules_file_too_is_not_warned_about(
 def test_klint_json_is_a_project_rule_pack_when_it_holds_rules(
     tmp_path: Path, content: dict[str, object], does_hold_rules: bool
 ) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     config = write_json(project / "klint.json", content)
 
     settings = AppSettings.from_env(project, None)
@@ -156,7 +156,7 @@ def test_klint_json_is_a_project_rule_pack_when_it_holds_rules(
 def test_klint_json_that_cannot_be_read_stops_with_an_error_naming_it(
     tmp_path: Path, content: str, reason: str
 ) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     (project / "klint.json").write_text(content, encoding="utf-8")
 
     with pytest.raises(ValueError, match=rf"klint\.json' {reason}"):
@@ -167,7 +167,7 @@ def test_klint_json_that_cannot_be_read_stops_with_an_error_naming_it(
 def test_env_block_that_is_not_an_object_is_ignored_with_a_warning(
     tmp_path: Path,
 ) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     write_json(project / "klint.json", {"env": "KLINT_JUDGE_MODE=remote", "rules": {}})
 
     with pytest.warns(KlintWarning, match="'env' block .* is ignored"):
@@ -180,7 +180,7 @@ def test_env_block_that_is_not_an_object_is_ignored_with_a_warning(
 def test_unknown_env_key_is_ignored_with_a_warning_and_the_rest_applies(
     tmp_path: Path,
 ) -> None:
-    project = _project(
+    project = _create_project(
         tmp_path, {"KLINT_JUDGE_MODLE": "typo", "KLINT_JUDGE_MODE": "remote"}
     )
 
@@ -194,7 +194,7 @@ def test_unknown_env_key_is_ignored_with_a_warning_and_the_rest_applies(
 @pytest.mark.usefixtures("shell_env")
 def test_every_known_env_key_is_applied_without_a_warning(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {})
-    project = _project(
+    project = _create_project(
         tmp_path,
         {
             "KLINT_JUDGE_MODEL": "a-model",
@@ -225,7 +225,7 @@ def test_rule_replacement_variables_name_the_pack_that_replaces_the_built_in_one
     shell_env["KLINT_REPLACE_FILE_RULES"] = str(file_pack)
     shell_env["KLINT_REPLACE_PROJECT_RULES"] = str(project_pack)
 
-    settings = AppSettings.from_env(_project(tmp_path), None)
+    settings = AppSettings.from_env(_create_project(tmp_path), None)
 
     # Each command replaces the built-in packs with its own; see the command
     # tests. The built-in packs stay as they are for the other command.
@@ -240,7 +240,7 @@ def test_relative_rule_replacement_set_in_the_shell_is_taken_from_the_working_di
     # The fixture's working directory, not klint's own folder.
     shell_env["KLINT_REPLACE_FILE_RULES"] = "rules/file_rules.json"
 
-    settings = AppSettings.from_env(_project(tmp_path), None)
+    settings = AppSettings.from_env(_create_project(tmp_path), None)
 
     expected = (Path.cwd() / "rules" / "file_rules.json").resolve()
     assert settings.file_rule_replacement == expected
@@ -250,7 +250,7 @@ def test_relative_rule_replacement_set_in_the_shell_is_taken_from_the_working_di
 def test_relative_rule_replacement_set_in_klint_json_is_taken_from_its_folder(
     tmp_path: Path,
 ) -> None:
-    project = _project(
+    project = _create_project(
         tmp_path, {"KLINT_REPLACE_PROJECT_RULES": "rules/project_rules.json"}
     )
 
@@ -264,7 +264,7 @@ def test_relative_rule_replacement_set_in_klint_json_is_taken_from_its_folder(
 def test_fallback_rule_packs_in_klint_json_replace_the_built_in_ones(
     tmp_path: Path,
 ) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     in_project = write_text(project / "rules" / "docs.json", "{}")
     elsewhere = write_text(tmp_path / "prose.json", "{}")
     write_json(
@@ -283,7 +283,7 @@ def test_fallback_rule_packs_in_klint_json_replace_the_built_in_ones(
 def test_fallback_rule_packs_that_are_not_a_list_of_paths_are_ignored_with_a_warning(
     tmp_path: Path,
 ) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     write_json(project / "klint.json", {"fallback_rule_packs": "docs.json"})
 
     with pytest.warns(KlintWarning, match="'fallback_rule_packs' key .* is ignored"):
@@ -296,7 +296,7 @@ def test_fallback_rule_packs_that_are_not_a_list_of_paths_are_ignored_with_a_war
 def test_fallback_rule_pack_that_is_not_a_file_is_left_out_with_a_warning(
     tmp_path: Path,
 ) -> None:
-    project = _project(tmp_path)
+    project = _create_project(tmp_path)
     kept = write_json(project / "docs.json", {})
     write_json(
         project / "klint.json", {"fallback_rule_packs": ["absent.json", "docs.json"]}
@@ -321,7 +321,7 @@ def test_mode_is_read_as_a_judge_mode_in_any_case(
 ) -> None:
     shell_env["KLINT_JUDGE_MODE"] = raw_mode
 
-    settings = AppSettings.from_env(_project(tmp_path), None)
+    settings = AppSettings.from_env(_create_project(tmp_path), None)
 
     assert settings.judge_mode is expected
 
@@ -336,14 +336,14 @@ def test_unknown_mode_stops_with_an_error_listing_the_valid_values(
         match=r"KLINT_JUDGE_MODE 'locl'.* is not a judge mode; valid values: "
         r"\['local', 'remote'\]",
     ):
-        AppSettings.from_env(_project(tmp_path), None)
+        AppSettings.from_env(_create_project(tmp_path), None)
 
 
 def test_loading_the_settings_leaves_the_environment_as_it_was(
     shell_env: dict[str, str], tmp_path: Path
 ) -> None:
     shell_env["KLINT_JUDGE_API_KEY"] = "from-shell"
-    project = _project(tmp_path, {"KLINT_JUDGE_MODEL": "from-json"})
+    project = _create_project(tmp_path, {"KLINT_JUDGE_MODEL": "from-json"})
     environment_before = dict(os.environ)
 
     settings = AppSettings.from_env(project, None)

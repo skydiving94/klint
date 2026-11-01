@@ -85,4 +85,4 @@ def test_old_target_unit_types_field_still_picks_the_units_with_a_warning(
     assert capsys.readouterr().err.splitlines() == [
         _describe_deprecation("target_unit_types", "unit_types", rules_file)
     ]
-    assert judge.asked_rule_ids() == [["for_files"]]
+    assert judge.list_asked_rule_ids() == [["for_files"]]

@@ -72,7 +72,7 @@ class Auditor:
         def collect_child_findings(unit: AuditableUnit) -> tuple[AuditFinding, ...]:
             """Return the findings so far on the units nested directly in ``unit``."""
             child_findings: list[AuditFinding] = []
-            for child in unit.children():
+            for child in unit.list_children():
                 index = unit_identity_to_index.get(id(child))
                 if index is not None:
                     child_findings.extend(unit_findings[index] or ())

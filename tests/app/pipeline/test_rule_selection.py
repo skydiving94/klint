@@ -22,7 +22,7 @@ from tests.support.notes_suite import (
 )
 
 
-def _rule(
+def _build_rule(
     rule_id: str, unit_types: list[str], languages: list[str] | None = None
 ) -> AuditRule:
     return AuditRule(
@@ -40,10 +40,10 @@ class MixedRulesNotesSuite(NotesSuite):
     def list_audit_kinds(self) -> list[AuditKind]:
         (notes_kind,) = super().list_audit_kinds()
         rules = [
-            _rule("whole_file_rule", ["file"]),
+            _build_rule("whole_file_rule", ["file"]),
             POLITE_RULE,
-            _rule("python_note_rule", ["note"], languages=["python"]),
-            _rule("short_note", ["note", "file"]),
+            _build_rule("python_note_rule", ["note"], languages=["python"]),
+            _build_rule("short_note", ["note", "file"]),
         ]
         return [replace(notes_kind, rule_loader=FixedRuleLoader(rules))]
 
@@ -71,7 +71,7 @@ def test_unit_with_no_language_is_asked_the_rules_for_its_unit_type(
 
     # The rule for files is for another unit type, and the rule limited to
     # Python cannot apply to a note in no language.
-    assert judge.subject_to_asked_rule_ids() == {
+    assert judge.map_subject_to_asked_rule_ids() == {
         "Thank you!\n": {"polite_note", "short_note"}
     }
     findings = outcome.report.select_findings(should_include_non_problems=True)

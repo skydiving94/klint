@@ -231,7 +231,7 @@ class AuditCommandApp:
 
         report = outcome.report
         selected_unit_count = len(outcome.selected_unit_ids)
-        if selected_unit_count and not report.audited_unit_ids():
+        if selected_unit_count and not report.list_audited_unit_ids():
             # Each unit's failure has had its own line; nothing was checked.
             print_error_line(
                 command,
@@ -246,7 +246,7 @@ class AuditCommandApp:
             print(
                 json.dumps(
                     {
-                        command.audited_units_json_key: report.audited_unit_ids(),
+                        command.audited_units_json_key: report.list_audited_unit_ids(),
                         "unit_id_to_roll_up_status": {
                             unit_id: status.value
                             for unit_id, status in (

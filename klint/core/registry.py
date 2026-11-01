@@ -24,6 +24,6 @@ class UnitRegistry:
             )
         self._unit_classes[unit_type] = unit_class
 
-    def known_unit_types(self) -> list[str]:
+    def list_known_unit_types(self) -> list[str]:
         """Return every registered unit_type tag, sorted."""
         return sorted(self._unit_classes)

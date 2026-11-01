@@ -48,5 +48,5 @@ class AuditableDirectoryUnit(AuditableUnit):
             subdirectory_names=[d.directory_name for d in self.subdirectories],
         )
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         return [*self.files, *self.subdirectories]

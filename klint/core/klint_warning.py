@@ -12,17 +12,21 @@ class KlintWarning(UserWarning):
 
 def warn_about_unreadable_directory(path: Path, error: OSError) -> None:
     """Warn that the directory at ``path`` is left out because it cannot be read."""
-    _warn(f"Directory '{path}' is left out: it cannot be read ({_reason(error)})")
+    _warn(
+        f"Directory '{path}' is left out: it cannot be read ({_describe_reason(error)})"
+    )
 
 
 def warn_about_unreadable_file(path: Path, error: OSError) -> None:
     """Warn that the file at ``path`` is left out because it cannot be read."""
-    _warn(f"File '{path}' is left out: it cannot be read ({_reason(error)})")
+    _warn(f"File '{path}' is left out: it cannot be read ({_describe_reason(error)})")
 
 
 def warn_about_unprocessable_file(path: Path, error: Exception) -> None:
     """Warn that the file at ``path`` is left out because extracting it failed."""
-    _warn(f"File '{path}' is left out: it cannot be processed ({_reason(error)})")
+    _warn(
+        f"File '{path}' is left out: it cannot be processed ({_describe_reason(error)})"
+    )
 
 
 def warn_about_unparseable_file(path: Path, error: Exception) -> None:
@@ -32,7 +36,7 @@ def warn_about_unparseable_file(path: Path, error: Exception) -> None:
     """
     _warn(
         f"File '{path}' is listed by name and line count only: "
-        f"it cannot be parsed ({_reason(error)})"
+        f"it cannot be parsed ({_describe_reason(error)})"
     )
 
 
@@ -74,7 +78,7 @@ def _warn(message: str) -> None:
     warnings.warn(message, KlintWarning, stacklevel=3)
 
 
-def _reason(error: Exception) -> str:
+def _describe_reason(error: Exception) -> str:
     """Return why ``error`` happened, in the words a user reads."""
     if isinstance(error, OSError) and error.strerror:
         return error.strerror

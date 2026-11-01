@@ -68,7 +68,7 @@ def test_command_for_a_suite_added_in_test_code_runs_end_to_end(
         (notes[0], "Rude"),
         (notes[1], "Rude"),
     ]
-    assert judge.subject_to_asked_rule_ids() == {
+    assert judge.map_subject_to_asked_rule_ids() == {
         "Go away.\n": {"polite_note"},
         "Thank you!\n": {"polite_note"},
     }

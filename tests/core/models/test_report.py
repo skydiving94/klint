@@ -14,7 +14,7 @@ class _ContextWithRuleId(UnitContext):
     rule_id: str
 
 
-def _finding(
+def _build_finding(
     rule_id: str, answer: AnswerChoice, confidence: float | None, unit_id: str = "a.py"
 ) -> AuditFinding:
     return AuditFinding(
@@ -33,15 +33,15 @@ def _report(*findings: AuditFinding) -> AuditReport:
     return report
 
 
-def _rule_ids(findings: list[AuditFinding]) -> list[str]:
+def _list_rule_ids(findings: list[AuditFinding]) -> list[str]:
     return [finding.rule_id for finding in findings]
 
 
 def test_report_selects_problems_only_unless_asked_for_every_answer() -> None:
-    report = _report(_finding("a", PASS, 0.9), _finding("b", FAIL, 0.9))
+    report = _report(_build_finding("a", PASS, 0.9), _build_finding("b", FAIL, 0.9))
 
-    assert _rule_ids(report.select_findings()) == ["b"]
-    assert _rule_ids(report.select_findings(should_include_non_problems=True)) == [
+    assert _list_rule_ids(report.select_findings()) == ["b"]
+    assert _list_rule_ids(report.select_findings(should_include_non_problems=True)) == [
         "a",
         "b",
     ]
@@ -49,24 +49,24 @@ def test_report_selects_problems_only_unless_asked_for_every_answer() -> None:
 
 def test_report_selects_by_confidence_but_keeps_unscored_findings() -> None:
     report = _report(
-        _finding("low", FAIL, 0.2),
-        _finding("high", FAIL, 0.8),
-        _finding("unscored", FAIL, None),
+        _build_finding("low", FAIL, 0.2),
+        _build_finding("high", FAIL, 0.8),
+        _build_finding("unscored", FAIL, None),
     )
 
-    assert _rule_ids(report.select_findings(min_confidence=0.5)) == [
+    assert _list_rule_ids(report.select_findings(min_confidence=0.5)) == [
         "high",
         "unscored",
     ]
 
 
 def test_report_keeps_the_recorded_order_of_findings_and_audited_units() -> None:
-    report = _report(_finding("z", FAIL, 0.1), _finding("a", FAIL, 0.9))
+    report = _report(_build_finding("z", FAIL, 0.1), _build_finding("a", FAIL, 0.9))
     report.record_audited_unit("b.py")
     report.record_audited_unit("a.py")
 
-    assert _rule_ids(report.select_findings()) == ["z", "a"]
-    assert report.audited_unit_ids() == ["b.py", "a.py"]
+    assert _list_rule_ids(report.select_findings()) == ["z", "a"]
+    assert report.list_audited_unit_ids() == ["b.py", "a.py"]
 
 
 def test_finding_dict_has_the_finding_keys_with_the_unit_context_apart() -> None:

@@ -61,7 +61,7 @@ class AuditProgressReporter:
         if not self._enabled:
             return
         self._completed += 1
-        self._render(f"Audited {_directory_of(unit_id)}")
+        self._render(f"Audited {_find_directory_of(unit_id)}")
 
     def finish(self) -> None:
         if not self._enabled:
@@ -86,7 +86,7 @@ class AuditProgressReporter:
         sys.stderr.flush()
 
 
-def _directory_of(unit_id: str) -> str:
+def _find_directory_of(unit_id: str) -> str:
     """Return the directory a unit is, or sits in; the ID of a unit is its path."""
     path = Path(unit_id)
     return str(path if path.is_dir() else path.parent)

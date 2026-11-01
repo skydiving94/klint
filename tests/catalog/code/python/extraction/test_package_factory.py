@@ -14,7 +14,7 @@ from tests.support.builders import (
 from tests.support.paths import MOCK_PROJECT, SnapshotAsserter
 
 
-def _subdirectory(
+def _find_subdirectory(
     unit: AuditablePythonPackageUnit, name: str
 ) -> AuditablePythonPackageUnit:
     (match,) = [d for d in unit.subdirectories if d.directory_name == name]
@@ -44,7 +44,7 @@ def test_python_factory_gives_every_package_the_same_project_module_names(
 def test_subdirectory_text_uses_the_module_names_of_the_audited_project(
     assert_snapshot: SnapshotAsserter,
 ) -> None:
-    inside_tree = _subdirectory(extract_python_project(MOCK_PROJECT), "api")
+    inside_tree = _find_subdirectory(extract_python_project(MOCK_PROJECT), "api")
     alone = extract_python_project(MOCK_PROJECT / "api")
     subjects = list_judge_subjects(MOCK_PROJECT, PROJECT_STRUCTURE_KIND_ID)
 

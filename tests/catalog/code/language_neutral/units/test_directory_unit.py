@@ -20,8 +20,8 @@ def test_directory_children_are_its_files_then_its_subdirectories() -> None:
         unit_id="pkg", files=[file_unit], subdirectories=[subdirectory]
     )
 
-    assert list(directory.children()) == [file_unit, subdirectory]
-    assert subdirectory.children() == []
+    assert list(directory.list_children()) == [file_unit, subdirectory]
+    assert subdirectory.list_children() == []
 
 
 def test_directory_is_described_without_assuming_a_language(tmp_path: Path) -> None:

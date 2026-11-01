@@ -21,7 +21,7 @@ def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
         JudgeAnswer("a", "pass", 0.7, {"pass": 0.7}),
         JudgeAnswer("b", "fail", 0.7, {"fail": 0.7}),
     ]
-    assert judge.asked_rule_ids() == [["a", "b", "c"]]
+    assert judge.list_asked_rule_ids() == [["a", "b", "c"]]
 
 
 def test_network_is_blocked() -> None:

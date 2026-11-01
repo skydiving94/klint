@@ -52,14 +52,14 @@ class FakeJudge(BaseJudge):
             )
         return answers
 
-    def asked_rule_ids(self) -> list[list[str]]:
+    def list_asked_rule_ids(self) -> list[list[str]]:
         """Return the rule ids asked in each request, sorted, in request order."""
         return [
             sorted(question.question_id for question in request.questions)
             for request in self.requests
         ]
 
-    def subject_to_asked_rule_ids(self) -> dict[str, set[str]]:
+    def map_subject_to_asked_rule_ids(self) -> dict[str, set[str]]:
         """Return the rule ids asked about each subject.
 
         Meant for tests whose subjects all differ: a later request about the

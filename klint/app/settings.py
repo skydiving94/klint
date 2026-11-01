@@ -99,17 +99,17 @@ def _locate_built_in_resource(relative_path: str) -> Path:
     return Path(str(catalog / relative_path))
 
 
-def _built_in_packs(relative_paths: Sequence[str]) -> tuple[Path, ...]:
+def _list_built_in_packs(relative_paths: Sequence[str]) -> tuple[Path, ...]:
     """Locate built-in rule packs inside the installed package."""
     return tuple(_locate_built_in_resource(relative) for relative in relative_paths)
 
 
 def _locate_built_in_rule_packs() -> tuple[Path, ...]:
-    return _built_in_packs(_BUILT_IN_RULE_PACKS)
+    return _list_built_in_packs(_BUILT_IN_RULE_PACKS)
 
 
 def _locate_built_in_fallback_rule_packs() -> tuple[Path, ...]:
-    return _built_in_packs(_BUILT_IN_FALLBACK_RULE_PACKS)
+    return _list_built_in_packs(_BUILT_IN_FALLBACK_RULE_PACKS)
 
 
 def _locate_built_in_language_to_file_extensions() -> Path:

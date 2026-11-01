@@ -44,7 +44,7 @@ EXAMPLE_FILE = "examples/backend_data_and_security.py"
 Capture = pytest.CaptureFixture[str]
 
 
-def _structure_app(
+def _build_structure_app(
     judge: BaseJudge, settings: AppSettings | None = None
 ) -> AuditCommandApp:
     return build_audit_command_app(STRUCTURE_AUDIT_COMMAND, judge, settings)
@@ -54,7 +54,7 @@ def _run(app: AuditCommandApp, *argv: str | Path) -> ExitCode:
     return asyncio.run(app.run([str(arg) for arg in argv]))
 
 
-def _json_output(capsys: Capture) -> dict[str, Any]:
+def _read_json_output(capsys: Capture) -> dict[str, Any]:
     output: dict[str, Any] = json.loads(capsys.readouterr().out)
     return output
 
@@ -77,7 +77,7 @@ def test_project_audit_json_matches_snapshot(
         },
     )
     judge = fake_judge(choices={"acyclic_packages": "fail"})
-    app = _structure_app(judge, make_settings(built_in_rule_packs=[pack]))
+    app = _build_structure_app(judge, make_settings(built_in_rule_packs=[pack]))
 
     exit_code = _run(app, MOCK_PROJECT, "--json")
 
@@ -85,7 +85,7 @@ def test_project_audit_json_matches_snapshot(
     assert_snapshot("cli_structure_audit.json", capsys.readouterr().out)
     # One judge call per directory, the root and its three subdirectories,
     # each asked every rule.
-    assert judge.asked_rule_ids() == [["acyclic_packages", "small_packages"]] * 4
+    assert judge.list_asked_rule_ids() == [["acyclic_packages", "small_packages"]] * 4
 
 
 @pytest.mark.usefixtures("in_repo_root")
@@ -94,7 +94,7 @@ def test_project_audit_rejects_a_file_target(
 ) -> None:
     judge = fake_judge()
 
-    exit_code = _run(_structure_app(judge), EXAMPLE_FILE)
+    exit_code = _run(_build_structure_app(judge), EXAMPLE_FILE)
 
     assert exit_code == ExitCode.RUN_ERROR
     assert "must be a directory" in capsys.readouterr().err
@@ -110,9 +110,9 @@ def test_target_under_a_folder_with_an_ignored_name_is_audited_in_full(
     write_text(project / "pkg" / "a.py", "y = 2\n")
     judge = fake_judge(default="fail")
 
-    _run(_structure_app(judge), project, "--json")
+    _run(_build_structure_app(judge), project, "--json")
 
-    output = _json_output(capsys)
+    output = _read_json_output(capsys)
     directories = [str(project), str(project / "pkg")]
     assert output["examined_directories"] == directories
     # The judge is asked about the directories listed as examined, and no others.
@@ -132,7 +132,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     locked = make_unreadable(write_text(package / "locked.py", "y = 2\n"))
     judge = fake_judge()
 
-    exit_code = _run(_structure_app(judge), package, "--json")
+    exit_code = _run(_build_structure_app(judge), package, "--json")
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
@@ -142,7 +142,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
         "it cannot be read (Permission denied)"
     ]
     # The directory is described to the judge without that file.
-    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
+    ((content, _rule_ids),) = judge.map_subject_to_asked_rule_ids().items()
     assert "a.py" in content
     assert "locked.py" not in content
 
@@ -186,7 +186,7 @@ def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
         f"[klint-structure] Warning: File '{broken}' is left out: "
         "it cannot be processed (the extractor is broken on b.py)"
     ]
-    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
+    ((content, _rule_ids),) = judge.map_subject_to_asked_rule_ids().items()
     assert "a.py" in content
     assert "b.py" not in content
 
@@ -202,7 +202,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     locked = make_unreadable(write_text(repo / "locked" / "a.py", "y = 2\n").parent)
     judge = fake_judge()
 
-    exit_code = _run(_structure_app(judge), repo, "--json")
+    exit_code = _run(_build_structure_app(judge), repo, "--json")
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
@@ -211,7 +211,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
         f"[klint-structure] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
-    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
+    ((content, _rule_ids),) = judge.map_subject_to_asked_rule_ids().items()
     assert "locked" not in content
 
 
@@ -223,10 +223,10 @@ def test_binary_file_is_listed_by_name_only(
     (package / "logo.dat").write_bytes(b"\x00\x01\n\x02\n")
     judge = fake_judge()
 
-    exit_code = _run(_structure_app(judge), package, "--json")
+    exit_code = _run(_build_structure_app(judge), package, "--json")
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
+    ((content, _rule_ids),) = judge.map_subject_to_asked_rule_ids().items()
     content_lines = content.splitlines()
     assert "    - logo.dat (binary)" in content_lines
     assert "    - a.py (lines=1)" in content_lines
@@ -240,7 +240,7 @@ def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
     write_text(package / "orders.py", "import json\n\n\nclass Order:\n    pass\n")
     judge = fake_judge()
 
-    exit_code = _run(_structure_app(judge), package, "--json")
+    exit_code = _run(_build_structure_app(judge), package, "--json")
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
@@ -250,7 +250,7 @@ def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
         "count only: it cannot be parsed ('[' was never closed, line 1)"
     ]
     # The judge is told the file could not be parsed, not that it is empty.
-    ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
+    ((content, _rule_ids),) = judge.map_subject_to_asked_rule_ids().items()
     content_lines = content.splitlines()
     assert "    - __init__.py (lines=1; cannot be parsed)" in content_lines
     assert "    - orders.py (lines=5; imports=[json]; classes=[Order])" in content_lines
@@ -266,13 +266,13 @@ def test_package_description_marks_what_unparseable_files_leave_unknown(
     write_text(package / "sub" / "b.py", "def (:\n")
     judge = fake_judge()
 
-    exit_code = _run(_structure_app(judge), package, "--json")
+    exit_code = _run(_build_structure_app(judge), package, "--json")
 
     capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     (root_content,) = [
         content
-        for content in judge.subject_to_asked_rule_ids()
+        for content in judge.map_subject_to_asked_rule_ids()
         if content.startswith(f"Target Directory Under Audit: {package} ")
     ]
     content_lines = root_content.splitlines()
@@ -302,9 +302,9 @@ def test_rules_for_python_are_asked_only_about_directories_holding_python(
     write_text(repo / "docs" / "intro.md", "# Intro\n")
     judge = fake_judge()
 
-    _run(_structure_app(judge, settings), repo, "--json", "--all-answers")
+    _run(_build_structure_app(judge, settings), repo, "--json", "--all-answers")
 
-    output = _json_output(capsys)
+    output = _read_json_output(capsys)
     judged_unit_ids = {issue["unit_id"] for issue in output["findings"]}
     assert judged_unit_ids == {str(repo), str(repo / "app")}
     # The directory without Python is not sent to the judge at all, so it is
@@ -323,10 +323,10 @@ def test_project_rule_replacement_replaces_every_built_in_pack(
     judge = fake_judge()
     settings = make_settings(project_rule_replacement=replacement)
 
-    _run(_structure_app(judge, settings), repo, "--json")
+    _run(_build_structure_app(judge, settings), repo, "--json")
 
     # Every directory is asked, whatever language it is described in.
-    assert judge.asked_rule_ids() == [["only_rule"]] * 3
+    assert judge.list_asked_rule_ids() == [["only_rule"]] * 3
 
 
 def test_custom_rule_can_target_the_files_inside_a_directory(
@@ -348,15 +348,17 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
     # No rule but the custom ones.
     settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
 
-    _run(_structure_app(judge, settings), package, "--json", "--rules", custom)
+    _run(_build_structure_app(judge, settings), package, "--json", "--rules", custom)
 
     contents_asked_the_file_rule = [
         content
-        for content, rule_ids in judge.subject_to_asked_rule_ids().items()
+        for content, rule_ids in judge.map_subject_to_asked_rule_ids().items()
         if rule_ids == {"python_file"}
     ]
     calls_with_the_directory_rule = [
-        rule_ids for rule_ids in judge.asked_rule_ids() if "for_directory" in rule_ids
+        rule_ids
+        for rule_ids in judge.list_asked_rule_ids()
+        if "for_directory" in rule_ids
     ]
     # Only the Python file is asked the file rule, and the directory its own rule.
     assert contents_asked_the_file_rule == ["a.py (lines=1)"]
@@ -364,7 +366,7 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
     assert len(judge.requests) == 2
     # Examined are the units the judge was asked about: here the directory
     # and the one file inside it that a rule targets.
-    assert _json_output(capsys)["examined_directories"] == [
+    assert _read_json_output(capsys)["examined_directories"] == [
         str(package),
         str(package / "a.py"),
     ]
@@ -380,7 +382,7 @@ def test_directory_the_judge_fails_on_is_left_out_while_the_others_are_audited(
     # content of the root holds this file name.
     judge = PickyJudge(refuses="only_in_root.py")
 
-    exit_code = _run(_structure_app(judge), repo, "--json")
+    exit_code = _run(_build_structure_app(judge), repo, "--json")
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.PROBLEMS_FOUND

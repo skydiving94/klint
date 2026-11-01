@@ -26,7 +26,7 @@ RED, GREEN, YELLOW = "\033[91m", "\033[92m", "\033[93m"
 BAR_AT_90 = "█" * 9 + "░"
 
 
-def _bar(color: str) -> str:
+def _format_bar(color: str) -> str:
     return f"{color}{BAR_AT_90}{RESET} {BOLD} 90.0%{RESET}"
 
 
@@ -35,7 +35,7 @@ def _run_report(app: AuditCommandApp, target: Path, capsys: Capture) -> str:
     return capsys.readouterr().out
 
 
-def _line_of(report: str, rule_id: str) -> str:
+def _find_line_of(report: str, rule_id: str) -> str:
     (line,) = [line for line in report.splitlines() if f"{rule_id}{RESET}" in line]
     return line
 
@@ -63,16 +63,16 @@ def test_default_scale_keeps_its_badges_and_colours_only_problem_bars(
 
     rule_id_to_start_and_bar = {
         rule_id: (
-            _line_of(report, rule_id).split(f" {BOLD}{rule_id}")[0].strip(),
-            _line_of(report, rule_id).split("Confidence: ")[1],
+            _find_line_of(report, rule_id).split(f" {BOLD}{rule_id}")[0].strip(),
+            _find_line_of(report, rule_id).split("Confidence: ")[1],
         )
         for rule_id in rule_id_to_answer
     }
     assert rule_id_to_start_and_bar == {
-        "r_fail": (f"{BOLD}{RED}[FAIL]{RESET}", _bar(RED)),
-        "r_lack": (f"{BOLD}{YELLOW}[LACK OF EVIDENCE]{RESET}", _bar(DIM)),
-        "r_pass": (f"{BOLD}{GREEN}[PASS]{RESET}", _bar(DIM)),
-        "r_irrelevant": (f"{DIM}[IRRELEVANT]{RESET}", _bar(DIM)),
+        "r_fail": (f"{BOLD}{RED}[FAIL]{RESET}", _format_bar(RED)),
+        "r_lack": (f"{BOLD}{YELLOW}[LACK OF EVIDENCE]{RESET}", _format_bar(DIM)),
+        "r_pass": (f"{BOLD}{GREEN}[PASS]{RESET}", _format_bar(DIM)),
+        "r_irrelevant": (f"{DIM}[IRRELEVANT]{RESET}", _format_bar(DIM)),
     }
     # The order is that of the scale's sort ranks.
     assert [
@@ -114,6 +114,6 @@ def test_answer_of_another_scale_is_shown_as_its_scale_says(
     lines = [line for line in report.splitlines() if "polite_note" in line]
     assert len(lines) == 2
     assert all(line.strip().startswith(badge) for line in lines)
-    assert all(line.endswith(_bar(bar_color)) for line in lines)
+    assert all(line.endswith(_format_bar(bar_color)) for line in lines)
     assert f"{failure_count} failure(s)" in report
     assert code == exit_code

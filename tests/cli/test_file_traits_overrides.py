@@ -42,7 +42,7 @@ def _audit_project(
     judge = FakeJudge()
     app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
     asyncio.run(app.run([str(project), "--json"]))
-    return judge.subject_to_asked_rule_ids()
+    return judge.map_subject_to_asked_rule_ids()
 
 
 @pytest.mark.usefixtures("shell_env")
@@ -117,7 +117,7 @@ def test_glob_matches_from_the_folder_of_the_klint_json(tmp_path: Path) -> None:
         )
     )
 
-    assert judge.subject_to_asked_rule_ids() == {
+    assert judge.map_subject_to_asked_rule_ids() == {
         "views = 1\n": {"frontend_rule", "python_rule"}
     }
 

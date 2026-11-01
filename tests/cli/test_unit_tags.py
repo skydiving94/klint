@@ -42,7 +42,7 @@ def _audit_files(
     settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
     app = build_audit_command_app(command, judge, settings)
     asyncio.run(app.run([str(target), "--json", "--rules", str(custom_rules_path)]))
-    return judge.subject_to_asked_rule_ids()
+    return judge.map_subject_to_asked_rule_ids()
 
 
 def test_rules_limited_to_unit_tags_are_asked_where_the_tags_are_detected(
@@ -124,11 +124,11 @@ def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
     settings = make_settings(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS)
     app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
     asyncio.run(app.run(["examples", "--json"]))
-    content_to_rule_ids = judge.subject_to_asked_rule_ids()
+    content_to_rule_ids = judge.map_subject_to_asked_rule_ids()
     backend_rule_ids = set(_read_rule_ids(BUILT_IN_RULE_PACKS[0]))
     react_rule_ids = set(_read_rule_ids(REACT_RULE_PACK))
 
-    def asked_rule_ids(example: str) -> set[str]:
+    def list_asked_rule_ids(example: str) -> set[str]:
         (rule_ids,) = [
             rule_ids
             for content, rule_ids in content_to_rule_ids.items()
@@ -142,7 +142,7 @@ def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
         "examples/frontend_architecture.tsx",
         "examples/frontend_hooks_and_dom.tsx",
     ):
-        assert asked_rule_ids(example) == react_rule_ids | {"god_component"}
+        assert list_asked_rule_ids(example) == react_rule_ids | {"god_component"}
     for example in (
         "examples/backend_data_and_security.py",
         "examples/mock_bad_project/api/checkout_routes.py",
@@ -151,7 +151,7 @@ def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
         # No signal: every rule for its language.
         "examples/mock_bad_project/utils/misc_helpers.py",
     ):
-        assert asked_rule_ids(example) == backend_rule_ids | {"god_component"}
+        assert list_asked_rule_ids(example) == backend_rule_ids | {"god_component"}
 
 
 def _read_rule_ids(pack: Path) -> list[str]:

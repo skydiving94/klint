@@ -48,7 +48,7 @@ class FakeRuntime:
         self.requests: list[FakeRequest] = []
         self.response_has_answers = True
 
-    def modules(self) -> dict[str, ModuleType]:
+    def build_modules(self) -> dict[str, ModuleType]:
         """Return stand-in modules for everything the in-process judge imports."""
         runtime = self
 
@@ -72,25 +72,27 @@ class FakeRuntime:
                 return {"answers": answers}
 
         return {
-            "torch": _module("torch", bfloat16="bfloat16"),
-            "huggingface_hub": _module("huggingface_hub"),
-            "huggingface_hub.utils": _module(
+            "torch": _build_module("torch", bfloat16="bfloat16"),
+            "huggingface_hub": _build_module("huggingface_hub"),
+            "huggingface_hub.utils": _build_module(
                 "huggingface_hub.utils", disable_progress_bars=lambda: None
             ),
-            "kev": _module("kev"),
-            "kev.checkpoint": _module(
+            "kev": _build_module("kev"),
+            "kev.checkpoint": _build_module(
                 "kev.checkpoint",
                 Checkpoint=Checkpoint,
                 LoadOptions=FakeLoadOptions,
                 fused_available=lambda: True,
             ),
-            "kev.device": _module("kev.device", default_device=lambda: runtime.device),
-            "kev.serve": _module("kev.serve", Server=Server),
-            "kev.api": _module("kev.api", SystemOneRequest=FakeRequest),
+            "kev.device": _build_module(
+                "kev.device", default_device=lambda: runtime.device
+            ),
+            "kev.serve": _build_module("kev.serve", Server=Server),
+            "kev.api": _build_module("kev.api", SystemOneRequest=FakeRequest),
         }
 
 
-def _module(name: str, **attributes: object) -> ModuleType:
+def _build_module(name: str, **attributes: object) -> ModuleType:
     module = ModuleType(name)
     module.__dict__.update(attributes)
     return module
@@ -100,7 +102,7 @@ def _module(name: str, **attributes: object) -> ModuleType:
 def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeRuntime]:
     """Install the stand-ins for the duration of one test."""
     fake = FakeRuntime(device="cpu")
-    for name, module in fake.modules().items():
+    for name, module in fake.build_modules().items():
         monkeypatch.setitem(sys.modules, name, module)
     # Importing the judge sets these; setting them here lets pytest undo it.
     monkeypatch.setenv("HF_HUB_DISABLE_PROGRESS_BARS", "1")
@@ -110,7 +112,7 @@ def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeRuntime]:
     sys.modules.pop(IN_PROCESS_JUDGE_MODULE, None)
 
 
-def _in_process_judge(checkpoint: str = "org/model") -> BaseJudge:
+def _build_in_process_judge(checkpoint: str = "org/model") -> BaseJudge:
     judge = importlib.import_module(IN_PROCESS_JUDGE_MODULE).InProcessSystemOneJudge(
         checkpoint=checkpoint
     )
@@ -123,7 +125,7 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
 ) -> None:
     request = build_judge_request("x = 1", "rule_a", "rule_b")
 
-    answers = asyncio.run(_in_process_judge().answer(request))
+    answers = asyncio.run(_build_in_process_judge().answer(request))
 
     # The keys and values kev has always been sent.
     criteria = PRACTICE_SCALE.map_choice_key_to_criterion()
@@ -143,7 +145,7 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
 
 
 def test_model_is_loaded_once_and_reused(runtime: FakeRuntime) -> None:
-    judge = _in_process_judge()
+    judge = _build_in_process_judge()
 
     async def ask_three_times() -> None:
         request = build_judge_request("x", "r")
@@ -174,11 +176,14 @@ def test_load_options_depend_on_the_device(
 ) -> None:
     runtime.device = device
 
-    asyncio.run(_in_process_judge().answer(build_judge_request("x", "r")))
+    asyncio.run(_build_in_process_judge().answer(build_judge_request("x", "r")))
 
     assert runtime.load_options == [expected]
 
 
 def test_response_without_answers_gives_no_answers(runtime: FakeRuntime) -> None:
     runtime.response_has_answers = False
-    assert asyncio.run(_in_process_judge().answer(build_judge_request("x", "r"))) == []
+    assert (
+        asyncio.run(_build_in_process_judge().answer(build_judge_request("x", "r")))
+        == []
+    )

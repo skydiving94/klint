@@ -54,5 +54,5 @@ def test_unit_language_is_not_in_the_context() -> None:
 
 
 def test_a_unit_has_no_children_unless_it_says_so() -> None:
-    assert AuditableFileUnit(unit_id="a.py").children() == ()
-    assert AuditableFileMetadataUnit(unit_id="a.py").children() == ()
+    assert AuditableFileUnit(unit_id="a.py").list_children() == ()
+    assert AuditableFileMetadataUnit(unit_id="a.py").list_children() == ()

@@ -43,5 +43,5 @@ class AuditablePackageSummaryUnit(AuditableUnit):
             level=self.level, path=self.path, summary=self.summary
         )
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         return [*self.packages, *self.files]

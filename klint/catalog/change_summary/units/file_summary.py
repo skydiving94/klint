@@ -40,5 +40,5 @@ class AuditableFileSummaryUnit(AuditableUnit):
             level=SummaryLevel.FILE, path=self.path, summary=self.summary
         )
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         return self.hunks

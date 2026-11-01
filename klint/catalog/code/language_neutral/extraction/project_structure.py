@@ -35,5 +35,5 @@ class ProjectStructureExtractor(BaseUnitExtractor[ScannedTarget]):
 def _yield_unit_and_nested_units(unit: AuditableUnit) -> Iterator[AuditableUnit]:
     """Yield ``unit``, then every unit nested inside it, parents before children."""
     yield unit
-    for child in unit.children():
+    for child in unit.list_children():
         yield from _yield_unit_and_nested_units(child)

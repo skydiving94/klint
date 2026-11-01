@@ -65,7 +65,7 @@ def test_file_contents_audit_returns_the_findings_on_each_file(
     files = (str(tmp_path / "a.py"), str(tmp_path / "b.md"))
     assert outcome.scanned_file_count == 2
     assert outcome.selected_unit_ids == files
-    assert outcome.report.audited_unit_ids() == list(files)
+    assert outcome.report.list_audited_unit_ids() == list(files)
     assert _list_answers(outcome) == [
         (files[0], "tidy_file", FAIL),
         (files[1], "tidy_file", FAIL),
@@ -111,7 +111,7 @@ def test_unit_whose_audit_fails_is_selected_but_left_out_of_the_report(
 
     a_file, b_file = str(tmp_path / "a.py"), str(tmp_path / "b.py")
     assert outcome.selected_unit_ids == (a_file, b_file)
-    assert outcome.report.audited_unit_ids() == [a_file]
+    assert outcome.report.list_audited_unit_ids() == [a_file]
     assert listener.events[0] == "started 2"
     assert sorted(listener.events[1:]) == [
         f"audited {a_file}",
@@ -138,7 +138,7 @@ def test_rules_file_given_with_the_request_is_asked_too(
         ),
     )
 
-    assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+    assert judge.list_asked_rule_ids() == [["tidy_file", "typed"]]
 
 
 def test_rules_held_in_memory_are_asked_with_no_rules_file(
@@ -158,7 +158,7 @@ def test_rules_held_in_memory_are_asked_with_no_rules_file(
         ),
     )
 
-    assert judge.asked_rule_ids() == [["tidy_file", "typed"]]
+    assert judge.list_asked_rule_ids() == [["tidy_file", "typed"]]
     assert sorted(path.name for path in tmp_path.iterdir()) == ["a.py"]
 
 

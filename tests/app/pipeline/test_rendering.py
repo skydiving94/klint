@@ -222,4 +222,4 @@ def test_children_sharing_an_id_give_their_parents_their_own_findings() -> None:
         "\nintro: clear_section = fail",
         "\nintro: clear_section = pass",
     ]
-    assert len(outcome.report.audited_unit_ids()) == 5
+    assert len(outcome.report.list_audited_unit_ids()) == 5

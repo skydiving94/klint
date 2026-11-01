@@ -21,7 +21,7 @@ def fake_judge() -> type[FakeJudge]:
 
 
 @pytest.fixture(autouse=True)
-def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+def _block_network_access(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that tries to open a network connection."""
     blocked = Mock(side_effect=RuntimeError("network access is not allowed in tests"))
     monkeypatch.setattr(socket.socket, "connect", blocked)

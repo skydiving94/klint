@@ -26,7 +26,7 @@ def _write_project(root: Path) -> None:
     write_text(root / "pkg" / "a.py", "y = 2\n")
 
 
-def _app(command: AuditCommand, judge: BaseJudge) -> AuditCommandApp:
+def _build_app(command: AuditCommand, judge: BaseJudge) -> AuditCommandApp:
     return build_audit_command_app(command, judge)
 
 
@@ -48,7 +48,7 @@ def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
     # Every subject holds the empty string, so the judge fails on every unit.
     judge = PickyJudge(refuses="")
 
-    exit_code = _run(_app(command, judge), tmp_path)
+    exit_code = _run(_build_app(command, judge), tmp_path)
 
     captured = capsys.readouterr()
     *skipping_lines, last_line = captured.err.splitlines()
@@ -80,7 +80,7 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
     judge = PickyJudge(refuses="poison")
     judge.default = answer
 
-    exit_code = _run(_app(command, judge), tmp_path)
+    exit_code = _run(_build_app(command, judge), tmp_path)
 
     captured = capsys.readouterr()
     assert exit_code == expected_exit_code
