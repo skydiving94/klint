@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.exit_code import ExitCode
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommand, AuditCommandApp
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from klint.core.interfaces.judge import BaseJudge
 from tests.support.builders import build_audit_command_app, make_settings, write_text
 from tests.support.fakes import FakeJudge, PickyJudge
@@ -38,7 +38,7 @@ def _run(app: AuditCommandApp, target: Path) -> ExitCode:
     ("command", "unit_paths"),
     [
         (FILE_AUDIT_COMMAND, ("pkg/a.py", "poison.py")),
-        (PROJECT_AUDIT_COMMAND, ("", "pkg")),
+        (STRUCTURE_AUDIT_COMMAND, ("", "pkg")),
     ],
 )
 def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
@@ -64,7 +64,7 @@ def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
     )
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND])
+@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
 @pytest.mark.parametrize(
     ("answer", "expected_exit_code"),
     [("fail", ExitCode.PROBLEMS_FOUND), ("pass", ExitCode.NO_PROBLEMS)],
@@ -90,7 +90,7 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
     assert skipping_line.endswith(": judge is down")
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND])
+@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
 def test_run_with_no_unit_to_audit_exits_0(
     tmp_path: Path,
     fake_judge: type[FakeJudge],

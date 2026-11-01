@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommand
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import build_audit_command_app, write_text
 from tests.support.fakes import FakeJudge
 
@@ -23,7 +23,7 @@ EXPECTED_CRITERIA = {
 }
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND])
+@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
 def test_both_commands_send_these_criteria_to_the_judge_in_this_order(
     tmp_path: Path, fake_judge: type[FakeJudge], command: AuditCommand
 ) -> None:

@@ -8,15 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli import basic_audit, project_audit
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli import file_audit, structure_audit
 from klint.cli.exit_code import ExitCode
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import (
     AuditCommand,
     parse_command_arguments,
     run_command_from_shell,
 )
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -33,7 +33,7 @@ from tests.support.stub_system_one_server import StubSystemOneServer
     ("command", "audited_path_parts", "rule_id"),
     [
         (FILE_AUDIT_COMMAND, ("a.py",), "for_files"),
-        (PROJECT_AUDIT_COMMAND, (), "for_directories"),
+        (STRUCTURE_AUDIT_COMMAND, (), "for_directories"),
     ],
 )
 def test_both_commands_take_the_same_options(
@@ -73,7 +73,7 @@ def test_both_commands_take_the_same_options(
 
 @pytest.mark.parametrize(
     ("command", "argument_name"),
-    [(FILE_AUDIT_COMMAND, "file"), (PROJECT_AUDIT_COMMAND, "directory")],
+    [(FILE_AUDIT_COMMAND, "file"), (STRUCTURE_AUDIT_COMMAND, "directory")],
 )
 def test_each_command_names_its_path_argument_in_the_help(
     command: AuditCommand, argument_name: str, capsys: pytest.CaptureFixture[str]
@@ -126,7 +126,7 @@ def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_o
     assert error_line.startswith("[klint] Error: Audit target does not exist")
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND])
+@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
 @pytest.mark.parametrize(
     ("judge_choice", "extra_argv", "expected_exit_code"),
     [
@@ -156,7 +156,7 @@ def test_exit_code_says_whether_a_failure_was_found(
     assert exit_code == expected_exit_code
 
 
-@pytest.mark.parametrize("cli_main", [basic_audit.cli_main, project_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
 def test_command_that_cannot_run_exits_with_status_2(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -173,7 +173,7 @@ def test_command_that_cannot_run_exits_with_status_2(
     assert "does not exist" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("cli_main", [basic_audit.cli_main, project_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
 def test_command_line_that_cannot_be_parsed_exits_with_status_2(
     monkeypatch: pytest.MonkeyPatch, cli_main: Callable[[], int]
 ) -> None:
@@ -185,7 +185,7 @@ def test_command_line_that_cannot_be_parsed_exits_with_status_2(
     assert stopped.value.code == ExitCode.RUN_ERROR
 
 
-@pytest.mark.parametrize("cli_main", [basic_audit.cli_main, project_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
 def test_unknown_mode_stops_the_command_before_any_judge_is_built(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommand
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import (
     FILE_RULE,
     build_audit_command_app,
@@ -110,7 +110,9 @@ def test_project_audit_tags_the_files_of_a_directory_alike(tmp_path: Path) -> No
     write_text(tmp_path / "repo" / "db.py", "import sqlalchemy\n")
     write_text(tmp_path / "repo" / "view.js", "import React from 'react';\n")
 
-    content_to_rule_ids = _audit_files(tmp_path / "repo", rules, PROJECT_AUDIT_COMMAND)
+    content_to_rule_ids = _audit_files(
+        tmp_path / "repo", rules, STRUCTURE_AUDIT_COMMAND
+    )
 
     # Only the file that imports React is asked the frontend rule.
     assert content_to_rule_ids == {"view.js (lines=1)": {"frontend_file"}}

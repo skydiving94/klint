@@ -11,9 +11,9 @@ from injector import Binder
 
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.catalog.domain_neutral.units.file import AuditableFileUnit
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.unit import AuditableUnit, UnitContext
 from tests.support.builders import (
@@ -92,11 +92,13 @@ def test_findings_on_files_directories_and_file_metadata_share_their_keys(
     )
     settings = make_settings(built_in_rule_packs=[rules], fallback_rule_packs=[rules])
     file_app = build_audit_command_app(FILE_AUDIT_COMMAND, fake_judge(), settings)
-    project_app = build_audit_command_app(PROJECT_AUDIT_COMMAND, fake_judge(), settings)
+    structure_app = build_audit_command_app(
+        STRUCTURE_AUDIT_COMMAND, fake_judge(), settings
+    )
 
     findings = [
         *_run_findings(file_app, project, capsys),
-        *_run_findings(project_app, project, capsys),
+        *_run_findings(structure_app, project, capsys),
     ]
 
     rule_id_to_keys = {finding["rule_id"]: list(finding) for finding in findings}

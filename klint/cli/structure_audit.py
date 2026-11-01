@@ -6,7 +6,7 @@ import sys
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
 from klint.cli.runner import AuditCommand, run_command_from_shell
 
-PROJECT_AUDIT_COMMAND = AuditCommand(
+STRUCTURE_AUDIT_COMMAND = AuditCommand(
     name="klint-project",
     description="klint - recursive project structure audit CLI",
     target_argument_name="directory",
@@ -17,7 +17,7 @@ PROJECT_AUDIT_COMMAND = AuditCommand(
 
 
 def cli_main() -> int:
-    return asyncio.run(run_command_from_shell(PROJECT_AUDIT_COMMAND))
+    return asyncio.run(run_command_from_shell(STRUCTURE_AUDIT_COMMAND))
 
 
 if __name__ == "__main__":

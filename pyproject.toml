@@ -37,8 +37,8 @@ dev = [
 ]
 
 [project.scripts]
-klint = "klint.cli.basic_audit:cli_main"
-klint-project = "klint.cli.project_audit:cli_main"
+klint = "klint.cli.file_audit:cli_main"
+klint-project = "klint.cli.structure_audit:cli_main"
 klint-change-summary = "klint.cli.change_summary_audit:cli_main"
 
 [tool.setuptools.packages.find]
