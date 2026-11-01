@@ -23,7 +23,7 @@ from klint.infra.system_one.system_one_format import (
 disable_progress_bars()
 
 
-class LocalKevJudge(BaseJudge):
+class InProcessSystemOneJudge(BaseJudge):
     def __init__(self, checkpoint: str) -> None:
         self._checkpoint = checkpoint
         self._server: Server | None = None

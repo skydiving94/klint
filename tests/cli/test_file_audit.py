@@ -21,7 +21,7 @@ from klint.core.interfaces.judge import BaseJudge
 from klint.core.models.judge_exchange import JudgeQuestion
 from klint.core.models.question_type import QuestionType
 from klint.core.models.unit import AuditableUnit
-from klint.infra.system_one.remote import RemoteSystemOneJudge
+from klint.infra.system_one.http_judge import HttpSystemOneJudge
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -548,7 +548,7 @@ def test_file_the_judge_server_fails_on_is_skipped_and_stops_the_run(
     target = tmp_path / "a.py"
     target.write_text("x = 1\n", encoding="utf-8")
     system_one_server.response_status = 503
-    judge = RemoteSystemOneJudge(model_name="fake", base_url=system_one_server.base_url)
+    judge = HttpSystemOneJudge(model_name="fake", base_url=system_one_server.base_url)
 
     exit_code = _run(_file_app(judge), target, "--json")
 

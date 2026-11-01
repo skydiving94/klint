@@ -40,7 +40,7 @@ from klint.infra.language_to_file_extensions_loader.language_table_loader import
 )
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
-from klint.infra.system_one.remote import RemoteSystemOneJudge
+from klint.infra.system_one.http_judge import HttpSystemOneJudge
 from klint.infra.tag_detection_loader.tag_table_loader import load_tag_detection_table
 
 # The language each file extension stands for, loaded once per injector.
@@ -84,11 +84,13 @@ class KlintModule(Module):
         # A single binding, so that the remote mode never loads the model.
         match settings.judge_mode:
             case JudgeMode.LOCAL:
-                from klint.infra.system_one.local import LocalKevJudge
+                from klint.infra.system_one.in_process_judge import (
+                    InProcessSystemOneJudge,
+                )
 
-                return LocalKevJudge(checkpoint=settings.model_name)
+                return InProcessSystemOneJudge(checkpoint=settings.model_name)
             case JudgeMode.REMOTE:
-                return RemoteSystemOneJudge(
+                return HttpSystemOneJudge(
                     model_name=settings.model_name,
                     base_url=settings.judge_base_url,
                     api_key=settings.judge_api_key,

@@ -7,7 +7,7 @@ import pytest
 
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
 from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
-from klint.infra.system_one.remote import RemoteSystemOneJudge
+from klint.infra.system_one.http_judge import HttpSystemOneJudge
 from tests.support.builders import build_judge_request
 from tests.support.stub_system_one_server import StubSystemOneServer
 
@@ -17,14 +17,14 @@ REQUEST = build_judge_request("x = 1\n", "first", "second")
 def _ask(
     server: StubSystemOneServer, request: JudgeRequest = REQUEST
 ) -> list[JudgeAnswer]:
-    judge = RemoteSystemOneJudge(model_name="kev-latest", base_url=server.base_url)
+    judge = HttpSystemOneJudge(model_name="kev-latest", base_url=server.base_url)
     return asyncio.run(judge.answer(request))
 
 
 def test_request_is_posted_to_the_systemone_endpoint_in_its_format(
     system_one_server: StubSystemOneServer,
 ) -> None:
-    judge = RemoteSystemOneJudge(
+    judge = HttpSystemOneJudge(
         model_name="kev-latest",
         base_url=f"{system_one_server.base_url}/",
         api_key="secret",
@@ -149,7 +149,7 @@ def test_endpoint_that_does_not_answer_in_time_is_an_error(
     system_one_server: StubSystemOneServer,
 ) -> None:
     system_one_server.response_delay_seconds = 0.2
-    judge = RemoteSystemOneJudge(
+    judge = HttpSystemOneJudge(
         model_name="kev-latest",
         base_url=system_one_server.base_url,
         timeout_seconds=0.05,

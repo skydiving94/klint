@@ -10,7 +10,7 @@ from klint.infra.system_one.system_one_format import (
 )
 
 
-class RemoteSystemOneJudge(BaseJudge):
+class HttpSystemOneJudge(BaseJudge):
     """Asks a model served over HTTP, at the System One endpoint."""
 
     def __init__(

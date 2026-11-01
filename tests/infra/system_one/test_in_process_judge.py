@@ -15,7 +15,7 @@ from klint.core.interfaces.judge import BaseJudge
 from klint.core.models.judge_exchange import JudgeAnswer
 from tests.support.builders import build_judge_request
 
-LOCAL_MODULE = "klint.infra.system_one.local"
+IN_PROCESS_JUDGE_MODULE = "klint.infra.system_one.in_process_judge"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -49,7 +49,7 @@ class FakeRuntime:
         self.response_has_answers = True
 
     def modules(self) -> dict[str, ModuleType]:
-        """Return stand-in modules for everything the local judge imports."""
+        """Return stand-in modules for everything the in-process judge imports."""
         runtime = self
 
         class Checkpoint:
@@ -105,13 +105,15 @@ def runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeRuntime]:
     # Importing the judge sets these; setting them here lets pytest undo it.
     monkeypatch.setenv("HF_HUB_DISABLE_PROGRESS_BARS", "1")
     monkeypatch.setenv("TQDM_DISABLE", "1")
-    sys.modules.pop(LOCAL_MODULE, None)
+    sys.modules.pop(IN_PROCESS_JUDGE_MODULE, None)
     yield fake
-    sys.modules.pop(LOCAL_MODULE, None)
+    sys.modules.pop(IN_PROCESS_JUDGE_MODULE, None)
 
 
-def _local_judge(checkpoint: str = "org/model") -> BaseJudge:
-    judge = importlib.import_module(LOCAL_MODULE).LocalKevJudge(checkpoint=checkpoint)
+def _in_process_judge(checkpoint: str = "org/model") -> BaseJudge:
+    judge = importlib.import_module(IN_PROCESS_JUDGE_MODULE).InProcessSystemOneJudge(
+        checkpoint=checkpoint
+    )
     assert isinstance(judge, BaseJudge)
     return judge
 
@@ -121,7 +123,7 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
 ) -> None:
     request = build_judge_request("x = 1", "rule_a", "rule_b")
 
-    answers = asyncio.run(_local_judge().answer(request))
+    answers = asyncio.run(_in_process_judge().answer(request))
 
     # The keys and values kev has always been sent.
     criteria = PRACTICE_SCALE.map_choice_key_to_criterion()
@@ -141,7 +143,7 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
 
 
 def test_model_is_loaded_once_and_reused(runtime: FakeRuntime) -> None:
-    judge = _local_judge()
+    judge = _in_process_judge()
 
     async def ask_three_times() -> None:
         request = build_judge_request("x", "r")
@@ -172,11 +174,11 @@ def test_load_options_depend_on_the_device(
 ) -> None:
     runtime.device = device
 
-    asyncio.run(_local_judge().answer(build_judge_request("x", "r")))
+    asyncio.run(_in_process_judge().answer(build_judge_request("x", "r")))
 
     assert runtime.load_options == [expected]
 
 
 def test_response_without_answers_gives_no_answers(runtime: FakeRuntime) -> None:
     runtime.response_has_answers = False
-    assert asyncio.run(_local_judge().answer(build_judge_request("x", "r"))) == []
+    assert asyncio.run(_in_process_judge().answer(build_judge_request("x", "r"))) == []
