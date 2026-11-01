@@ -36,6 +36,18 @@ def warn_about_unparseable_file(path: Path, error: Exception) -> None:
     )
 
 
+def describe_deprecated_name(old_name: str, new_name: str, place: str = "") -> str:
+    """Return the message saying ``old_name`` still works, for now, as ``new_name``.
+
+    ``place`` says where the old name was found, such as "in 'klint.json'".
+    """
+    found_at = f" {place}" if place else ""
+    return (
+        f"'{old_name}'{found_at} is deprecated and stops working in the next "
+        f"release; use '{new_name}' instead"
+    )
+
+
 @contextmanager
 def leave_out_file_on_failure(path: Path) -> Iterator[None]:
     """Turn a failure to extract the file at ``path`` into a warning.

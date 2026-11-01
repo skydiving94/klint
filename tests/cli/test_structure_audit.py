@@ -1,4 +1,4 @@
-"""The klint-project command end to end, with the fake judge in place of the model."""
+"""The klint-structure command end to end, with the fake judge in place of the model."""
 
 import asyncio
 import json
@@ -20,6 +20,7 @@ from klint.catalog.code.python.extraction.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.cli import klint_project_alias
 from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
@@ -35,6 +36,7 @@ from tests.support.builders import (
 )
 from tests.support.fakes import FakeJudge, PickyJudge
 from tests.support.paths import MOCK_PROJECT, SnapshotAsserter
+from tests.support.stub_system_one_server import StubSystemOneServer
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -136,7 +138,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert captured.err.splitlines() == [
-        f"[klint-project] Warning: File '{locked}' is left out: "
+        f"[klint-structure] Warning: File '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
     # The directory is described to the judge without that file.
@@ -181,7 +183,7 @@ def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert captured.err.splitlines() == [
-        f"[klint-project] Warning: File '{broken}' is left out: "
+        f"[klint-structure] Warning: File '{broken}' is left out: "
         "it cannot be processed (the extractor is broken on b.py)"
     ]
     ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
@@ -206,7 +208,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(repo)]
     assert captured.err.splitlines() == [
-        f"[klint-project] Warning: Directory '{locked}' is left out: "
+        f"[klint-structure] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
     ((content, _rule_ids),) = judge.subject_to_asked_rule_ids().items()
@@ -244,7 +246,7 @@ def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert captured.err.splitlines() == [
-        f"[klint-project] Warning: File '{init_file}' is listed by name and line "
+        f"[klint-structure] Warning: File '{init_file}' is listed by name and line "
         "count only: it cannot be parsed ('[' was never closed, line 1)"
     ]
     # The judge is told the file could not be parsed, not that it is empty.
@@ -391,7 +393,7 @@ def _run_main(
 ) -> int:
     """Run the command as the shell would, but with the given settings."""
     monkeypatch.setattr(AppSettings, "from_env", lambda *_args: settings)
-    monkeypatch.setattr(sys, "argv", ["klint-project", str(target)])
+    monkeypatch.setattr(sys, "argv", ["klint-structure", str(target)])
     return asyncio.run(run_command_from_shell(STRUCTURE_AUDIT_COMMAND))
 
 
@@ -407,7 +409,31 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     assert exit_code == ExitCode.RUN_ERROR
     assert captured.out == ""
     assert captured.err.startswith(
-        "[klint-project] Error: Language-to-file-extensions file"
+        "[klint-structure] Error: Language-to-file-extensions file"
     )
     assert str(broken) in captured.err
     assert captured.err.count("\n") == 1
+
+
+def test_old_command_name_runs_the_structure_audit_with_a_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    shell_env: dict[str, str],
+    capsys: Capture,
+    system_one_server: StubSystemOneServer,
+) -> None:
+    package = write_text(tmp_path / "pkg" / "a.py", "x = 1\n").parent
+    shell_env["KEV_MODE"] = "remote"
+    shell_env["KEV_BASE_URL"] = system_one_server.base_url
+    monkeypatch.setattr(sys, "argv", ["klint-project", str(package), "--json"])
+
+    exit_code = klint_project_alias.cli_main()
+
+    captured = capsys.readouterr()
+    assert exit_code == ExitCode.NO_PROBLEMS
+    assert captured.err.splitlines() == [
+        "[klint-structure] Warning: 'klint-project' is deprecated and stops "
+        "working in the next release; use 'klint-structure' instead"
+    ]
+    assert json.loads(captured.out)["examined_directories"] == [str(package)]
+    assert len(system_one_server.received) == 1

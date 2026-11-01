@@ -6,7 +6,7 @@ inputs:
     required: false
     default: "."
   mode:
-    description: "Audit mode: 'file' (klint) or 'project' (klint-project)"
+    description: "Audit mode: 'file' (klint) or 'project' (klint-structure)"
     required: false
     default: "file"
   min_confidence:
@@ -68,7 +68,7 @@ runs:
       run: |
         CLI_CMD="klint"
         if [ "${{ inputs.mode }}" = "project" ]; then
-          CLI_CMD="klint-project"
+          CLI_CMD="klint-structure"
         fi
         RULES_FLAG=""
         if [ -n "${{ inputs.rules }}" ]; then

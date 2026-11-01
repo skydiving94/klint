@@ -140,7 +140,7 @@ class AppSettings:
         default_factory=_locate_built_in_fallback_rule_packs
     )
     # A file that replaces every built-in pack for one command, klint or
-    # klint-project; its rules are then asked about every file.
+    # klint-structure; its rules are then asked about every file.
     file_contents_rule_pack_override: Path | None = None
     project_structure_rule_pack_override: Path | None = None
     # The project's klint.json, and the files whose rules merge over the
