@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.models.judge_exchange import JudgeAnswer
 from tests.support.builders import build_judge_request

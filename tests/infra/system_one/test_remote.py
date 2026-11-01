@@ -5,7 +5,7 @@ import urllib.error
 
 import pytest
 
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
 from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
 from klint.infra.system_one.remote import RemoteSystemOneJudge
 from tests.support.builders import build_judge_request

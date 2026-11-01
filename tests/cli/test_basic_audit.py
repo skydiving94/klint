@@ -11,7 +11,7 @@ import pytest
 from injector import Binder
 
 from klint.app.settings import AppSettings
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.exit_code import ExitCode

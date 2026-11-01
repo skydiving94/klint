@@ -1,8 +1,10 @@
-from klint.catalog.code.common.extraction.file_metadata_base import (
+from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
     list_binary_file,
 )
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.units.file_metadata import (
+    AuditableFileMetadataUnit,
+)
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 
 

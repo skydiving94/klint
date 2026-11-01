@@ -3,7 +3,9 @@
 from pathlib import Path
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.units.file_metadata import (
+    AuditableFileMetadataUnit,
+)
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule

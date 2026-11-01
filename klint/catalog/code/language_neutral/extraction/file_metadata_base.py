@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.units.file_metadata import (
+    AuditableFileMetadataUnit,
+)
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 
 

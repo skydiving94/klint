@@ -145,7 +145,7 @@ type = "independence"
 modules = ["klint.catalog.code", "klint.catalog.change_summary"]
 
 [[tool.importlinter.contracts]]
-name = "Catalog: code shared across languages does not import one language"
+name = "Catalog: language-neutral code does not import one language"
 type = "forbidden"
-source_modules = ["klint.catalog.code.common"]
+source_modules = ["klint.catalog.code.language_neutral"]
 forbidden_modules = ["klint.catalog.code.python"]

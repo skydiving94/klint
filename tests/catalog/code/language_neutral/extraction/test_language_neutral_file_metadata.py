@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
+from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
 )
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile

@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.units.file_metadata import (
+    AuditableFileMetadataUnit,
+)
 from klint.catalog.code.python.extraction.file_metadata import (
     PythonFileMetadataExtractor,
 )

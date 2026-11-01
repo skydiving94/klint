@@ -3,29 +3,37 @@
 from injector import Binder, Module, ProviderOf, inject, provider
 
 from klint.catalog.code import python
-from klint.catalog.code.common.extraction.directory_factory import (
+from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extraction.file_contents import FileContentsExtractor
-from klint.catalog.code.common.extraction.file_metadata_base import (
+from klint.catalog.code.language_neutral.extraction.file_contents import (
+    FileContentsExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.common.extraction.language_neutral_directory_factory import (
+from klint.catalog.code.language_neutral.extraction.language_neutral_directory_factory import (  # noqa: E501
     LanguageNeutralDirectoryUnitFactory,
 )
-from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
+from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
-from klint.catalog.code.common.extraction.project_structure import (
+from klint.catalog.code.language_neutral.extraction.project import (
+    RecursiveProjectExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.project_structure import (
     ProjectStructureExtractor,
 )
-from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.common.renderers.directory import DirectoryRenderer
-from klint.catalog.code.common.renderers.file_metadata import FileMetadataRenderer
-from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.renderers.directory import DirectoryRenderer
+from klint.catalog.code.language_neutral.renderers.file_metadata import (
+    FileMetadataRenderer,
+)
+from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.file_metadata import (
+    AuditableFileMetadataUnit,
+)
 from klint.catalog.code.python.extraction.file_metadata import (
     PythonFileMetadataExtractor,
 )

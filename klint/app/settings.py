@@ -19,23 +19,25 @@ _DEFAULT_BASE_URL = "http://127.0.0.1:8009"
 # Built-in rule packs, relative to klint/resources/catalog/ and merged in this
 # order. Each pack states in its header the files it loads for.
 _BUILT_IN_RULE_PACKS = (
-    "code/common/backend.json",
+    "code/language_neutral/backend.json",
     "code/typescript/react.json",
-    "code/common/structure.json",
+    "code/language_neutral/structure.json",
     "code/python/project_structure.json",
 )
 # The packs a file whose language is not identified is asked, unless the
 # config file names its own.
 _BUILT_IN_FALLBACK_RULE_PACKS = (
-    "code/common/backend.json",
-    "code/common/structure.json",
+    "code/language_neutral/backend.json",
+    "code/language_neutral/structure.json",
 )
 # The built-in list of languages and their file extensions, relative to
 # klint/resources/catalog/.
-_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = "code/common/language_to_file_extensions.json"
+_BUILT_IN_LANGUAGE_TO_FILE_EXTENSIONS = (
+    "code/language_neutral/language_to_file_extensions.json"
+)
 # The built-in tables that tell which side of a project a file belongs to,
 # relative to klint/resources/catalog/.
-_BUILT_IN_TAG_DETECTION = "code/common/tag_detection.json"
+_BUILT_IN_TAG_DETECTION = "code/language_neutral/tag_detection.json"
 
 
 @dataclass(frozen=True)
