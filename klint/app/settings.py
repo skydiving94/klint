@@ -21,14 +21,14 @@ _DEFAULT_BASE_URL = "http://127.0.0.1:8009"
 _BUILT_IN_RULE_PACKS = (
     "code/language_neutral/backend.json",
     "code/typescript/react.json",
-    "code/language_neutral/structure.json",
-    "code/python/project_structure.json",
+    "code/language_neutral/file_design.json",
+    "code/python/package_structure.json",
 )
 # The packs a file whose language is not identified is asked, unless the
 # config file names its own.
 _BUILT_IN_FALLBACK_RULE_PACKS = (
     "code/language_neutral/backend.json",
-    "code/language_neutral/structure.json",
+    "code/language_neutral/file_design.json",
 )
 # The built-in list of languages and their file extensions, relative to
 # klint/resources/catalog/.

@@ -26,7 +26,7 @@ from tests.support.builders import (
 from tests.support.paths import (
     BUILT_IN_RULE_PACKS,
     FALLBACK_RULE_PACKS,
-    PYTHON_PROJECT_RULE_PACK,
+    PYTHON_PACKAGE_RULE_PACK,
     REACT_RULE_PACK,
 )
 
@@ -115,7 +115,7 @@ def test_built_in_packs_are_chosen_by_the_language_of_the_file() -> None:
     loader = _built_in_loader()
     shared = set(_rule_ids_in(*FALLBACK_RULE_PACKS))
     react = set(_rule_ids_in(REACT_RULE_PACK))
-    python_project = set(_rule_ids_in(PYTHON_PROJECT_RULE_PACK))
+    python_project = set(_rule_ids_in(PYTHON_PACKAGE_RULE_PACK))
 
     assert set(_load(loader, PYTHON)) == shared | python_project
     assert set(_load(loader, TYPESCRIPT)) == shared | react
@@ -565,7 +565,7 @@ def test_malformed_languages_or_tags_are_rejected(
 
 
 def test_built_in_python_project_rules_are_limited_to_python() -> None:
-    rules = _load(_loader([PYTHON_PROJECT_RULE_PACK], (), KNOWN_LANGUAGES), PYTHON)
+    rules = _load(_loader([PYTHON_PACKAGE_RULE_PACK], (), KNOWN_LANGUAGES), PYTHON)
 
     assert rules
     assert all(rule.languages == ["python"] for rule in rules.values())
