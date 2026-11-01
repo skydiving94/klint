@@ -62,15 +62,18 @@ def test_old_setting_name_in_klint_json_still_applies_with_a_warning(
     ]
 
 
-def test_new_setting_name_wins_over_the_old_one_set_beside_it(
-    shell_env: dict[str, str], tmp_path: Path
+@pytest.mark.parametrize(
+    ("new_value", "expected"), [("local", JudgeMode.LOCAL), ("", JudgeMode.REMOTE)]
+)
+def test_new_setting_name_wins_over_the_old_one_unless_it_is_empty(
+    shell_env: dict[str, str], tmp_path: Path, new_value: str, expected: JudgeMode
 ) -> None:
-    shell_env.update({"KEV_MODE": "remote", "KLINT_JUDGE_MODE": "local"})
+    shell_env.update({"KEV_MODE": "remote", "KLINT_JUDGE_MODE": new_value})
 
     with pytest.warns(KlintWarning, match="'KEV_MODE' in the environment"):
         settings = AppSettings.from_env(tmp_path, None)
 
-    assert settings.judge_mode is JudgeMode.LOCAL
+    assert settings.judge_mode is expected
 
 
 def test_old_rule_replacement_names_still_apply_with_a_warning(

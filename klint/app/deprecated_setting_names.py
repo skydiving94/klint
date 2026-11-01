@@ -21,7 +21,8 @@ def translate_deprecated_setting_names(
     """Return ``key_to_value`` with each old setting name replaced by its new one.
 
     Each old name found is reported as a KlintWarning that names ``place``,
-    where it was set. When the new name is set as well, its value is kept.
+    where it was set. When the new name is set as well, its value is kept;
+    an empty value counts as not set.
     """
     translated = {
         key: value
@@ -33,5 +34,6 @@ def translate_deprecated_setting_names(
         if new_key is None:
             continue
         warn_about_deprecated_name(key, new_key, place)
-        translated.setdefault(new_key, value)
+        if not translated.get(new_key):
+            translated[new_key] = value
     return translated
