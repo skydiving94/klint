@@ -9,7 +9,7 @@ from klint.catalog.code.language_neutral.units.directory_unit import (
 )
 from klint.core.models.location import Location
 from tests.support.builders import (
-    build_project_extractor,
+    build_directory_tree_extractor,
     build_target_scanner,
     extract_python_project,
 )
@@ -17,7 +17,7 @@ from tests.support.paths import MOCK_PROJECT
 
 
 @pytest.mark.usefixtures("in_repo_root")
-def test_project_extractor_builds_one_root_unit() -> None:
+def test_directory_tree_extractor_builds_one_root_unit() -> None:
     unit = extract_python_project(MOCK_PROJECT)
 
     assert unit.unit_type == "project_directory"
@@ -29,8 +29,8 @@ def test_project_extractor_builds_one_root_unit() -> None:
 
 
 @pytest.mark.usefixtures("in_repo_root")
-def test_project_extractor_keeps_nothing_between_extractions() -> None:
-    extractor = build_project_extractor()
+def test_directory_tree_extractor_keeps_nothing_between_extractions() -> None:
+    extractor = build_directory_tree_extractor()
     scanner = build_target_scanner()
 
     asyncio.run(extractor.extract(scanner.scan_directory(MOCK_PROJECT)))

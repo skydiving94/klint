@@ -9,6 +9,9 @@ from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
+)
 from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
@@ -17,9 +20,6 @@ from klint.catalog.code.language_neutral.extraction.language_neutral_directory_f
 )
 from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
-)
-from klint.catalog.code.language_neutral.extraction.project import (
-    RecursiveProjectExtractor,
 )
 from klint.catalog.code.language_neutral.units.directory_unit import (
     AuditableDirectoryUnit,
@@ -40,7 +40,7 @@ from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator i
 )
 from tests.support.builders import (
     build_target_scanner,
-    extract_project,
+    extract_directory_tree,
     list_judge_subjects,
     write_text,
 )
@@ -68,7 +68,7 @@ def _extract(
     language_to_directory_unit_factory: dict[str, BaseDirectoryUnitFactory],
 ) -> AuditableDirectoryUnit:
     """Extract ``target`` with these bindings and the language-neutral fallbacks."""
-    extractor = RecursiveProjectExtractor(
+    extractor = DirectoryTreeExtractor(
         TraitsBasedExtractionDelegator(
             language_to_file_metadata_extractor, LanguageNeutralFileMetadataExtractor()
         ),
@@ -84,7 +84,7 @@ def test_each_file_is_read_by_the_extractor_for_its_language(tmp_path: Path) -> 
     for name in ("a.py", "b.java", "c.txt"):
         write_text(tmp_path / "pkg" / name, "import os\n")
 
-    files = extract_project(tmp_path / "pkg").files
+    files = extract_directory_tree(tmp_path / "pkg").files
 
     # All three hold the same text; only the Python file is read as Python.
     assert [(f.file_name, f.language, f.imports) for f in files] == [
@@ -101,7 +101,7 @@ def test_binary_file_is_listed_by_name_only_whatever_its_language(
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "blob.py").write_bytes(b"import os\n\x00\x01\n")
 
-    (blob,) = extract_project(tmp_path / "pkg").files
+    (blob,) = extract_directory_tree(tmp_path / "pkg").files
 
     assert (blob.file_name, blob.line_count, blob.language) == ("blob.py", None, None)
     assert blob.imports == []
@@ -133,7 +133,7 @@ def test_directory_holding_no_python_is_not_described_as_a_python_package(
     write_text(tmp_path / "docs" / "view.tsx", "export {};\n")
     write_text(tmp_path / "docs" / "guide" / "intro.md", "# Intro\n")
 
-    root = extract_project(tmp_path / "docs")
+    root = extract_directory_tree(tmp_path / "docs")
     (guide,) = root.subdirectories
     subjects = list_judge_subjects(tmp_path / "docs", PROJECT_STRUCTURE_KIND_ID)
 
@@ -153,7 +153,7 @@ def test_only_directories_holding_python_are_described_as_python_packages(
     write_text(tmp_path / "repo" / "app" / "main.py", "x = 1\n")
     write_text(tmp_path / "repo" / "docs" / "intro.md", "# Intro\n")
 
-    root = extract_project(tmp_path / "repo")
+    root = extract_directory_tree(tmp_path / "repo")
     app, docs = root.subdirectories
 
     # The root holds Python further down, so it is a package too.

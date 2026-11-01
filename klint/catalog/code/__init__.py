@@ -6,6 +6,9 @@ from klint.catalog.code import python
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
+)
 from klint.catalog.code.language_neutral.extraction.file_contents import (
     FileContentsExtractor,
 )
@@ -17,9 +20,6 @@ from klint.catalog.code.language_neutral.extraction.language_neutral_directory_f
 )
 from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
-)
-from klint.catalog.code.language_neutral.extraction.project import (
-    RecursiveProjectExtractor,
 )
 from klint.catalog.code.language_neutral.extraction.project_structure import (
     ProjectStructureExtractor,
@@ -164,13 +164,13 @@ class CodeSuiteModule(Module):
         )
 
     @provider
-    def provide_project_extractor(
+    def provide_directory_tree_extractor(
         self,
         language_to_file_metadata_extractor: dict[str, BaseFileMetadataExtractor],
         language_to_directory_unit_factory: dict[str, BaseDirectoryUnitFactory],
         file_traits_identifier: BaseFileTraitsIdentifier,
-    ) -> RecursiveProjectExtractor:
-        return RecursiveProjectExtractor(
+    ) -> DirectoryTreeExtractor:
+        return DirectoryTreeExtractor(
             TraitsBasedExtractionDelegator(
                 language_to_file_metadata_extractor,
                 fallback_extractor=LanguageNeutralFileMetadataExtractor(),

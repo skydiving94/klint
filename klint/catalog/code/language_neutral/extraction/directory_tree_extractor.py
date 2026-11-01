@@ -22,7 +22,7 @@ from klint.core.models.scanned_tree import ScannedDirectory, ScannedFile
 from klint.core.models.unit_traits import UnitTraits
 
 
-class RecursiveProjectExtractor:
+class DirectoryTreeExtractor:
     """Builds one composite directory unit for a scanned tree.
 
     The unit holds the metadata of the files directly in the scanned

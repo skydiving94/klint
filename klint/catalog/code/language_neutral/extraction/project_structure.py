@@ -4,8 +4,8 @@ from collections.abc import Iterator
 
 from injector import inject
 
-from klint.catalog.code.language_neutral.extraction.project import (
-    RecursiveProjectExtractor,
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
 )
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.scanned_tree import ScannedTarget
@@ -19,8 +19,8 @@ class ProjectStructureExtractor(BaseUnitExtractor[ScannedTarget]):
     """
 
     @inject
-    def __init__(self, project_extractor: RecursiveProjectExtractor) -> None:
-        self._project_extractor = project_extractor
+    def __init__(self, directory_tree_extractor: DirectoryTreeExtractor) -> None:
+        self._project_extractor = directory_tree_extractor
 
     async def extract(self, audit_input: ScannedTarget) -> list[AuditableUnit]:
         if audit_input.directory is None:

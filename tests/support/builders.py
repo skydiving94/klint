@@ -10,8 +10,8 @@ from klint.app.judge_mode import JudgeMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import Override
-from klint.catalog.code.language_neutral.extraction.project import (
-    RecursiveProjectExtractor,
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
 )
 from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
@@ -183,20 +183,20 @@ def build_target_scanner() -> TargetScanner:
     )
 
 
-def build_project_extractor() -> RecursiveProjectExtractor:
-    """Return klint's project extractor, built the way the commands build it."""
-    return create_command_injector(make_settings()).get(RecursiveProjectExtractor)
+def build_directory_tree_extractor() -> DirectoryTreeExtractor:
+    """Return klint's directory tree extractor, built the way the commands build it."""
+    return create_command_injector(make_settings()).get(DirectoryTreeExtractor)
 
 
-def extract_project(target: Path) -> AuditableDirectoryUnit:
+def extract_directory_tree(target: Path) -> AuditableDirectoryUnit:
     """Scan ``target``, extract it, and return the directory unit for its root."""
     scanned_target = build_target_scanner().scan_directory(target)
-    return asyncio.run(build_project_extractor().extract(scanned_target))
+    return asyncio.run(build_directory_tree_extractor().extract(scanned_target))
 
 
 def extract_python_project(target: Path) -> AuditablePythonPackageUnit:
     """Extract ``target``, which holds Python, and return its root package unit."""
-    unit = extract_project(target)
+    unit = extract_directory_tree(target)
     assert isinstance(unit, AuditablePythonPackageUnit)
     return unit
 
