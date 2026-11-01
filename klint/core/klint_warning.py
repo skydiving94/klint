@@ -48,6 +48,11 @@ def describe_deprecated_name(old_name: str, new_name: str, place: str = "") -> s
     )
 
 
+def warn_about_deprecated_name(old_name: str, new_name: str, place: str = "") -> None:
+    """Warn that ``old_name`` was used; it still works, for now, as ``new_name``."""
+    _warn(describe_deprecated_name(old_name, new_name, place))
+
+
 @contextmanager
 def leave_out_file_on_failure(path: Path) -> Iterator[None]:
     """Turn a failure to extract the file at ``path`` into a warning.

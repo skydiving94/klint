@@ -31,7 +31,7 @@ def _bar(color: str) -> str:
 
 
 def _run_report(app: AuditCommandApp, target: Path, capsys: Capture) -> str:
-    asyncio.run(app.run([str(target), "--all"]))
+    asyncio.run(app.run([str(target), "--all-answers"]))
     return capsys.readouterr().out
 
 
@@ -106,7 +106,7 @@ def test_answer_of_another_scale_is_shown_as_its_scale_says(
         NOTES_COMMAND, fake_judge(default=answer), overrides=[add_the_notes_suite]
     )
 
-    code = asyncio.run(app.run([str(tmp_path), "--all"]))
+    code = asyncio.run(app.run([str(tmp_path), "--all-answers"]))
     report = capsys.readouterr().out
 
     lines = [line for line in report.splitlines() if "polite_note" in line]

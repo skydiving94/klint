@@ -52,7 +52,7 @@ def test_both_commands_take_the_same_options(
     # No rule but the custom ones, each answered "pass" with low confidence.
     settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
     app = build_audit_command_app(command, fake_judge(confidence=0.4), settings)
-    argv = [str(target), "--json", "--rules", str(custom), "--all"]
+    argv = [str(target), "--json", "--rules", str(custom), "--all-answers"]
 
     asyncio.run(app.run(argv))
     every_answer = json.loads(capsys.readouterr().out)
@@ -69,6 +69,27 @@ def test_both_commands_take_the_same_options(
         "unit_id_to_roll_up_status": {audited: "no_problem"},
         "findings": [],
     }
+
+
+def test_old_all_flag_still_shows_every_answer_with_a_warning(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    app = build_audit_command_app(FILE_AUDIT_COMMAND, fake_judge())
+    asyncio.run(app.run([str(target), "--json", "--all-answers"]))
+    every_answer = capsys.readouterr().out
+
+    exit_code = asyncio.run(app.run([str(target), "--json", "--all"]))
+
+    captured = capsys.readouterr()
+    assert exit_code == ExitCode.NO_PROBLEMS
+    assert captured.out == every_answer
+    assert captured.err.splitlines() == [
+        "[klint] Warning: '--all' is deprecated and stops working in the next "
+        "release; use '--all-answers' instead"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -131,7 +152,7 @@ def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_o
     ("judge_choice", "extra_argv", "expected_exit_code"),
     [
         ("pass", [], ExitCode.NO_PROBLEMS),
-        ("pass", ["--all"], ExitCode.NO_PROBLEMS),
+        ("pass", ["--all-answers"], ExitCode.NO_PROBLEMS),
         ("lack_of_evidence", [], ExitCode.NO_PROBLEMS),
         ("fail", [], ExitCode.PROBLEMS_FOUND),
         ("fail", ["--json"], ExitCode.PROBLEMS_FOUND),

@@ -78,7 +78,7 @@ def test_file_audit_json_matches_snapshot(
     assert_snapshot("cli_file_audit.json", capsys.readouterr().out)
 
 
-def test_all_flag_reports_every_answer(
+def test_all_answers_flag_reports_every_answer(
     tmp_path: Path, fake_judge: type[FakeJudge], capsys: Capture
 ) -> None:
     pack = write_json(
@@ -91,7 +91,7 @@ def test_all_flag_reports_every_answer(
 
     _run(app, target, "--json")
     failed = [(i["rule_id"], i["answer"]) for i in _json_output(capsys)["findings"]]
-    _run(app, target, "--json", "--all")
+    _run(app, target, "--json", "--all-answers")
     judged = [(i["rule_id"], i["answer"]) for i in _json_output(capsys)["findings"]]
 
     assert failed == [("b_rule", "Fail")]
@@ -432,7 +432,7 @@ def test_rule_the_judge_does_not_answer_is_left_out_of_the_report(
     target = write_text(tmp_path / "a.py", "x = 1\n")
     judge = fake_judge(choices={"unanswered": None})
 
-    _run(_file_app(judge), target, "--json", "--all", "--rules", custom)
+    _run(_file_app(judge), target, "--json", "--all-answers", "--rules", custom)
 
     reported_rule_ids = {issue["rule_id"] for issue in _json_output(capsys)["findings"]}
     assert "answered" in reported_rule_ids

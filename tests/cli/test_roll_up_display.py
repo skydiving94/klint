@@ -67,7 +67,7 @@ def test_terminal_shows_every_ancestor_of_a_problem_with_its_status(
 def test_terminal_shows_no_problem_on_units_shown_with_all_answers(
     tmp_path: Path, capsys: Capture
 ) -> None:
-    report = _ANSI_CODE.sub("", _run_outline_command(tmp_path, capsys, "--all"))
+    report = _ANSI_CODE.sub("", _run_outline_command(tmp_path, capsys, "--all-answers"))
 
     assert "Target: section 2.1 [NO PROBLEM]" in report.splitlines()
     assert "A problem was found in a unit nested in it" not in report

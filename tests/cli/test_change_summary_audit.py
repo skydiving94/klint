@@ -91,8 +91,10 @@ def test_json_lists_each_summary_its_status_and_the_findings(
     assert finding["location"]["source"].endswith("/hunks/1/summary")
 
 
-def test_every_answer_is_shown_with_all(tmp_path: Path, capsys: Capture) -> None:
-    _run_command(tmp_path, HypothesisJudge(), "--all", "--json")
+def test_every_answer_is_shown_with_all_answers(
+    tmp_path: Path, capsys: Capture
+) -> None:
+    _run_command(tmp_path, HypothesisJudge(), "--all-answers", "--json")
 
     findings = json.loads(capsys.readouterr().out)["findings"]
     assert {finding["answer"] for finding in findings} == {"Accurate"}

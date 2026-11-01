@@ -302,7 +302,7 @@ def test_rules_for_python_are_asked_only_about_directories_holding_python(
     write_text(repo / "docs" / "intro.md", "# Intro\n")
     judge = fake_judge()
 
-    _run(_structure_app(judge, settings), repo, "--json", "--all")
+    _run(_structure_app(judge, settings), repo, "--json", "--all-answers")
 
     output = _json_output(capsys)
     judged_unit_ids = {issue["unit_id"] for issue in output["findings"]}

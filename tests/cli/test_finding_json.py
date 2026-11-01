@@ -72,7 +72,7 @@ def use_the_spoofing_extractor_for_python(binder: Binder) -> None:
 def _run_findings(
     app: AuditCommandApp, target: Path, capsys: Capture
 ) -> list[dict[str, Any]]:
-    asyncio.run(app.run([str(target), "--json", "--all"]))
+    asyncio.run(app.run([str(target), "--json", "--all-answers"]))
     findings: list[dict[str, Any]] = json.loads(capsys.readouterr().out)["findings"]
     return findings
 
