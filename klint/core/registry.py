@@ -11,19 +11,19 @@ class UnitRegistry:
     """
 
     def __init__(self) -> None:
-        self._unit_classes: dict[str, type[AuditableUnit]] = {}
+        self._unit_type_to_class: dict[str, type[AuditableUnit]] = {}
 
     def register_unit(self, unit_class: type[AuditableUnit]) -> None:
         """Add a unit class; registering the same class twice is harmless."""
         unit_type = unit_class.unit_type
-        existing = self._unit_classes.get(unit_type)
+        existing = self._unit_type_to_class.get(unit_type)
         if existing is not None and existing is not unit_class:
             raise ValueError(
                 f"Unit type '{unit_type}' is already registered by "
                 f"{existing.__name__}; {unit_class.__name__} cannot reuse it"
             )
-        self._unit_classes[unit_type] = unit_class
+        self._unit_type_to_class[unit_type] = unit_class
 
     def list_known_unit_types(self) -> list[str]:
         """Return every registered unit_type tag, sorted."""
-        return sorted(self._unit_classes)
+        return sorted(self._unit_type_to_class)

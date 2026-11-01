@@ -60,7 +60,7 @@ def _read_answer(question_id: str, raw_answer: object) -> JudgeAnswer | None:
         confidence=_read_number(
             raw_answer.get("confidence"), f"confidence for '{question_id}'"
         ),
-        choice_key_to_probability=_read_probabilities(
+        choice_key_to_probability=_read_choice_key_to_probability(
             raw_answer.get("probabilities"), question_id
         ),
     )
@@ -75,17 +75,17 @@ def _read_number(raw_number: object, description: str) -> float | None:
     return raw_number
 
 
-def _read_probabilities(
-    raw_probabilities: object, question_id: str
+def _read_choice_key_to_probability(
+    raw_choice_key_to_probability: object, question_id: str
 ) -> dict[str, float] | None:
-    if raw_probabilities is None:
+    if raw_choice_key_to_probability is None:
         return None
-    if not isinstance(raw_probabilities, dict):
+    if not isinstance(raw_choice_key_to_probability, dict):
         raise ValueError(
             f"The judge's probabilities for '{question_id}' are not a JSON object"
         )
     choice_key_to_probability: dict[str, float] = {}
-    for choice_key, raw_probability in raw_probabilities.items():
+    for choice_key, raw_probability in raw_choice_key_to_probability.items():
         description = f"probability of '{choice_key}' for '{question_id}'"
         probability = _read_number(raw_probability, description)
         if probability is None:

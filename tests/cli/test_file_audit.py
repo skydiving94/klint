@@ -71,7 +71,9 @@ def test_file_audit_json_matches_snapshot(
             "typed_functions": {**FILE_RULE, "question": "Are functions typed?"},
         },
     )
-    judge = fake_judge(choices={"clear_names": "fail", "short_functions": "fail"})
+    judge = fake_judge(
+        rule_id_to_answer={"clear_names": "fail", "short_functions": "fail"}
+    )
     app = _build_file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
     exit_code = _run(app, EXAMPLE_FILE, "--json")
@@ -88,7 +90,7 @@ def test_all_answers_flag_reports_every_answer(
         {"a_rule": FILE_RULE, "b_rule": FILE_RULE, "c_rule": FILE_RULE},
     )
     target = write_text(tmp_path / "a.py", "x = 1\n")
-    judge = fake_judge(choices={"b_rule": "fail"})
+    judge = fake_judge(rule_id_to_answer={"b_rule": "fail"})
     app = _build_file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
     _run(app, target, "--json")
@@ -397,7 +399,7 @@ def test_rules_flag_adds_custom_rules_to_the_defaults(
     pack = write_json(tmp_path / "pack.json", {"pack_rule": FILE_RULE})
     custom = write_json(tmp_path / "custom.json", {"house_rule": FILE_RULE})
     target = write_text(tmp_path / "a.py", "x = 1\n")
-    judge = fake_judge(choices={"house_rule": "fail"})
+    judge = fake_judge(rule_id_to_answer={"house_rule": "fail"})
     app = _build_file_app(judge, make_settings(built_in_rule_packs=[pack]))
 
     _run(app, target, "--json", "--rules", custom)
@@ -440,7 +442,7 @@ def test_rule_the_judge_does_not_answer_is_left_out_of_the_report(
         tmp_path / "custom.json", {"answered": FILE_RULE, "unanswered": FILE_RULE}
     )
     target = write_text(tmp_path / "a.py", "x = 1\n")
-    judge = fake_judge(choices={"unanswered": None})
+    judge = fake_judge(rule_id_to_answer={"unanswered": None})
 
     _run(_build_file_app(judge), target, "--json", "--all-answers", "--rules", custom)
 
@@ -616,7 +618,7 @@ def test_terminal_report_shows_findings_and_summary(
     _run(_build_file_app(fake_judge(), settings), target)
     assert "No architectural or semantic issues found." in capsys.readouterr().out
 
-    judge = fake_judge(choices={"house_rule": "fail"})
+    judge = fake_judge(rule_id_to_answer={"house_rule": "fail"})
     _run(_build_file_app(judge, settings), target)
 
     report = capsys.readouterr().out

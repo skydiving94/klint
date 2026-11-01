@@ -76,7 +76,7 @@ def test_project_audit_json_matches_snapshot(
             "small_packages": {**DIR_RULE, "question": "Is each package small?"},
         },
     )
-    judge = fake_judge(choices={"acyclic_packages": "fail"})
+    judge = fake_judge(rule_id_to_answer={"acyclic_packages": "fail"})
     app = _build_structure_app(judge, make_settings(built_in_rule_packs=[pack]))
 
     exit_code = _run(app, MOCK_PROJECT, "--json")

@@ -55,7 +55,7 @@ def test_default_scale_keeps_its_badges_and_colours_only_problem_bars(
     target = write_text(tmp_path / "a.py", "x = 1\n")
     app = build_audit_command_app(
         FILE_AUDIT_COMMAND,
-        fake_judge(choices=dict(rule_id_to_answer)),
+        fake_judge(rule_id_to_answer=dict(rule_id_to_answer)),
         make_settings(built_in_rule_packs=[pack]),
     )
 

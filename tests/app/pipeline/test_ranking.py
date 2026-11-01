@@ -96,7 +96,7 @@ def test_findings_come_by_answer_then_confidence_then_rule_id(
     )
     target = write_text(tmp_path / "a.py", "x = 1\n")
     judge = fake_judge(
-        choices={
+        rule_id_to_answer={
             rule_id: answer
             for rule_id, (answer, _) in rule_id_to_answer_and_confidence.items()
         },
@@ -141,7 +141,7 @@ def test_kind_ranks_findings_by_its_tags_within_an_answer(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
     write_text(tmp_path / "note.txt", "Hi.\n")
-    judge = fake_judge(default="rude", choices={"e_polite_secret": "polite"})
+    judge = fake_judge(default="rude", rule_id_to_answer={"e_polite_secret": "polite"})
 
     outcome = _run_audit(judge, tmp_path, NOTES_KIND_ID)
 

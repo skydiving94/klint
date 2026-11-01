@@ -62,7 +62,7 @@ def _build_built_in_loader() -> RulePackLoader:
     return _build_loader(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS, KNOWN_LANGUAGES)
 
 
-def _load(
+def _load_rule_id_to_rule(
     loader: RulePackLoader, traits: UnitTraits = PYTHON, custom: Path | None = None
 ) -> dict[str, AuditRule]:
     custom_rule_source = (
@@ -80,8 +80,10 @@ def _list_rule_ids_in(*packs: Path) -> list[str]:
     return rule_ids
 
 
-def _build_pack(applies_to: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any]:
-    return {"applies_to": applies_to, "rules": rules}
+def _build_pack(
+    applies_to: dict[str, Any], rule_id_to_spec: dict[str, Any]
+) -> dict[str, Any]:
+    return {"applies_to": applies_to, "rules": rule_id_to_spec}
 
 
 def test_rules_keep_the_order_of_the_chosen_packs_and_of_each_pack(
@@ -100,16 +102,16 @@ def test_rules_keep_the_order_of_the_chosen_packs_and_of_each_pack(
     loader = _build_loader([first, python_only, typescript_only, last])
 
     # The judge is asked the rules in this order.
-    assert list(_load(loader, TYPESCRIPT)) == ["b", "a", "d", "e"]
-    assert list(_load(loader, PYTHON)) == ["b", "a", "c", "e"]
+    assert list(_load_rule_id_to_rule(loader, TYPESCRIPT)) == ["b", "a", "d", "e"]
+    assert list(_load_rule_id_to_rule(loader, PYTHON)) == ["b", "a", "c", "e"]
 
 
 def test_built_in_typescript_file_rules_are_choice_questions_about_files() -> None:
-    rules = _load(_build_built_in_loader(), TYPESCRIPT)
+    rule_id_to_rule = _load_rule_id_to_rule(_build_built_in_loader(), TYPESCRIPT)
 
-    assert rules
-    assert all(r.question_type is QuestionType.CHOICE for r in rules.values())
-    assert all(r.unit_types == ["file"] for r in rules.values())
+    assert rule_id_to_rule
+    assert all(r.question_type is QuestionType.CHOICE for r in rule_id_to_rule.values())
+    assert all(r.unit_types == ["file"] for r in rule_id_to_rule.values())
 
 
 def test_built_in_packs_are_chosen_by_the_language_of_the_file() -> None:
@@ -118,10 +120,10 @@ def test_built_in_packs_are_chosen_by_the_language_of_the_file() -> None:
     react = set(_list_rule_ids_in(REACT_RULE_PACK))
     python_project = set(_list_rule_ids_in(PYTHON_PACKAGE_RULE_PACK))
 
-    assert set(_load(loader, PYTHON)) == shared | python_project
-    assert set(_load(loader, TYPESCRIPT)) == shared | react
-    assert set(_load(loader, JAVA)) == shared
-    assert set(_load(loader, UNIDENTIFIED)) == shared
+    assert set(_load_rule_id_to_rule(loader, PYTHON)) == shared | python_project
+    assert set(_load_rule_id_to_rule(loader, TYPESCRIPT)) == shared | react
+    assert set(_load_rule_id_to_rule(loader, JAVA)) == shared
+    assert set(_load_rule_id_to_rule(loader, UNIDENTIFIED)) == shared
 
 
 def test_file_of_unidentified_language_is_asked_only_the_fallback_packs(
@@ -135,8 +137,8 @@ def test_file_of_unidentified_language_is_asked_only_the_fallback_packs(
     )
     loader = _build_loader([shared], [fallback])
 
-    assert list(_load(loader, UNIDENTIFIED)) == ["for_prose"]
-    assert list(_load(loader, PYTHON)) == ["for_code"]
+    assert list(_load_rule_id_to_rule(loader, UNIDENTIFIED)) == ["for_prose"]
+    assert list(_load_rule_id_to_rule(loader, PYTHON)) == ["for_code"]
 
 
 def test_pack_without_a_header_loads_for_every_identified_language(
@@ -145,10 +147,10 @@ def test_pack_without_a_header_loads_for_every_identified_language(
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE})
     loader = _build_loader([pack])
 
-    assert list(_load(loader, PYTHON)) == ["a"]
-    assert list(_load(loader, JAVA)) == ["a"]
-    assert _load(loader, UNIDENTIFIED) == {}
-    assert _load(loader, PYTHON)["a"].languages == []
+    assert list(_load_rule_id_to_rule(loader, PYTHON)) == ["a"]
+    assert list(_load_rule_id_to_rule(loader, JAVA)) == ["a"]
+    assert _load_rule_id_to_rule(loader, UNIDENTIFIED) == {}
+    assert _load_rule_id_to_rule(loader, PYTHON)["a"].languages == []
 
 
 def test_rule_inherits_the_languages_of_its_pack(tmp_path: Path) -> None:
@@ -157,10 +159,10 @@ def test_rule_inherits_the_languages_of_its_pack(tmp_path: Path) -> None:
         _build_pack({"languages": ["typescript", "javascript"]}, {"a": FILE_RULE}),
     )
 
-    rules = _load(_build_loader([pack]), TYPESCRIPT)
+    rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]), TYPESCRIPT)
 
-    assert rules["a"].languages == ["typescript", "javascript"]
-    assert _load(_build_loader([pack]), PYTHON) == {}
+    assert rule_id_to_rule["a"].languages == ["typescript", "javascript"]
+    assert _load_rule_id_to_rule(_build_loader([pack]), PYTHON) == {}
 
 
 def test_rule_may_narrow_the_languages_of_its_pack(tmp_path: Path) -> None:
@@ -172,7 +174,9 @@ def test_rule_may_narrow_the_languages_of_its_pack(tmp_path: Path) -> None:
         ),
     )
 
-    assert _load(_build_loader([pack]), TYPESCRIPT)["a"].languages == ["typescript"]
+    assert _load_rule_id_to_rule(_build_loader([pack]), TYPESCRIPT)["a"].languages == [
+        "typescript"
+    ]
 
 
 def test_rule_naming_a_language_its_pack_leaves_out_is_warned_about(
@@ -190,12 +194,12 @@ def test_rule_naming_a_language_its_pack_leaves_out_is_warned_about(
     )
 
     with pytest.warns(KlintWarning, match=r"names languages \['go'\]") as caught:
-        rules = _load(_build_loader([pack]), PYTHON)
+        rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]), PYTHON)
 
     assert len(caught) == 2
     # A rule left with no language of its pack never runs, so it is dropped.
-    assert list(rules) == ["partly_out"]
-    assert rules["partly_out"].languages == ["python"]
+    assert list(rule_id_to_rule) == ["partly_out"]
+    assert rule_id_to_rule["partly_out"].languages == ["python"]
 
 
 def test_rules_of_a_pack_that_is_not_chosen_are_not_read(tmp_path: Path) -> None:
@@ -208,9 +212,9 @@ def test_rules_of_a_pack_that_is_not_chosen_are_not_read(tmp_path: Path) -> None
     )
     loader = _build_loader([pack])
 
-    assert _load(loader, PYTHON) == {}
+    assert _load_rule_id_to_rule(loader, PYTHON) == {}
     with pytest.raises(ValueError, match="unknown unit_types"):
-        _load(loader, TYPESCRIPT)
+        _load_rule_id_to_rule(loader, TYPESCRIPT)
 
 
 def test_each_pack_is_read_once_however_many_loads_use_it(tmp_path: Path) -> None:
@@ -220,10 +224,10 @@ def test_each_pack_is_read_once_however_many_loads_use_it(tmp_path: Path) -> Non
     loader = _build_loader([pack])
 
     with pytest.warns(KlintWarning, match="unknown fields"):
-        _load(loader, PYTHON)
+        _load_rule_id_to_rule(loader, PYTHON)
 
     # No warning the second time: an unexpected one fails the test.
-    assert list(_load(loader, JAVA)) == ["typo"]
+    assert list(_load_rule_id_to_rule(loader, JAVA)) == ["typo"]
 
 
 def test_header_with_an_unknown_field_is_kept_with_a_warning(tmp_path: Path) -> None:
@@ -233,9 +237,9 @@ def test_header_with_an_unknown_field_is_kept_with_a_warning(tmp_path: Path) -> 
     )
 
     with pytest.warns(KlintWarning, match=r"header .* unknown fields \['tags'\]"):
-        rules = _load(_build_loader([pack]), PYTHON)
+        rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]), PYTHON)
 
-    assert rules["a"].languages == ["python"]
+    assert rule_id_to_rule["a"].languages == ["python"]
 
 
 def test_header_naming_an_unknown_language_is_kept_with_a_warning(
@@ -247,9 +251,9 @@ def test_header_naming_an_unknown_language_is_kept_with_a_warning(
     )
 
     with pytest.warns(KlintWarning, match=r"header .* unknown languages \['pyhton'\]"):
-        rules = _load(_build_loader([pack]), PYTHON)
+        rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]), PYTHON)
 
-    assert rules["a"].languages == ["python", "pyhton"]
+    assert rule_id_to_rule["a"].languages == ["python", "pyhton"]
 
 
 @pytest.mark.parametrize(
@@ -263,7 +267,7 @@ def test_malformed_header_stops_with_an_error_naming_the_file(
     )
 
     with pytest.raises(ValueError, match=r"pack\.json' has an invalid applies_to"):
-        _load(_build_loader([pack]), PYTHON)
+        _load_rule_id_to_rule(_build_loader([pack]), PYTHON)
 
 
 def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
@@ -279,13 +283,18 @@ def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
         },
     )
 
-    defaults = _load(_build_loader([first, second]))
-    rules = _load(_build_loader([first, second]), custom=custom)
+    defaults = _load_rule_id_to_rule(_build_loader([first, second]))
+    rule_id_to_rule = _load_rule_id_to_rule(
+        _build_loader([first, second]), custom=custom
+    )
 
-    assert list(rules) == ["a", "b", "c", "extra"]
-    assert rules["a"].question == "Custom?"
-    assert rules["extra"].question == "Extra?"
-    assert (rules["b"], rules["c"]) == (defaults["b"], defaults["c"])
+    assert list(rule_id_to_rule) == ["a", "b", "c", "extra"]
+    assert rule_id_to_rule["a"].question == "Custom?"
+    assert rule_id_to_rule["extra"].question == "Extra?"
+    assert (rule_id_to_rule["b"], rule_id_to_rule["c"]) == (
+        defaults["b"],
+        defaults["c"],
+    )
 
 
 @pytest.mark.parametrize("traits", [PYTHON, UNIDENTIFIED])
@@ -296,7 +305,9 @@ def test_custom_rules_merge_whatever_the_traits(
     fallback = write_json(tmp_path / "fallback.json", {"for_prose": FILE_RULE})
     custom = write_json(tmp_path / "custom.json", {"house_rule": FILE_RULE})
 
-    assert "house_rule" in _load(_build_loader([pack], [fallback]), traits, custom)
+    assert "house_rule" in _load_rule_id_to_rule(
+        _build_loader([pack], [fallback]), traits, custom
+    )
 
 
 def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
@@ -304,7 +315,7 @@ def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
         tmp_path / "klint.json",
         {"env": {"KLINT_JUDGE_MODE": "local"}, "rules": {"only": FILE_RULE}},
     )
-    assert list(_load(_build_loader([config]))) == ["only"]
+    assert list(_load_rule_id_to_rule(_build_loader([config]))) == ["only"]
 
 
 def test_entries_without_type_or_question_are_skipped_with_a_warning(
@@ -320,9 +331,9 @@ def test_entries_without_type_or_question_are_skipped_with_a_warning(
         },
     )
     with pytest.warns(KlintWarning, match="needs both 'type' and") as caught:
-        rules = _load(_build_loader([pack]))
+        rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]))
 
-    assert list(rules) == ["ok"]
+    assert list(rule_id_to_rule) == ["ok"]
     assert len(caught) == 3
 
 
@@ -335,9 +346,9 @@ def test_rule_naming_an_unknown_language_is_kept_with_a_warning(
     )
 
     with pytest.warns(KlintWarning, match=r"'typo' .* unknown languages \['pyhton'\]"):
-        rules = _load(_build_loader([pack]))
+        rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]))
 
-    assert rules["typo"].languages == ["pyhton", "Python"]
+    assert rule_id_to_rule["typo"].languages == ["pyhton", "Python"]
 
 
 def test_unknown_rule_field_is_ignored_with_a_warning(tmp_path: Path) -> None:
@@ -346,9 +357,9 @@ def test_unknown_rule_field_is_ignored_with_a_warning(tmp_path: Path) -> None:
     )
 
     with pytest.warns(KlintWarning, match=r"unknown fields \['langauges'\]"):
-        rules = _load(_build_loader([pack]))
+        rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]))
 
-    assert rules["typo"].languages == []
+    assert rule_id_to_rule["typo"].languages == []
 
 
 def test_keys_beside_a_rules_block_are_not_rules(tmp_path: Path) -> None:
@@ -362,7 +373,7 @@ def test_keys_beside_a_rules_block_are_not_rules(tmp_path: Path) -> None:
     )
 
     # No warning either: an unexpected one fails the test.
-    assert list(_load(_build_loader([pack]))) == ["a"]
+    assert list(_load_rule_id_to_rule(_build_loader([pack]))) == ["a"]
 
 
 def test_every_key_of_a_flat_file_but_its_header_is_a_rule(tmp_path: Path) -> None:
@@ -372,7 +383,7 @@ def test_every_key_of_a_flat_file_but_its_header_is_a_rule(tmp_path: Path) -> No
     )
 
     with pytest.warns(KlintWarning, match="Rule 'env' .* is skipped"):
-        assert list(_load(_build_loader([pack]))) == ["a"]
+        assert list(_load_rule_id_to_rule(_build_loader([pack]))) == ["a"]
 
 
 def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_them(
@@ -400,8 +411,8 @@ def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_
     )
     loader = _build_loader([pack], project_rule_packs=[project])
 
-    python_rules = _load(loader, PYTHON, custom)
-    java_rules = _load(loader, JAVA)
+    python_rules = _load_rule_id_to_rule(loader, PYTHON, custom)
+    java_rules = _load_rule_id_to_rule(loader, JAVA)
 
     assert {rule_id: rule.question for rule_id, rule in python_rules.items()} == {
         "shared": "From the project?",
@@ -421,16 +432,16 @@ def test_file_that_cannot_be_read_as_rules_stops_with_an_error_naming_it(
     pack = write_text(tmp_path / "pack.json", content)
 
     with pytest.raises(ValueError, match=rf"pack\.json' {reason}"):
-        _load(_build_loader([pack]))
+        _load_rule_id_to_rule(_build_loader([pack]))
 
 
 def test_unit_types_default_to_file_and_explicit_ones_are_kept(
     tmp_path: Path,
 ) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE, "b": DIR_RULE})
-    rules = _load(_build_loader([pack]))
-    assert rules["a"].unit_types == ["file"]
-    assert rules["b"].unit_types == ["project_directory"]
+    rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]))
+    assert rule_id_to_rule["a"].unit_types == ["file"]
+    assert rule_id_to_rule["b"].unit_types == ["project_directory"]
 
 
 def test_unknown_unit_type_is_rejected(tmp_path: Path) -> None:
@@ -438,13 +449,13 @@ def test_unknown_unit_type_is_rejected(tmp_path: Path) -> None:
         tmp_path / "pack.json", {"a": {**FILE_RULE, "unit_types": ["nope"]}}
     )
     with pytest.raises(ValueError, match="unknown unit_types"):
-        _load(_build_loader([pack]))
+        _load_rule_id_to_rule(_build_loader([pack]))
 
 
 def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": {**FILE_RULE, "type": "essay"}})
     with pytest.raises(ValueError, match="essay"):
-        _load(_build_loader([pack]))
+        _load_rule_id_to_rule(_build_loader([pack]))
 
 
 @pytest.mark.parametrize(
@@ -467,7 +478,7 @@ def test_malformed_rule_stops_with_an_error_naming_the_rule_and_the_file(
     with pytest.raises(
         ValueError, match=rf"^Rule 'broken' {message} in '.*pack\.json'"
     ):
-        _load(_build_loader([pack]))
+        _load_rule_id_to_rule(_build_loader([pack]))
 
 
 def test_malformed_rule_in_a_pack_that_is_not_chosen_stops_nothing(
@@ -483,25 +494,25 @@ def test_malformed_rule_in_a_pack_that_is_not_chosen_stops_nothing(
     loader = _build_loader([pack])
 
     # No warning either: an unexpected one fails the test.
-    assert _load(loader, PYTHON) == {}
+    assert _load_rule_id_to_rule(loader, PYTHON) == {}
     with (
         pytest.warns(KlintWarning, match="'typo' .* is skipped"),
         pytest.raises(ValueError, match="has unknown type 'yesno'"),
     ):
-        _load(loader, TYPESCRIPT)
+        _load_rule_id_to_rule(loader, TYPESCRIPT)
 
 
 def test_missing_custom_file_raises(tmp_path: Path) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE})
 
     with pytest.raises(FileNotFoundError, match="Rules file does not exist"):
-        _load(_build_loader([pack]), custom=tmp_path / "absent.json")
+        _load_rule_id_to_rule(_build_loader([pack]), custom=tmp_path / "absent.json")
 
 
 def test_missing_pack_gives_no_rules(tmp_path: Path) -> None:
     absent = tmp_path / "absent.json"
-    assert _load(_build_loader([absent])) == {}
-    assert _load(_build_loader([], [absent]), UNIDENTIFIED) == {}
+    assert _load_rule_id_to_rule(_build_loader([absent])) == {}
+    assert _load_rule_id_to_rule(_build_loader([], [absent]), UNIDENTIFIED) == {}
 
 
 def test_several_packs_are_merged_in_order(tmp_path: Path) -> None:
@@ -514,18 +525,20 @@ def test_several_packs_are_merged_in_order(tmp_path: Path) -> None:
         {"shared": {**FILE_RULE, "question": "From second?"}, "b": FILE_RULE},
     )
 
-    rules = _load(_build_loader([first, second]))
+    rule_id_to_rule = _load_rule_id_to_rule(_build_loader([first, second]))
 
-    assert list(rules) == ["shared", "a", "b"]
-    assert rules["shared"].question == "From second?"
+    assert list(rule_id_to_rule) == ["shared", "a", "b"]
+    assert rule_id_to_rule["shared"].question == "From second?"
 
 
 def test_missing_pack_is_skipped_among_several(tmp_path: Path) -> None:
     present = write_json(tmp_path / "present.json", {"a": FILE_RULE})
 
-    rules = _load(_build_loader([tmp_path / "absent.json", present]))
+    rule_id_to_rule = _load_rule_id_to_rule(
+        _build_loader([tmp_path / "absent.json", present])
+    )
 
-    assert list(rules) == ["a"]
+    assert list(rule_id_to_rule) == ["a"]
 
 
 def test_languages_tags_and_unit_tags_are_read_from_a_rule(tmp_path: Path) -> None:
@@ -543,18 +556,18 @@ def test_languages_tags_and_unit_tags_are_read_from_a_rule(tmp_path: Path) -> No
         },
     )
 
-    rules = _load(_build_loader([pack]))
+    rule_id_to_rule = _load_rule_id_to_rule(_build_loader([pack]))
 
-    assert rules["scoped"].languages == ["python"]
-    assert rules["scoped"].tags == ["security"]
-    assert rules["scoped"].unit_tags == ["backend"]
-    for plain_rule in (rules["plain"], rules["empty"]):
+    assert rule_id_to_rule["scoped"].languages == ["python"]
+    assert rule_id_to_rule["scoped"].tags == ["security"]
+    assert rule_id_to_rule["scoped"].unit_tags == ["backend"]
+    for plain_rule in (rule_id_to_rule["plain"], rule_id_to_rule["empty"]):
         assert (plain_rule.languages, plain_rule.tags, plain_rule.unit_tags) == (
             [],
             [],
             [],
         )
-    assert rules["plain"].unit_types == ["file"]
+    assert rule_id_to_rule["plain"].unit_types == ["file"]
 
 
 @pytest.mark.parametrize("field_name", ["languages", "tags", "unit_tags"])
@@ -566,32 +579,38 @@ def test_malformed_languages_or_tags_are_rejected(
         tmp_path / "pack.json", {"broken": {**FILE_RULE, field_name: bad_value}}
     )
     with pytest.raises(ValueError, match=f"Rule 'broken' has invalid {field_name}"):
-        _load(_build_loader([pack]))
+        _load_rule_id_to_rule(_build_loader([pack]))
 
 
 def test_built_in_python_project_rules_are_limited_to_python() -> None:
-    rules = _load(
+    rule_id_to_rule = _load_rule_id_to_rule(
         _build_loader([PYTHON_PACKAGE_RULE_PACK], (), KNOWN_LANGUAGES), PYTHON
     )
 
-    assert rules
-    assert all(rule.languages == ["python"] for rule in rules.values())
+    assert rule_id_to_rule
+    assert all(rule.languages == ["python"] for rule in rule_id_to_rule.values())
 
 
 def test_built_in_react_rules_are_limited_to_typescript_and_javascript() -> None:
-    rules = _load(_build_loader([REACT_RULE_PACK], (), KNOWN_LANGUAGES), TYPESCRIPT)
+    rule_id_to_rule = _load_rule_id_to_rule(
+        _build_loader([REACT_RULE_PACK], (), KNOWN_LANGUAGES), TYPESCRIPT
+    )
 
-    assert rules
+    assert rule_id_to_rule
     assert all(
-        rule.languages == ["typescript", "javascript"] for rule in rules.values()
+        rule.languages == ["typescript", "javascript"]
+        for rule in rule_id_to_rule.values()
     )
 
 
 def test_built_in_rules_set_no_tags() -> None:
     loader = _build_built_in_loader()
-    rules = {**_load(loader, PYTHON), **_load(loader, TYPESCRIPT)}
+    rule_id_to_rule = {
+        **_load_rule_id_to_rule(loader, PYTHON),
+        **_load_rule_id_to_rule(loader, TYPESCRIPT),
+    }
 
-    assert all(rule.tags == [] for rule in rules.values())
+    assert all(rule.tags == [] for rule in rule_id_to_rule.values())
 
 
 def test_rule_loading_only_accepts_registered_unit_types(tmp_path: Path) -> None:
@@ -609,11 +628,14 @@ def test_built_in_backend_and_react_rules_are_limited_to_their_side() -> None:
     backend_rule_ids = _list_rule_ids_in(BUILT_IN_RULE_PACKS[0])
     react_rule_ids = _list_rule_ids_in(REACT_RULE_PACK)
 
-    rules = {**_load(loader, PYTHON), **_load(loader, TYPESCRIPT)}
+    rule_id_to_rule = {
+        **_load_rule_id_to_rule(loader, PYTHON),
+        **_load_rule_id_to_rule(loader, TYPESCRIPT),
+    }
 
     assert backend_rule_ids
     assert react_rule_ids
-    for rule_id, rule in rules.items():
+    for rule_id, rule in rule_id_to_rule.items():
         if rule_id in backend_rule_ids:
             assert rule.unit_tags == ["backend"], rule_id
         elif rule_id in react_rule_ids:

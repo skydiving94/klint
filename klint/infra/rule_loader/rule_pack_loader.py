@@ -61,16 +61,16 @@ class RulePackLoader(BaseRuleLoader):
         self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None
     ) -> list[AuditRule]:
         """Merge the chosen packs, the project's, then the custom rules, by rule ID."""
-        rules: dict[str, AuditRule] = {}
+        rule_id_to_rule: dict[str, AuditRule] = {}
         for pack in self._choose_packs(traits):
-            rules.update(self._load_pack_rules(pack))
+            rule_id_to_rule.update(self._load_pack_rules(pack))
         sources_merged_last = list(self._project_rule_sources)
         if custom_rule_source is not None:
             sources_merged_last.append(custom_rule_source)
         for source in sources_merged_last:
             for pack in self._read_packs(source):
-                rules.update(self._load_pack_rules(pack))
-        return list(rules.values())
+                rule_id_to_rule.update(self._load_pack_rules(pack))
+        return list(rule_id_to_rule.values())
 
     def _choose_packs(self, traits: UnitTraits) -> Iterator[RulePackSpec]:
         language = traits.language

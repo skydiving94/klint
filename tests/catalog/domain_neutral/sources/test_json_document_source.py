@@ -45,7 +45,7 @@ def _list_answers(outcome: AuditOutcome) -> list[tuple[str, str]]:
 def test_json_document_held_in_memory_is_audited_with_no_file(
     fake_judge: type[FakeJudge], media_type: str
 ) -> None:
-    judge = fake_judge(choices={"polite_note": "rude"})
+    judge = fake_judge(rule_id_to_answer={"polite_note": "rude"})
 
     outcome = _run_audit(
         judge, InMemoryBytesInput(content=NOTES_DOCUMENT, media_type=media_type)

@@ -78,7 +78,7 @@ def test_two_kinds_with_different_scales_run_in_one_process(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
     _write_notes(tmp_path)
-    judge = fake_judge(choices={"polite_note": "polite", "tidy_file": "fail"})
+    judge = fake_judge(rule_id_to_answer={"polite_note": "polite", "tidy_file": "fail"})
     pipeline = build_audit_pipeline(judge, binding_overrides=[add_the_notes_suite])
 
     def run_audit(audit_kind_id: str) -> AuditOutcome:

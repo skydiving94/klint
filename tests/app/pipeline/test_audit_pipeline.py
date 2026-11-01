@@ -53,7 +53,7 @@ def test_file_contents_audit_returns_the_findings_on_each_file(
 ) -> None:
     write_text(tmp_path / "a.py", "x = 1\n")
     write_text(tmp_path / "b.md", "# Notes\n")
-    judge = fake_judge(choices={"tidy_file": "fail"})
+    judge = fake_judge(rule_id_to_answer={"tidy_file": "fail"})
 
     outcome = _run_audit(
         judge,
