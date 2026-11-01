@@ -35,13 +35,13 @@ from klint.core.klint_warning import KlintWarning
 from klint.core.models.audit_kind import AuditKind
 from klint.core.models.file_traits_override import FileTraitsOverride
 from klint.core.registry import UnitRegistry
-from klint.infra.language_to_file_extensions_loader.json_loader import (
+from klint.infra.language_to_file_extensions_loader.language_table_loader import (
     load_file_extension_to_language,
 )
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
 from klint.infra.system_one.remote import RemoteSystemOneJudge
-from klint.infra.tag_detection_loader.json_loader import load_tag_detection_table
+from klint.infra.tag_detection_loader.tag_table_loader import load_tag_detection_table
 
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])

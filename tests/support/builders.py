@@ -29,7 +29,7 @@ from klint.core.models.audit_input import DiskPathInput
 from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
-from klint.infra.language_to_file_extensions_loader.json_loader import (
+from klint.infra.language_to_file_extensions_loader.language_table_loader import (
     load_file_extension_to_language,
 )
 from tests.support.fakes import FakeJudge, JudgeOverride

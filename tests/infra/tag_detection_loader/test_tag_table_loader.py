@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from klint.infra.tag_detection_loader.json_loader import load_tag_detection_table
+from klint.infra.tag_detection_loader.tag_table_loader import load_tag_detection_table
 from tests.support.builders import write_json
 from tests.support.paths import TAG_DETECTION
 
