@@ -44,7 +44,7 @@ OUTLINE_COMMAND = AuditCommand(
     target_argument_name="outline",
     target_argument_help="Outline JSON file",
     audit_kind_id=OUTLINE_KIND_ID,
-    json_key="examined_sections",
+    audited_units_json_key="examined_sections",
 )
 CLEAR_SECTION_RULE = AuditRule(
     rule_id="clear_section",

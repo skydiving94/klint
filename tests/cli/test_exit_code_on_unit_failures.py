@@ -84,7 +84,7 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
 
     captured = capsys.readouterr()
     assert exit_code == expected_exit_code
-    assert len(json.loads(captured.out)[command.json_key]) == 1
+    assert len(json.loads(captured.out)[command.audited_units_json_key]) == 1
     (skipping_line,) = captured.err.splitlines()
     assert skipping_line.startswith(f"[{command.name}] Skipping ")
     assert skipping_line.endswith(": judge is down")
@@ -108,7 +108,7 @@ def test_run_with_no_unit_to_audit_exits_0(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out) == {
-        command.json_key: [],
+        command.audited_units_json_key: [],
         "unit_id_to_roll_up_status": {},
         "findings": [],
     }

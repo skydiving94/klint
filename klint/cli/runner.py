@@ -32,9 +32,10 @@ class AuditCommand:
 
     name is what the user types and description is shown in the help.
     target_argument_name and target_argument_help describe the path to audit.
-    audit_kind_id names the kind of audit the command asks for, and json_key
-    is the key the audited units are listed under in JSON output. The
-    terminal report says no_problems_message when it has no finding to show.
+    audit_kind_id names the kind of audit the command asks for, and
+    audited_units_json_key is the key the audited units are listed under in
+    JSON output. The terminal report says no_problems_message when it has no
+    finding to show.
     """
 
     name: str
@@ -42,7 +43,7 @@ class AuditCommand:
     target_argument_name: str
     target_argument_help: str
     audit_kind_id: str
-    json_key: str
+    audited_units_json_key: str
     no_problems_message: str = "No architectural or semantic issues found."
 
 
@@ -235,7 +236,7 @@ class AuditCommandApp:
             print(
                 json.dumps(
                     {
-                        command.json_key: report.audited_unit_ids(),
+                        command.audited_units_json_key: report.audited_unit_ids(),
                         "unit_id_to_roll_up_status": {
                             unit_id: status.value
                             for unit_id, status in (

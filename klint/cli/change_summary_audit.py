@@ -16,7 +16,7 @@ CHANGE_SUMMARY_COMMAND = AuditCommand(
     target_argument_name="summaries",
     target_argument_help="Path to the change-summary JSON document to verify",
     audit_kind_id=CHANGE_SUMMARY_KIND_ID,
-    json_key="examined_summaries",
+    audited_units_json_key="examined_summaries",
     no_problems_message="Every summary passed its checks.",
 )
 

@@ -58,7 +58,7 @@ NOTES_COMMAND = AuditCommand(
     target_argument_name="folder",
     target_argument_help="Folder of notes",
     audit_kind_id=NOTES_KIND_ID,
-    json_key="examined_notes",
+    audited_units_json_key="examined_notes",
 )
 
 
