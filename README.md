@@ -148,6 +148,20 @@ You can configure `klint` via shell environment variables (`export KEV_...`), th
 * **Configuration Precedence**: Exported shell variables (`export KEV_...`) $\rightarrow$ Target project `klint.json` `"env"` block $\rightarrow$ `klint` repo `.env` (dev override) $\rightarrow$ Built-in defaults.
 * **Merge vs. Replace Rules**: Custom rules in `klint.json` or `--rules` merge with built-in rules (overriding any rule with the same ID). To replace built-in rule packs completely, set `KEV_DEFAULT_RULES_PATH` or `KEV_DEFAULT_PROJECT_RULES_PATH`.
 
+### Using Jev (TypeSafe's Hosted API)
+`klint` can ask TypeSafe's hosted Jev model instead of a local `kev`, with no GPU and nothing else to install. You need a TypeSafe API key; see [docs.typesafe.ai](https://docs.typesafe.ai).
+
+Set the key in your shell, not in `klint.json`, which is usually committed:
+~~~bash
+read -rs KLINT_JUDGE_API_KEY && export KLINT_JUDGE_API_KEY
+export KLINT_JUDGE_MODE=remote KLINT_JUDGE_BASE_URL=https://api.typesafe.ai KLINT_JUDGE_MODEL=jev-latest
+klint examples/
+~~~
+
+* **What leaves your machine**: the code of each audited unit (for `klint-change-summary`, each summary and its code) and the rule questions are sent to TypeSafe. Use the local `kev` for code that must stay on your machine.
+* **A refused key**: `klint` skips each unit with "did not accept the API key" (or "needs an API key, and none was given") and exits with code 2 when no unit could be audited.
+* **Setting names**: `KLINT_JUDGE_MODE`, `KLINT_JUDGE_BASE_URL`, `KLINT_JUDGE_MODEL` and `KLINT_JUDGE_API_KEY` replace the `KEV_*` names, which still work for one release.
+
 ## Enterprise Extensibility: Custom Auditable Units & Extractors
 
 `klint` uses a hexagonal architecture where any custom unit subclassing `AuditableUnit` automatically registers its `unit_type` via `__init_subclass__` for immediate use in JSON rules:
