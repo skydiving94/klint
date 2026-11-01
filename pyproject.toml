@@ -15,8 +15,9 @@ dependencies = [
     "injector>=0.23",
 ]
 
-# The in-process model runtime, needed only when KEV_MODE=local. Optional for
-# people installing klint; developers get it through the dev group below.
+# The in-process model runtime, needed only when KLINT_JUDGE_MODE=local.
+# Optional for people installing klint; developers get it through the dev
+# group below.
 # kev itself supports Python 3.12 and 3.13 only, so on other versions this
 # extra installs nothing.
 [project.optional-dependencies]
@@ -37,8 +38,10 @@ dev = [
 ]
 
 [project.scripts]
-klint = "klint.cli.basic_audit:cli_main"
-klint-project = "klint.cli.project_audit:cli_main"
+klint = "klint.cli.file_audit:cli_main"
+klint-structure = "klint.cli.structure_audit:cli_main"
+# The old name of klint-structure, kept for one release.
+klint-project = "klint.cli.klint_project_alias:cli_main"
 klint-change-summary = "klint.cli.change_summary_audit:cli_main"
 
 [tool.setuptools.packages.find]
@@ -122,9 +125,9 @@ layers = [
     "klint.core",
 ]
 
-# A named suite is any package under klint/catalog but the shared one,
-# klint.catalog.common; each new suite is added to forbidden_modules. The
-# caller of the use case chooses the suites an audit draws on.
+# A named suite is any package under klint/catalog but the domain-neutral one,
+# klint.catalog.domain_neutral; each new suite is added to forbidden_modules.
+# The caller of the use case chooses the suites an audit draws on.
 [[tool.importlinter.contracts]]
 name = "Suites: app and core import no named suite"
 type = "forbidden"
@@ -132,20 +135,20 @@ source_modules = ["klint.app", "klint.core"]
 forbidden_modules = ["klint.catalog.code", "klint.catalog.change_summary"]
 
 [[tool.importlinter.contracts]]
-name = "Catalog: shared suites do not import specific ones"
+name = "Catalog: the domain-neutral suite imports no named suite"
 type = "forbidden"
-source_modules = ["klint.catalog.common"]
+source_modules = ["klint.catalog.domain_neutral"]
 forbidden_modules = ["klint.catalog.code", "klint.catalog.change_summary"]
 
 # Each named suite stands alone: what two suites share belongs in
-# klint.catalog.common.
+# klint.catalog.domain_neutral.
 [[tool.importlinter.contracts]]
 name = "Catalog: named suites do not import one another"
 type = "independence"
 modules = ["klint.catalog.code", "klint.catalog.change_summary"]
 
 [[tool.importlinter.contracts]]
-name = "Catalog: code shared across languages does not import one language"
+name = "Catalog: language-neutral code does not import one language"
 type = "forbidden"
-source_modules = ["klint.catalog.code.common"]
+source_modules = ["klint.catalog.code.language_neutral"]
 forbidden_modules = ["klint.catalog.code.python"]

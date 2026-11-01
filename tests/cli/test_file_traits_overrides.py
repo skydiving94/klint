@@ -1,4 +1,4 @@
-"""A project's klint.json overrides the language and tags detected for files."""
+"""A project's klint.json binding_overrides the language and tags detected for files."""
 
 import asyncio
 from dataclasses import replace
@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from klint.app.settings import AppSettings
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.core.klint_warning import KlintWarning
 from tests.support.builders import (
     FILE_RULE,
@@ -42,7 +42,7 @@ def _audit_project(
     judge = FakeJudge()
     app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
     asyncio.run(app.run([str(project), "--json"]))
-    return judge.subject_to_asked_rule_ids()
+    return judge.map_subject_to_asked_rule_ids()
 
 
 @pytest.mark.usefixtures("shell_env")
@@ -117,7 +117,7 @@ def test_glob_matches_from_the_folder_of_the_klint_json(tmp_path: Path) -> None:
         )
     )
 
-    assert judge.subject_to_asked_rule_ids() == {
+    assert judge.map_subject_to_asked_rule_ids() == {
         "views = 1\n": {"frontend_rule", "python_rule"}
     }
 

@@ -22,14 +22,14 @@ from tests.support.notes_suite import (
 )
 
 
-def _rule(
-    rule_id: str, target_unit_types: list[str], languages: list[str] | None = None
+def _build_rule(
+    rule_id: str, unit_types: list[str], languages: list[str] | None = None
 ) -> AuditRule:
     return AuditRule(
         rule_id=rule_id,
         question_type=QuestionType.CHOICE,
-        instructions=f"Is {rule_id} kept?",
-        target_unit_types=target_unit_types,
+        question=f"Is {rule_id} kept?",
+        unit_types=unit_types,
         languages=languages or [],
     )
 
@@ -40,10 +40,10 @@ class MixedRulesNotesSuite(NotesSuite):
     def list_audit_kinds(self) -> list[AuditKind]:
         (notes_kind,) = super().list_audit_kinds()
         rules = [
-            _rule("whole_file_rule", ["file"]),
+            _build_rule("whole_file_rule", ["file"]),
             POLITE_RULE,
-            _rule("python_note_rule", ["note"], languages=["python"]),
-            _rule("short_note", ["note", "file"]),
+            _build_rule("python_note_rule", ["note"], languages=["python"]),
+            _build_rule("short_note", ["note", "file"]),
         ]
         return [replace(notes_kind, rule_loader=FixedRuleLoader(rules))]
 
@@ -57,7 +57,9 @@ def test_unit_with_no_language_is_asked_the_rules_for_its_unit_type(
 ) -> None:
     write_text(tmp_path / "thanks.txt", "Thank you!\n")
     judge = fake_judge(default="polite")
-    pipeline = build_audit_pipeline(judge, overrides=[add_the_mixed_rules_notes_suite])
+    pipeline = build_audit_pipeline(
+        judge, binding_overrides=[add_the_mixed_rules_notes_suite]
+    )
 
     outcome = asyncio.run(
         pipeline.run_audit(
@@ -69,7 +71,7 @@ def test_unit_with_no_language_is_asked_the_rules_for_its_unit_type(
 
     # The rule for files is for another unit type, and the rule limited to
     # Python cannot apply to a note in no language.
-    assert judge.subject_to_asked_rule_ids() == {
+    assert judge.map_subject_to_asked_rule_ids() == {
         "Thank you!\n": {"polite_note", "short_note"}
     }
     findings = outcome.report.select_findings(should_include_non_problems=True)

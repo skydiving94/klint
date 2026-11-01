@@ -9,7 +9,9 @@ from injector import Binder, Module, ProviderOf, inject
 from klint.catalog.change_summary.extraction.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
-from klint.catalog.change_summary.renderers.hunk_summary import HunkSummaryRenderer
+from klint.catalog.change_summary.renderers.hunk_summary_renderer import (
+    HunkSummaryRenderer,
+)
 from klint.catalog.change_summary.renderers.upper_level_summary import (
     FileSummaryRenderer,
     PackageSummaryRenderer,
@@ -19,12 +21,14 @@ from klint.catalog.change_summary.summary_accuracy_scale import (
 )
 from klint.catalog.change_summary.summary_check_tag import SummaryCheckTag
 from klint.catalog.change_summary.units.file_summary import AuditableFileSummaryUnit
-from klint.catalog.change_summary.units.hunk_summary import AuditableHunkSummaryUnit
+from klint.catalog.change_summary.units.hunk_summary_unit import (
+    AuditableHunkSummaryUnit,
+)
 from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
-from klint.catalog.common.built_in_files import locate_built_in_catalog_file
-from klint.catalog.common.sources.json_document_source import (
+from klint.catalog.domain_neutral.built_in_files import locate_built_in_catalog_file
+from klint.catalog.domain_neutral.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.core.interfaces.suite import BaseSuite

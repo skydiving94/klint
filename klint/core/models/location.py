@@ -1,13 +1,13 @@
-"""Where an audited unit sits in its source."""
+"""Where an audited unit sits: a path, and the lines it spans."""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class Location:
-    """A source, such as a file or directory path, and an optional line span."""
+    """A path, such as that of a file or directory, and an optional line span."""
 
-    source: str
+    path: str
     start_line: int | None = None
     end_line: int | None = None
 

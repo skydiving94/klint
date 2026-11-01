@@ -125,7 +125,7 @@ class AuditReport:
             _unit_id_to_roll_up_status=dict(self._unit_id_to_roll_up_status),
         )
 
-    def audited_unit_ids(self) -> list[str]:
+    def list_audited_unit_ids(self) -> list[str]:
         """Return the IDs of the units audited without error, in recorded order."""
         return list(self._audited_unit_ids)
 

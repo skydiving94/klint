@@ -23,7 +23,7 @@ class AuditableUnit(ABC):
 
     unit_type is a per-class string tag (not a per-instance field). Each
     concrete subclass declares its own constant; it is the tag JSON rules
-    use in target_unit_types. A unit class becomes known to an audit when
+    use in unit_types. A unit class becomes known to an audit when
     its suite adds it to the UnitRegistry.
 
     traits are what is known about the unit from the outside, such as the
@@ -54,6 +54,6 @@ class AuditableUnit(ABC):
         """Return where this unit's evidence sits, when apart from the unit itself."""
         return None
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         """Return the units nested directly inside this one."""
         return ()

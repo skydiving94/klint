@@ -6,10 +6,10 @@ from typing import ClassVar
 
 from injector import Binder, inject
 
-from klint.catalog.common.sources.directory_tree_source import (
+from klint.catalog.domain_neutral.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )
-from klint.catalog.common.sources.json_document_source import (
+from klint.catalog.domain_neutral.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.cli.runner import AuditCommand
@@ -49,8 +49,8 @@ POLITENESS_SCALE = AnswerScale(
 POLITE_RULE = AuditRule(
     rule_id="polite_note",
     question_type=QuestionType.CHOICE,
-    instructions="Is the note polite?",
-    target_unit_types=["note"],
+    question="Is the note polite?",
+    unit_types=["note"],
 )
 NOTES_COMMAND = AuditCommand(
     name="klint-notes",
@@ -58,7 +58,7 @@ NOTES_COMMAND = AuditCommand(
     target_argument_name="folder",
     target_argument_help="Folder of notes",
     audit_kind_id=NOTES_KIND_ID,
-    json_key="examined_notes",
+    audited_units_json_key="examined_notes",
 )
 
 

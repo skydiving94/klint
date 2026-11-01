@@ -30,8 +30,8 @@ commit `d35fa76` ("Listing a binary file by name only in the project audit").
 Start the judge as the repository's `CLAUDE.md` describes, then:
 
 ```bash
-KEV_MODE=remote uv run klint-change-summary examples/change_summary/summaries.json
-KEV_MODE=remote uv run klint-change-summary examples/change_summary/summaries_with_planted_errors.json
+KLINT_JUDGE_MODE=remote uv run klint-change-summary examples/change_summary/summaries.json
+KLINT_JUDGE_MODE=remote uv run klint-change-summary examples/change_summary/summaries_with_planted_errors.json
 ```
 
 The summaries are judged children first: the hunks, then the files, the

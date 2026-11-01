@@ -4,7 +4,7 @@ from tests.support.builders import build_unit_registry
 
 
 def test_built_in_suites_register_their_unit_types() -> None:
-    assert build_unit_registry().known_unit_types() == [
+    assert build_unit_registry().list_known_unit_types() == [
         "file",
         "file_metadata",
         "file_summary",

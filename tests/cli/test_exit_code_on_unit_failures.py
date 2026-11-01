@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.exit_code import ExitCode
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommand, AuditCommandApp
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from klint.core.interfaces.judge import BaseJudge
 from tests.support.builders import build_audit_command_app, make_settings, write_text
 from tests.support.fakes import FakeJudge, PickyJudge
@@ -26,7 +26,7 @@ def _write_project(root: Path) -> None:
     write_text(root / "pkg" / "a.py", "y = 2\n")
 
 
-def _app(command: AuditCommand, judge: BaseJudge) -> AuditCommandApp:
+def _build_app(command: AuditCommand, judge: BaseJudge) -> AuditCommandApp:
     return build_audit_command_app(command, judge)
 
 
@@ -38,7 +38,7 @@ def _run(app: AuditCommandApp, target: Path) -> ExitCode:
     ("command", "unit_paths"),
     [
         (FILE_AUDIT_COMMAND, ("pkg/a.py", "poison.py")),
-        (PROJECT_AUDIT_COMMAND, ("", "pkg")),
+        (STRUCTURE_AUDIT_COMMAND, ("", "pkg")),
     ],
 )
 def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
@@ -48,7 +48,7 @@ def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
     # Every subject holds the empty string, so the judge fails on every unit.
     judge = PickyJudge(refuses="")
 
-    exit_code = _run(_app(command, judge), tmp_path)
+    exit_code = _run(_build_app(command, judge), tmp_path)
 
     captured = capsys.readouterr()
     *skipping_lines, last_line = captured.err.splitlines()
@@ -64,7 +64,7 @@ def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
     )
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND])
+@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
 @pytest.mark.parametrize(
     ("answer", "expected_exit_code"),
     [("fail", ExitCode.PROBLEMS_FOUND), ("pass", ExitCode.NO_PROBLEMS)],
@@ -80,17 +80,17 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
     judge = PickyJudge(refuses="poison")
     judge.default = answer
 
-    exit_code = _run(_app(command, judge), tmp_path)
+    exit_code = _run(_build_app(command, judge), tmp_path)
 
     captured = capsys.readouterr()
     assert exit_code == expected_exit_code
-    assert len(json.loads(captured.out)[command.json_key]) == 1
+    assert len(json.loads(captured.out)[command.audited_units_json_key]) == 1
     (skipping_line,) = captured.err.splitlines()
     assert skipping_line.startswith(f"[{command.name}] Skipping ")
     assert skipping_line.endswith(": judge is down")
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, PROJECT_AUDIT_COMMAND])
+@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
 def test_run_with_no_unit_to_audit_exits_0(
     tmp_path: Path,
     fake_judge: type[FakeJudge],
@@ -108,7 +108,7 @@ def test_run_with_no_unit_to_audit_exits_0(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out) == {
-        command.json_key: [],
+        command.audited_units_json_key: [],
         "unit_id_to_roll_up_status": {},
         "findings": [],
     }

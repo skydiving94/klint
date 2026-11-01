@@ -44,7 +44,8 @@ def test_each_summary_is_a_unit_that_comes_before_those_nested_in_it() -> None:
         ("README.md#1", "hunk_summary"),
     ]
     unit_id_to_child_ids = {
-        unit.unit_id: [child.unit_id for child in unit.children()] for unit in units
+        unit.unit_id: [child.unit_id for child in unit.list_children()]
+        for unit in units
     }
     assert unit_id_to_child_ids["./"] == ["app/", "README.md"]
     assert unit_id_to_child_ids["app/greet.py"] == ["app/greet.py#1", "app/greet.py#2"]

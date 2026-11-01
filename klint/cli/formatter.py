@@ -61,7 +61,7 @@ class AuditProgressReporter:
         if not self._enabled:
             return
         self._completed += 1
-        self._render(f"Audited {_directory_of(unit_id)}")
+        self._render(f"Audited {_find_directory_of(unit_id)}")
 
     def finish(self) -> None:
         if not self._enabled:
@@ -86,7 +86,7 @@ class AuditProgressReporter:
         sys.stderr.flush()
 
 
-def _directory_of(unit_id: str) -> str:
+def _find_directory_of(unit_id: str) -> str:
     """Return the directory a unit is, or sits in; the ID of a unit is its path."""
     path = Path(unit_id)
     return str(path if path.is_dir() else path.parent)
@@ -152,7 +152,7 @@ def _format_evidence_suffix(evidence_location: Location | None) -> str:
         return ""
     line_range = evidence_location.line_range
     lines = "" if line_range is None else f" lines {line_range[0]}-{line_range[1]}"
-    return f" {_ANSI.DIM}(evidence: {evidence_location.source}{lines}){_ANSI.RESET}"
+    return f" {_ANSI.DIM}(evidence: {evidence_location.path}{lines}){_ANSI.RESET}"
 
 
 def format_audit_report(
@@ -162,7 +162,7 @@ def format_audit_report(
     no_problems_message: str,
     unit_id_to_roll_up_status: Mapping[str, RollUpStatus] | None = None,
 ) -> str:
-    """Return the terminal report of ``findings``, grouped by unit.
+    """Return the terminal report of ``findings``, unit_id_to_findings by unit.
 
     Each unit shown carries its roll-up status from
     ``unit_id_to_roll_up_status``. A unit with no finding shown is shown too
@@ -185,9 +185,9 @@ def format_audit_report(
         )
         return "\n".join(lines)
 
-    grouped: dict[str, list[AuditFinding]] = defaultdict(list)
+    unit_id_to_findings: dict[str, list[AuditFinding]] = defaultdict(list)
     for finding in findings:
-        grouped[finding.unit_id].append(finding)
+        unit_id_to_findings[finding.unit_id].append(finding)
 
     fail_count = sum(1 for finding in findings if finding.is_problem())
 
@@ -196,21 +196,22 @@ def format_audit_report(
         [
             unit_id
             for unit_id, status in unit_id_to_roll_up_status.items()
-            if unit_id in grouped or status is RollUpStatus.DESCENDANT_PROBLEM
+            if unit_id in unit_id_to_findings
+            or status is RollUpStatus.DESCENDANT_PROBLEM
         ]
-        + list(grouped)
+        + list(unit_id_to_findings)
     )
     for unit_id in shown_unit_ids:
         lines.append(
             f"\n{_ANSI.BOLD}Target:{_ANSI.RESET} {_ANSI.CYAN}{unit_id}{_ANSI.RESET}"
             f"{_format_roll_up_badge(unit_id_to_roll_up_status.get(unit_id))}"
         )
-        if unit_id not in grouped:
+        if unit_id not in unit_id_to_findings:
             lines.append(
                 f"      {_ANSI.DIM}\u21b3 A problem was found in a unit nested in "
                 f"it{_ANSI.RESET}"
             )
-        for finding in grouped.get(unit_id, []):
+        for finding in unit_id_to_findings.get(unit_id, []):
             line_range = finding.location.line_range if finding.location else None
 
             loc_suffix = ""

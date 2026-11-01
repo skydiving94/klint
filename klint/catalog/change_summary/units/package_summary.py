@@ -36,12 +36,12 @@ class AuditablePackageSummaryUnit(AuditableUnit):
 
     def get_location(self) -> Location:
         """Return where the summary sits in the change-summary document."""
-        return Location(source=f"{self.pointer}/summary")
+        return Location(path=f"{self.pointer}/summary")
 
     def get_context(self) -> ChangeSummaryContext:
         return ChangeSummaryContext(
             level=self.level, path=self.path, summary=self.summary
         )
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         return [*self.packages, *self.files]

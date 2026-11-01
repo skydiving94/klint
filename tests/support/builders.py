@@ -9,16 +9,20 @@ from typing import Any
 from klint.app.judge_mode import JudgeMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
-from klint.app.wiring import Override
-from klint.catalog.code.common.extraction.project import RecursiveProjectExtractor
-from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
-from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.file_traits_identifiers.extension_identifier import (
+from klint.app.wiring import BindingOverride
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
+)
+from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.catalog.domain_neutral.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge
@@ -27,10 +31,10 @@ from klint.core.models.audit_input import DiskPathInput
 from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
-from klint.infra.language_to_file_extensions_loader.json_loader import (
+from klint.infra.language_to_file_extensions_loader.language_table_loader import (
     load_file_extension_to_language,
 )
-from tests.support.fakes import FakeJudge, JudgeOverride
+from tests.support.fakes import FakeJudge, JudgeBindingOverride
 from tests.support.paths import (
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
     TIDY_RULE_PACK,
@@ -46,8 +50,8 @@ KNOWN_LANGUAGES = frozenset(
     load_file_extension_to_language(DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS).values()
 )
 
-FILE_RULE: RuleSpec = {"type": "choice", "instructions": "Is it tidy?"}
-DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
+FILE_RULE: RuleSpec = {"type": "choice", "question": "Is it tidy?"}
+DIR_RULE: RuleSpec = {**FILE_RULE, "unit_types": ["project_directory"]}
 
 
 def build_unit_registry() -> UnitRegistry:
@@ -98,9 +102,9 @@ def write_text(path: Path, text: str) -> Path:
 def make_settings(
     built_in_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
-    file_contents_rule_pack_override: Path | None = None,
-    project_structure_rule_pack_override: Path | None = None,
-    kev_mode: JudgeMode = JudgeMode.REMOTE,
+    file_rule_replacement: Path | None = None,
+    project_rule_replacement: Path | None = None,
+    judge_mode: JudgeMode = JudgeMode.REMOTE,
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
     """Return settings that point at the given rule packs and data files.
@@ -110,11 +114,11 @@ def make_settings(
     """
     return AppSettings(
         model_name="fake",
-        kev_mode=kev_mode,
+        judge_mode=judge_mode,
         built_in_rule_packs=tuple(built_in_rule_packs),
         fallback_rule_packs=tuple(fallback_rule_packs),
-        file_contents_rule_pack_override=file_contents_rule_pack_override,
-        project_structure_rule_pack_override=project_structure_rule_pack_override,
+        file_rule_replacement=file_rule_replacement,
+        project_rule_replacement=project_rule_replacement,
         language_to_file_extensions_path=language_to_file_extensions_path,
     )
 
@@ -126,15 +130,15 @@ def build_audit_pipeline(
     judge: BaseJudge,
     settings: AppSettings | None = None,
     *,
-    overrides: Sequence[Override] = (),
+    binding_overrides: Sequence[BindingOverride] = (),
 ) -> AuditPipeline:
     """Return klint's audit pipeline, built as the commands build it.
 
     ``judge`` stands in for the model, and ``settings`` default to those of
-    make_settings. ``overrides`` replace or add further bindings.
+    make_settings. ``binding_overrides`` replace or add further bindings.
     """
     injector = create_command_injector(
-        settings or make_settings(), JudgeOverride(judge), *overrides
+        settings or make_settings(), JudgeBindingOverride(judge), *binding_overrides
     )
     return injector.get(AuditPipeline)
 
@@ -144,14 +148,15 @@ def build_audit_command_app(
     judge: BaseJudge,
     settings: AppSettings | None = None,
     *,
-    overrides: Sequence[Override] = (),
+    binding_overrides: Sequence[BindingOverride] = (),
 ) -> AuditCommandApp:
     """Return the app of ``command``, built as the command builds it.
 
     The arguments are those of build_audit_pipeline.
     """
     return AuditCommandApp(
-        command, build_audit_pipeline(judge, settings, overrides=overrides)
+        command,
+        build_audit_pipeline(judge, settings, binding_overrides=binding_overrides),
     )
 
 
@@ -179,20 +184,20 @@ def build_target_scanner() -> TargetScanner:
     )
 
 
-def build_project_extractor() -> RecursiveProjectExtractor:
-    """Return klint's project extractor, built the way the commands build it."""
-    return create_command_injector(make_settings()).get(RecursiveProjectExtractor)
+def build_directory_tree_extractor() -> DirectoryTreeExtractor:
+    """Return klint's directory tree extractor, built the way the commands build it."""
+    return create_command_injector(make_settings()).get(DirectoryTreeExtractor)
 
 
-def extract_project(target: Path) -> AuditableDirectoryUnit:
+def extract_directory_tree(target: Path) -> AuditableDirectoryUnit:
     """Scan ``target``, extract it, and return the directory unit for its root."""
     scanned_target = build_target_scanner().scan_directory(target)
-    return asyncio.run(build_project_extractor().extract(scanned_target))
+    return asyncio.run(build_directory_tree_extractor().extract(scanned_target))
 
 
 def extract_python_project(target: Path) -> AuditablePythonPackageUnit:
     """Extract ``target``, which holds Python, and return its root package unit."""
-    unit = extract_project(target)
+    unit = extract_directory_tree(target)
     assert isinstance(unit, AuditablePythonPackageUnit)
     return unit
 
@@ -201,12 +206,12 @@ def build_rule_pack(
     origin: str,
     *rule_ids: str,
     languages: tuple[str, ...] | None = None,
-    target_unit_types: tuple[str, ...] = ("file",),
+    unit_types: tuple[str, ...] = ("file",),
 ) -> rule_pack.RulePackSpec:
     """Return a pack of choice rules asking "Is <rule_id> kept?", with no file.
 
     The pack is limited to ``languages`` when given, and each rule targets
-    ``target_unit_types``.
+    ``unit_types``.
     """
     return rule_pack.RulePackSpec(
         origin=origin,
@@ -215,8 +220,8 @@ def build_rule_pack(
             rule_pack.RuleSpec(
                 rule_id=rule_id,
                 question_type=QuestionType.CHOICE,
-                instructions=f"Is {rule_id} kept?",
-                target_unit_types=target_unit_types,
+                question=f"Is {rule_id} kept?",
+                unit_types=unit_types,
                 languages=(),
                 tags=(),
             )

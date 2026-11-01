@@ -21,7 +21,7 @@ def fake_judge() -> type[FakeJudge]:
 
 
 @pytest.fixture(autouse=True)
-def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
+def _block_network_access(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that tries to open a network connection."""
     blocked = Mock(side_effect=RuntimeError("network access is not allowed in tests"))
     monkeypatch.setattr(socket.socket, "connect", blocked)
@@ -59,13 +59,14 @@ def system_one_server(
 
 @pytest.fixture
 def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
-    """Give the test a private environment with no KEV_* variables set.
+    """Give the test a private environment with no klint setting set.
 
-    The settings a test sees then do not depend on the shell it runs from.
+    No KLINT_* variable is set, nor any KEV_* one that the KLINT_* ones
+    replace. The settings a test sees then do not depend on the shell it runs from.
     The working directory moves to an empty folder so that no stray
     klint.json is discovered there.
     """
-    env = {k: v for k, v in os.environ.items() if not k.startswith("KEV_")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("KLINT_", "KEV_"))}
     monkeypatch.setattr(os, "environ", env)
     workdir = tmp_path / "cwd"
     workdir.mkdir()

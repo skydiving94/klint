@@ -26,7 +26,7 @@ def _run_outline_command(tmp_path: Path, capsys: Capture, *options: str) -> str:
     app = build_audit_command_app(
         OUTLINE_COMMAND,
         SubjectJudge({"Section 1.1.": "fail"}),
-        overrides=[add_the_outline_suite],
+        binding_overrides=[add_the_outline_suite],
     )
     exit_code = asyncio.run(app.run([str(outline), *options]))
     assert exit_code == ExitCode.PROBLEMS_FOUND
@@ -64,10 +64,10 @@ def test_terminal_shows_every_ancestor_of_a_problem_with_its_status(
     assert report.count("A problem was found in a unit nested in it") == 2
 
 
-def test_terminal_shows_no_problem_on_units_shown_with_all_judgments(
+def test_terminal_shows_no_problem_on_units_shown_with_all_answers(
     tmp_path: Path, capsys: Capture
 ) -> None:
-    report = _ANSI_CODE.sub("", _run_outline_command(tmp_path, capsys, "--all"))
+    report = _ANSI_CODE.sub("", _run_outline_command(tmp_path, capsys, "--all-answers"))
 
     assert "Target: section 2.1 [NO PROBLEM]" in report.splitlines()
     assert "A problem was found in a unit nested in it" not in report

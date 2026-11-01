@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from klint.catalog.change_summary.document import ChangeKind
-from klint.catalog.change_summary.units.hunk_summary import AuditableHunkSummaryUnit
+from klint.catalog.change_summary.units.hunk_summary_unit import (
+    AuditableHunkSummaryUnit,
+)
 from klint.catalog.change_summary.units.summary_context import (
     ChangeSummaryContext,
     SummaryLevel,
@@ -31,12 +33,12 @@ class AuditableFileSummaryUnit(AuditableUnit):
 
     def get_location(self) -> Location:
         """Return where the summary sits in the change-summary document."""
-        return Location(source=f"{self.pointer}/summary")
+        return Location(path=f"{self.pointer}/summary")
 
     def get_context(self) -> ChangeSummaryContext:
         return ChangeSummaryContext(
             level=SummaryLevel.FILE, path=self.path, summary=self.summary
         )
 
-    def children(self) -> Sequence[AuditableUnit]:
+    def list_children(self) -> Sequence[AuditableUnit]:
         return self.hunks

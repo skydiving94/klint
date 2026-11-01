@@ -15,7 +15,7 @@ def map_unit_id_to_parent_unit_id(units: Iterable[AuditableUnit]) -> dict[str, s
     unit_id_to_parent_unit_id: dict[str, str] = {}
 
     def record_children(unit: AuditableUnit) -> None:
-        for child in unit.children():
+        for child in unit.list_children():
             if child.unit_id not in unit_id_to_parent_unit_id:
                 unit_id_to_parent_unit_id[child.unit_id] = unit.unit_id
                 record_children(child)

@@ -28,7 +28,7 @@ def test_children_first_judges_every_child_before_its_parent(
             parent
         ), (child, parent)
     # The report keeps the outline's own order, each section before its own.
-    assert outcome.report.audited_unit_ids() == [
+    assert outcome.report.list_audited_unit_ids() == [
         "book",
         "chapter 1",
         "section 1.1",
@@ -57,7 +57,7 @@ def test_children_first_judges_at_most_eight_units_of_a_level_at_once() -> None:
         judge, outline={"id": "book", "text": "B.", "sections": sections}
     )
 
-    assert len(outcome.report.audited_unit_ids()) == 21
+    assert len(outcome.report.list_audited_unit_ids()) == 21
     assert judge.most_at_once == 8
     assert judge.requests[-1].subject == "B."
 
@@ -71,7 +71,7 @@ def test_children_first_keeps_units_that_share_an_id_apart() -> None:
 
     outcome = run_outline_audit(SubjectJudge({"T1.": "fail"}), outline=outline)
 
-    assert outcome.report.audited_unit_ids() == ["book", "twin", "twin"]
+    assert outcome.report.list_audited_unit_ids() == ["book", "twin", "twin"]
     twin_answers = [
         finding.answer.label
         for finding in outcome.report.list_findings()

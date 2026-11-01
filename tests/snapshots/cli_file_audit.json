@@ -17,7 +17,7 @@
       "question": "Are the names clear?",
       "tags": [],
       "location": {
-        "source": "examples/backend_data_and_security.py",
+        "path": "examples/backend_data_and_security.py",
         "start_line": 1,
         "end_line": 43
       },
@@ -35,7 +35,7 @@
       "question": "Are functions short?",
       "tags": [],
       "location": {
-        "source": "examples/backend_data_and_security.py",
+        "path": "examples/backend_data_and_security.py",
         "start_line": 1,
         "end_line": 43
       },

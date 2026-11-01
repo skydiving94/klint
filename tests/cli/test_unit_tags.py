@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.basic_audit import FILE_AUDIT_COMMAND
-from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommand
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import (
     FILE_RULE,
     build_audit_command_app,
@@ -31,9 +31,9 @@ TAGGED_RULES = {
 
 
 def _audit_files(
-    target: Path, rules_path: Path, command: AuditCommand = FILE_AUDIT_COMMAND
+    target: Path, custom_rules_path: Path, command: AuditCommand = FILE_AUDIT_COMMAND
 ) -> dict[str, set[str]]:
-    """Run ``command`` on ``target`` with only the rules in ``rules_path``.
+    """Run ``command`` on ``target`` with only the rules in ``custom_rules_path``.
 
     Return the rule IDs asked about each unit, by what the judge read.
     """
@@ -41,8 +41,8 @@ def _audit_files(
     # No rule but the custom ones.
     settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
     app = build_audit_command_app(command, judge, settings)
-    asyncio.run(app.run([str(target), "--json", "--rules", str(rules_path)]))
-    return judge.subject_to_asked_rule_ids()
+    asyncio.run(app.run([str(target), "--json", "--rules", str(custom_rules_path)]))
+    return judge.map_subject_to_asked_rule_ids()
 
 
 def test_rules_limited_to_unit_tags_are_asked_where_the_tags_are_detected(
@@ -102,7 +102,7 @@ def test_imports_at_the_start_of_a_file_tag_it(tmp_path: Path) -> None:
 
 
 def test_project_audit_tags_the_files_of_a_directory_alike(tmp_path: Path) -> None:
-    file_metadata_rule = {**FILE_RULE, "target_unit_types": ["file_metadata"]}
+    file_metadata_rule = {**FILE_RULE, "unit_types": ["file_metadata"]}
     rules = write_json(
         tmp_path / "rules.json",
         {"frontend_file": {**file_metadata_rule, "unit_tags": ["frontend"]}},
@@ -110,7 +110,9 @@ def test_project_audit_tags_the_files_of_a_directory_alike(tmp_path: Path) -> No
     write_text(tmp_path / "repo" / "db.py", "import sqlalchemy\n")
     write_text(tmp_path / "repo" / "view.js", "import React from 'react';\n")
 
-    content_to_rule_ids = _audit_files(tmp_path / "repo", rules, PROJECT_AUDIT_COMMAND)
+    content_to_rule_ids = _audit_files(
+        tmp_path / "repo", rules, STRUCTURE_AUDIT_COMMAND
+    )
 
     # Only the file that imports React is asked the frontend rule.
     assert content_to_rule_ids == {"view.js (lines=1)": {"frontend_file"}}
@@ -122,11 +124,11 @@ def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
     settings = make_settings(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS)
     app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
     asyncio.run(app.run(["examples", "--json"]))
-    content_to_rule_ids = judge.subject_to_asked_rule_ids()
+    content_to_rule_ids = judge.map_subject_to_asked_rule_ids()
     backend_rule_ids = set(_read_rule_ids(BUILT_IN_RULE_PACKS[0]))
     react_rule_ids = set(_read_rule_ids(REACT_RULE_PACK))
 
-    def asked_rule_ids(example: str) -> set[str]:
+    def list_asked_rule_ids(example: str) -> set[str]:
         (rule_ids,) = [
             rule_ids
             for content, rule_ids in content_to_rule_ids.items()
@@ -140,7 +142,7 @@ def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
         "examples/frontend_architecture.tsx",
         "examples/frontend_hooks_and_dom.tsx",
     ):
-        assert asked_rule_ids(example) == react_rule_ids | {"god_component"}
+        assert list_asked_rule_ids(example) == react_rule_ids | {"god_component"}
     for example in (
         "examples/backend_data_and_security.py",
         "examples/mock_bad_project/api/checkout_routes.py",
@@ -149,7 +151,7 @@ def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
         # No signal: every rule for its language.
         "examples/mock_bad_project/utils/misc_helpers.py",
     ):
-        assert asked_rule_ids(example) == backend_rule_ids | {"god_component"}
+        assert list_asked_rule_ids(example) == backend_rule_ids | {"god_component"}
 
 
 def _read_rule_ids(pack: Path) -> list[str]:

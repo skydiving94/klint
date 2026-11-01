@@ -28,8 +28,8 @@ def _note_rule(rule_id: str, *tags: str) -> AuditRule:
     return AuditRule(
         rule_id=rule_id,
         question_type=QuestionType.CHOICE,
-        instructions=f"Is {rule_id} kept?",
-        target_unit_types=["note"],
+        question=f"Is {rule_id} kept?",
+        unit_types=["note"],
         tags=list(tags),
     )
 
@@ -64,7 +64,7 @@ def _run_audit(
 ) -> AuditOutcome:
     settings = make_settings() if rules is None else make_settings([rules], [rules])
     pipeline = build_audit_pipeline(
-        judge, settings, overrides=[add_the_ranked_notes_suite]
+        judge, settings, binding_overrides=[add_the_ranked_notes_suite]
     )
     request = AuditRequest(
         audit_input=DiskPathInput(target), audit_kind_id=audit_kind_id
@@ -72,7 +72,7 @@ def _run_audit(
     return asyncio.run(pipeline.run_audit(request))
 
 
-def _ranked(outcome: AuditOutcome) -> list[tuple[str, str]]:
+def _list_ranked_findings(outcome: AuditOutcome) -> list[tuple[str, str]]:
     return [
         (Path(finding.unit_id).name, finding.rule_id)
         for finding in outcome.report.select_findings(should_include_non_problems=True)
@@ -96,7 +96,7 @@ def test_findings_come_by_answer_then_confidence_then_rule_id(
     )
     target = write_text(tmp_path / "a.py", "x = 1\n")
     judge = fake_judge(
-        choices={
+        rule_id_to_answer={
             rule_id: answer
             for rule_id, (answer, _) in rule_id_to_answer_and_confidence.items()
         },
@@ -108,7 +108,7 @@ def test_findings_come_by_answer_then_confidence_then_rule_id(
 
     outcome = _run_audit(judge, target, FILE_CONTENTS_KIND_ID, rules)
 
-    assert [rule_id for _, rule_id in _ranked(outcome)] == [
+    assert [rule_id for _, rule_id in _list_ranked_findings(outcome)] == [
         "f_a",
         "f_b",
         "f_low",
@@ -129,7 +129,7 @@ def test_findings_on_one_unit_stay_together_in_audit_order(
 
     outcome = _run_audit(judge, target, FILE_CONTENTS_KIND_ID, rules)
 
-    assert _ranked(outcome) == [
+    assert _list_ranked_findings(outcome) == [
         ("a.py", "r2"),
         ("a.py", "r1"),
         ("b.py", "r2"),
@@ -141,13 +141,13 @@ def test_kind_ranks_findings_by_its_tags_within_an_answer(
     tmp_path: Path, fake_judge: type[FakeJudge]
 ) -> None:
     write_text(tmp_path / "note.txt", "Hi.\n")
-    judge = fake_judge(default="rude", choices={"e_polite_secret": "polite"})
+    judge = fake_judge(default="rude", rule_id_to_answer={"e_polite_secret": "polite"})
 
     outcome = _run_audit(judge, tmp_path, NOTES_KIND_ID)
 
     # A ranked tag counts by the best one a finding has; findings with none
     # come after; a problem comes before any other answer, whatever its tags.
-    assert [rule_id for _, rule_id in _ranked(outcome)] == [
+    assert [rule_id for _, rule_id in _list_ranked_findings(outcome)] == [
         "b_secret",
         "a_tone",
         "c_plain",
