@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from klint.catalog.change_summary.document import ChangeKind
-from klint.catalog.change_summary.units.hunk_summary import AuditableHunkSummaryUnit
+from klint.catalog.change_summary.units.hunk_summary_unit import (
+    AuditableHunkSummaryUnit,
+)
 from klint.catalog.change_summary.units.summary_context import (
     ChangeSummaryContext,
     SummaryLevel,

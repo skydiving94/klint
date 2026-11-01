@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.catalog.domain_neutral.extraction.whole_file import WholeFileExtractor
+from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
+    WholeFileExtractor,
+)
 from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.models.location import Location
 from klint.core.models.unit import AuditableUnit, UnitContext

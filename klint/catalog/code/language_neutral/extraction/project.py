@@ -8,7 +8,9 @@ from klint.catalog.code.language_neutral.extraction.directory_factory import (
 from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )

@@ -21,7 +21,9 @@ from klint.catalog.code.language_neutral.extraction.language_neutral_file_metada
 from klint.catalog.code.language_neutral.extraction.project import (
     RecursiveProjectExtractor,
 )
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
@@ -31,7 +33,7 @@ from klint.catalog.code.python.extraction.file_metadata_extractor import (
 from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,

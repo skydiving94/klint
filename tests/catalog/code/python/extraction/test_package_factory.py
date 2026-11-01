@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from tests.support.builders import (
     extract_python_project,
     list_judge_subjects,

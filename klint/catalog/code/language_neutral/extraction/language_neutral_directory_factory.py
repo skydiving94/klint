@@ -3,7 +3,9 @@ from pathlib import Path
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )

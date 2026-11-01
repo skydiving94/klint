@@ -6,7 +6,9 @@ from klint.catalog.change_summary.document_reader import (
     read_change_summary_document,
 )
 from klint.catalog.change_summary.units.file_summary import AuditableFileSummaryUnit
-from klint.catalog.change_summary.units.hunk_summary import AuditableHunkSummaryUnit
+from klint.catalog.change_summary.units.hunk_summary_unit import (
+    AuditableHunkSummaryUnit,
+)
 from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )

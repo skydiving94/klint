@@ -26,11 +26,15 @@ from klint.catalog.code.language_neutral.extraction.project_structure import (
 )
 from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.language_neutral.renderers.directory import DirectoryRenderer
+from klint.catalog.code.language_neutral.renderers.directory_renderer import (
+    DirectoryRenderer,
+)
 from klint.catalog.code.language_neutral.renderers.file_metadata_renderer import (
     FileMetadataRenderer,
 )
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
@@ -40,14 +44,16 @@ from klint.catalog.code.python.extraction.file_metadata_extractor import (
 from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.code.python.renderers.package import PythonPackageRenderer
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.python.renderers.package_renderer import PythonPackageRenderer
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
-from klint.catalog.domain_neutral.extraction.whole_file import WholeFileExtractor
-from klint.catalog.domain_neutral.renderers.whole_file import WholeFileRenderer
+from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
+    WholeFileExtractor,
+)
+from klint.catalog.domain_neutral.renderers.whole_file_renderer import WholeFileRenderer
 from klint.catalog.domain_neutral.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )

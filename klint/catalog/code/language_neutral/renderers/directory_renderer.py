@@ -1,7 +1,9 @@
 from klint.catalog.code.language_neutral.renderers.file_metadata_renderer import (
     describe_file_metadata,
 )
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.domain_neutral.renderers.character_budget import (
     join_lines_within_budget,
 )

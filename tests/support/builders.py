@@ -15,8 +15,10 @@ from klint.catalog.code.language_neutral.extraction.project import (
 )
 from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )

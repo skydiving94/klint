@@ -1,12 +1,14 @@
 from collections.abc import Iterator
 
-from klint.catalog.code.language_neutral.renderers.directory import (
+from klint.catalog.code.language_neutral.renderers.directory_renderer import (
     format_display_path,
     list_tree_lines,
 )
-from klint.catalog.code.language_neutral.units.directory import AuditableDirectoryUnit
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.python.module_names import collect_module_names
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.renderers.character_budget import (
     join_lines_within_budget,
 )

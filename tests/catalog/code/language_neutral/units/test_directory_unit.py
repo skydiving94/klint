@@ -6,7 +6,7 @@ from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
 from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit_traits import UnitTraits
