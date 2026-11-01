@@ -49,7 +49,7 @@ POLITENESS_SCALE = AnswerScale(
 POLITE_RULE = AuditRule(
     rule_id="polite_note",
     question_type=QuestionType.CHOICE,
-    instructions="Is the note polite?",
+    question="Is the note polite?",
     target_unit_types=["note"],
 )
 NOTES_COMMAND = AuditCommand(

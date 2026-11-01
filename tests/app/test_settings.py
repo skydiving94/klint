@@ -133,8 +133,8 @@ def test_klint_json_given_as_the_rules_file_too_is_not_warned_about(
     [
         ({"env": {"KLINT_JUDGE_MODE": "remote"}}, False),
         ({"fallback_rule_packs": []}, False),
-        ({"env": {}, "rules": {"a": {"type": "choice", "instructions": "?"}}}, True),
-        ({"a": {"type": "choice", "instructions": "?"}}, True),
+        ({"env": {}, "rules": {"a": {"type": "choice", "question": "?"}}}, True),
+        ({"a": {"type": "choice", "question": "?"}}, True),
     ],
 )
 def test_klint_json_is_a_project_rule_pack_when_it_holds_rules(

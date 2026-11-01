@@ -28,7 +28,7 @@ def _rule(
     return AuditRule(
         rule_id=rule_id,
         question_type=QuestionType.CHOICE,
-        instructions=f"Is {rule_id} kept?",
+        question=f"Is {rule_id} kept?",
         target_unit_types=target_unit_types,
         languages=languages or [],
     )

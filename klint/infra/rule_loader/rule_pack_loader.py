@@ -130,7 +130,7 @@ class RulePackLoader(BaseRuleLoader):
         return AuditRule(
             rule_id=spec.rule_id,
             question_type=spec.question_type,
-            instructions=spec.instructions,
+            question=spec.question,
             target_unit_types=list(spec.target_unit_types),
             languages=languages,
             tags=list(spec.tags),

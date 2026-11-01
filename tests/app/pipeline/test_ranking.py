@@ -28,7 +28,7 @@ def _note_rule(rule_id: str, *tags: str) -> AuditRule:
     return AuditRule(
         rule_id=rule_id,
         question_type=QuestionType.CHOICE,
-        instructions=f"Is {rule_id} kept?",
+        question=f"Is {rule_id} kept?",
         target_unit_types=["note"],
         tags=list(tags),
     )

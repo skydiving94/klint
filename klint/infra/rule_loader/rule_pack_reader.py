@@ -5,7 +5,7 @@ import warnings
 from pathlib import Path
 from typing import TypeGuard
 
-from klint.core.klint_warning import KlintWarning
+from klint.core.klint_warning import KlintWarning, describe_deprecated_name
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import DEFAULT_TARGET_UNIT_TYPES
 from klint.core.models.rule_pack import (
@@ -17,8 +17,11 @@ from klint.core.models.rule_pack import (
 )
 
 RULE_FIELD_NAMES = frozenset(
-    {"type", "instructions", "target_unit_types", "languages", "tags", "unit_tags"}
+    {"type", "question", "target_unit_types", "languages", "tags", "unit_tags"}
 )
+# Each old rule field name, and the name that replaces it. An old name still
+# works, with a warning, for one release.
+DEPRECATED_FIELD_NAME_TO_FIELD_NAME = {"instructions": "question"}
 # The header of a pack: which files the pack is for.
 HEADER_KEY = "applies_to"
 _HEADER_FIELD_NAMES = frozenset({"languages"})
@@ -30,8 +33,8 @@ def read_rule_pack(path: Path) -> RulePackSpec:
     Raises ValueError naming the file when it is not a JSON object or its
     header is malformed; an unknown header field is reported as a
     KlintWarning. A rule with a field of the wrong kind is an ERROR problem.
-    A rule without a type or instructions, and an unknown rule field, are
-    WARNING problems.
+    A rule without a type or question, an unknown rule field, and each old
+    field name the file uses, are WARNING problems.
     """
     try:
         raw_data: object = json.loads(path.read_text(encoding="utf-8"))
@@ -46,10 +49,25 @@ def read_rule_pack(path: Path) -> RulePackSpec:
     )
     rules: list[RuleSpec] = []
     rule_problems: list[RuleProblem] = []
+    used_old_field_names: set[str] = set()
     for rule_id, raw_rule in _select_raw_rules(raw_data).items():
-        rule = _read_rule(str(rule_id), raw_rule, path, rule_problems)
+        rule = _read_rule(
+            str(rule_id),
+            _translate_deprecated_field_names(raw_rule, used_old_field_names),
+            path,
+            rule_problems,
+        )
         if rule is not None:
             rules.append(rule)
+    rule_problems.extend(
+        RuleProblem(
+            RuleProblemSeverity.WARNING,
+            describe_deprecated_name(
+                old_name, DEPRECATED_FIELD_NAME_TO_FIELD_NAME[old_name], f"in '{path}'"
+            ),
+        )
+        for old_name in sorted(used_old_field_names)
+    )
     return RulePackSpec(
         origin=str(path),
         scope=scope,
@@ -69,6 +87,29 @@ def _select_raw_rules(raw_data: dict[object, object]) -> dict[object, object]:
     if isinstance(raw_rules, dict) and "type" not in raw_rules:
         return raw_rules
     return {key: value for key, value in raw_data.items() if key != HEADER_KEY}
+
+
+def _translate_deprecated_field_names(
+    raw_rule: object, used_old_field_names: set[str]
+) -> object:
+    """Return ``raw_rule`` with each old field name replaced by its new one.
+
+    Each old name found is added to ``used_old_field_names``. When the new
+    name is set as well, its value is kept. Anything but an object is
+    returned as it is.
+    """
+    if not isinstance(raw_rule, dict):
+        return raw_rule
+    translated = {
+        key: value
+        for key, value in raw_rule.items()
+        if key not in DEPRECATED_FIELD_NAME_TO_FIELD_NAME
+    }
+    for old_name, new_name in DEPRECATED_FIELD_NAME_TO_FIELD_NAME.items():
+        if old_name in raw_rule:
+            used_old_field_names.add(old_name)
+            translated.setdefault(new_name, raw_rule[old_name])
+    return translated
 
 
 def _read_scope(raw_header: object, path: Path) -> PackScope:
@@ -108,13 +149,13 @@ def _read_rule(
     if (
         not isinstance(raw_rule, dict)
         or "type" not in raw_rule
-        or "instructions" not in raw_rule
+        or "question" not in raw_rule
     ):
         rule_problems.append(
             RuleProblem(
                 RuleProblemSeverity.WARNING,
                 f"Rule '{rule_id}' in '{path}' is skipped: it needs both "
-                "'type' and 'instructions'",
+                "'type' and 'question'",
             )
         )
         return None
@@ -131,7 +172,7 @@ def _read_rule(
         return RuleSpec(
             rule_id=rule_id,
             question_type=_read_question_type(raw_rule["type"], rule_id, path),
-            instructions=_read_instructions(raw_rule["instructions"], rule_id, path),
+            question=_read_question(raw_rule["question"], rule_id, path),
             target_unit_types=(
                 _read_string_list(raw_rule, "target_unit_types", rule_id, path)
                 if "target_unit_types" in raw_rule
@@ -146,13 +187,13 @@ def _read_rule(
         return None
 
 
-def _read_instructions(raw_instructions: object, rule_id: str, path: Path) -> str:
-    if not isinstance(raw_instructions, str):
+def _read_question(raw_question: object, rule_id: str, path: Path) -> str:
+    if not isinstance(raw_question, str):
         raise ValueError(
-            f"Rule '{rule_id}' has invalid instructions {raw_instructions!r} in "
+            f"Rule '{rule_id}' has invalid question {raw_question!r} in "
             f"'{path}'; expected a string"
         )
-    return raw_instructions
+    return raw_question
 
 
 def _read_question_type(raw_type: object, rule_id: str, path: Path) -> QuestionType:

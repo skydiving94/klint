@@ -147,7 +147,7 @@ class Auditor:
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
                     answer=answer_scale.find_choice(answer.choice_key),
-                    question=rule.instructions,
+                    question=rule.question,
                     confidence=answer.confidence,
                     choice_key_to_probability=answer.choice_key_to_probability,
                     tags=tuple(rule.tags),
@@ -192,7 +192,7 @@ def _build_request(
             JudgeQuestion(
                 question_id=rule.rule_id,
                 question_type=rule.question_type,
-                question=rule.instructions,
+                question=rule.question,
                 choice_key_to_criterion=choice_key_to_criterion,
             )
             for rule in rules

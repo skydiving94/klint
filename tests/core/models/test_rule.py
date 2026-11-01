@@ -17,7 +17,7 @@ def _rule(
     return AuditRule(
         rule_id="r",
         question_type=QuestionType.CHOICE,
-        instructions="?",
+        question="?",
         languages=languages or [],
         tags=tags or [],
         unit_tags=unit_tags or [],

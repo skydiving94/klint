@@ -50,7 +50,7 @@ KNOWN_LANGUAGES = frozenset(
     load_file_extension_to_language(DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS).values()
 )
 
-FILE_RULE: RuleSpec = {"type": "choice", "instructions": "Is it tidy?"}
+FILE_RULE: RuleSpec = {"type": "choice", "question": "Is it tidy?"}
 DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
 
 
@@ -220,7 +220,7 @@ def build_rule_pack(
             rule_pack.RuleSpec(
                 rule_id=rule_id,
                 question_type=QuestionType.CHOICE,
-                instructions=f"Is {rule_id} kept?",
+                question=f"Is {rule_id} kept?",
                 target_unit_types=target_unit_types,
                 languages=(),
                 tags=(),

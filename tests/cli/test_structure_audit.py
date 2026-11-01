@@ -71,9 +71,9 @@ def test_project_audit_json_matches_snapshot(
         {
             "acyclic_packages": {
                 **DIR_RULE,
-                "instructions": "Do the packages import each other without cycles?",
+                "question": "Do the packages import each other without cycles?",
             },
-            "small_packages": {**DIR_RULE, "instructions": "Is each package small?"},
+            "small_packages": {**DIR_RULE, "question": "Is each package small?"},
         },
     )
     judge = fake_judge(choices={"acyclic_packages": "fail"})

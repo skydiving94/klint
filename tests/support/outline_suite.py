@@ -49,7 +49,7 @@ OUTLINE_COMMAND = AuditCommand(
 CLEAR_SECTION_RULE = AuditRule(
     rule_id="clear_section",
     question_type=QuestionType.CHOICE,
-    instructions="Is the section clear?",
+    question="Is the section clear?",
     target_unit_types=["outline_section"],
 )
 

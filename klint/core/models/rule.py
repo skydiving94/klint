@@ -11,7 +11,7 @@ DEFAULT_TARGET_UNIT_TYPES = ("file",)
 class AuditRule:
     rule_id: str
     question_type: QuestionType
-    instructions: str
+    question: str
     target_unit_types: list[str] = field(
         default_factory=lambda: list(DEFAULT_TARGET_UNIT_TYPES)
     )

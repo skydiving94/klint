@@ -70,8 +70,8 @@ def test_custom_rules_from_a_source_in_memory_merge_last(tmp_path: Path) -> None
 
     rules = asyncio.run(loader.load_rules(PYTHON, custom))
 
-    assert [(rule.rule_id, rule.instructions) for rule in rules] == [
+    assert [(rule.rule_id, rule.question) for rule in rules] == [
         ("a", "Is a kept?"),
-        ("b", FILE_RULE["instructions"]),
+        ("b", FILE_RULE["question"]),
         ("c", "Is c kept?"),
     ]

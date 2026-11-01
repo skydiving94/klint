@@ -3,7 +3,7 @@
   "rules": {
     "god_component": {
       "type": "choice",
-      "instructions": "Is each class, function, or component focused on a single clear responsibility rather than acting as a 'god component' that mixes unrelated concerns?",
+      "question": "Is each class, function, or component focused on a single clear responsibility rather than acting as a 'god component' that mixes unrelated concerns?",
       "target_unit_types": ["file"]
     }
   }

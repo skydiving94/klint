@@ -64,9 +64,9 @@ def test_file_audit_json_matches_snapshot(
     pack = write_json(
         tmp_path / "rules.json",
         {
-            "clear_names": {**FILE_RULE, "instructions": "Are the names clear?"},
-            "short_functions": {**FILE_RULE, "instructions": "Are functions short?"},
-            "typed_functions": {**FILE_RULE, "instructions": "Are functions typed?"},
+            "clear_names": {**FILE_RULE, "question": "Are the names clear?"},
+            "short_functions": {**FILE_RULE, "question": "Are functions short?"},
+            "typed_functions": {**FILE_RULE, "question": "Are functions typed?"},
         },
     )
     judge = fake_judge(choices={"clear_names": "fail", "short_functions": "fail"})
@@ -420,7 +420,7 @@ def test_judge_is_sent_the_file_content_and_a_rule_as_a_question(
     assert house_rule_question == JudgeQuestion(
         question_id="house_rule",
         question_type=QuestionType.CHOICE,
-        question=FILE_RULE["instructions"],
+        question=FILE_RULE["question"],
         choice_key_to_criterion=PRACTICE_SCALE.map_choice_key_to_criterion(),
     )
 

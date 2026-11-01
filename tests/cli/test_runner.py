@@ -242,7 +242,7 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
                 "KLINT_JUDGE_MODEL": "from-klint-json",
             },
             "rules": {
-                "shared": {**FILE_RULE, "instructions": "From klint.json?"},
+                "shared": {**FILE_RULE, "question": "From klint.json?"},
                 "project_only": FILE_RULE,
             },
         },
@@ -252,7 +252,7 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
         {
             "env": {"KLINT_JUDGE_MODEL": "from-rules-file"},
             "rules": {
-                "shared": {**FILE_RULE, "instructions": "From --rules?"},
+                "shared": {**FILE_RULE, "question": "From --rules?"},
                 "custom_only": FILE_RULE,
             },
         },
@@ -270,9 +270,10 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
     (received,) = system_one_server.received
     assert isinstance(received.body, dict)
     assert received.body["model"] == "from-klint-json"
-    rule_id_to_instructions = {
+    # System One names the text of a question "instructions".
+    rule_id_to_question = {
         rule_id: question["instructions"]
         for rule_id, question in received.body["questions"].items()
     }
-    assert rule_id_to_instructions["shared"] == "From --rules?"
-    assert {"project_only", "custom_only"} <= set(rule_id_to_instructions)
+    assert rule_id_to_question["shared"] == "From --rules?"
+    assert {"project_only", "custom_only"} <= set(rule_id_to_question)

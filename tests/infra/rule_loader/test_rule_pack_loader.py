@@ -271,8 +271,8 @@ def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
     custom = write_json(
         tmp_path / "custom.json",
         {
-            "a": {**FILE_RULE, "instructions": "Custom?"},
-            "extra": {**FILE_RULE, "instructions": "Extra?"},
+            "a": {**FILE_RULE, "question": "Custom?"},
+            "extra": {**FILE_RULE, "question": "Extra?"},
         },
     )
 
@@ -280,8 +280,8 @@ def test_custom_rules_override_any_pack_by_id_and_add_new_ones(
     rules = _load(_loader([first, second]), custom=custom)
 
     assert list(rules) == ["a", "b", "c", "extra"]
-    assert rules["a"].instructions == "Custom?"
-    assert rules["extra"].instructions == "Extra?"
+    assert rules["a"].question == "Custom?"
+    assert rules["extra"].question == "Extra?"
     assert (rules["b"], rules["c"]) == (defaults["b"], defaults["c"])
 
 
@@ -304,14 +304,14 @@ def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
     assert list(_load(_loader([config]))) == ["only"]
 
 
-def test_entries_without_type_or_instructions_are_skipped_with_a_warning(
+def test_entries_without_type_or_question_are_skipped_with_a_warning(
     tmp_path: Path,
 ) -> None:
     pack = write_json(
         tmp_path / "pack.json",
         {
             "ok": FILE_RULE,
-            "no_type": {"instructions": "x"},
+            "no_type": {"question": "x"},
             "no_text": {"type": "choice"},
             "junk": 1,
         },
@@ -384,23 +384,23 @@ def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_
         {
             "env": {"KLINT_JUDGE_MODE": "local"},
             "rules": {
-                "shared": {**FILE_RULE, "instructions": "From the project?"},
+                "shared": {**FILE_RULE, "question": "From the project?"},
                 "project_only": FILE_RULE,
             },
         },
     )
     custom = write_json(
         tmp_path / "custom.json",
-        {"project_only": {**FILE_RULE, "instructions": "From --rules?"}},
+        {"project_only": {**FILE_RULE, "question": "From --rules?"}},
     )
     loader = _loader([pack], project_rule_packs=[project])
 
     python_rules = _load(loader, PYTHON, custom)
     java_rules = _load(loader, JAVA)
 
-    assert {rule_id: rule.instructions for rule_id, rule in python_rules.items()} == {
+    assert {rule_id: rule.question for rule_id, rule in python_rules.items()} == {
         "shared": "From the project?",
-        "pack_only": FILE_RULE["instructions"],
+        "pack_only": FILE_RULE["question"],
         "project_only": "From --rules?",
     }
     assert list(java_rules) == ["shared", "project_only"]
@@ -449,7 +449,7 @@ def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
         ("type", 1, "has unknown type 1"),
         ("target_unit_types", "file", "has invalid target_unit_types 'file'"),
         ("target_unit_types", ["nope"], r"has unknown target_unit_types \['nope'\]"),
-        ("instructions", 7, "has invalid instructions 7"),
+        ("question", 7, "has invalid question 7"),
     ],
 )
 def test_malformed_rule_stops_with_an_error_naming_the_rule_and_the_file(
@@ -502,17 +502,17 @@ def test_missing_pack_gives_no_rules(tmp_path: Path) -> None:
 def test_several_packs_are_merged_in_order(tmp_path: Path) -> None:
     first = write_json(
         tmp_path / "first.json",
-        {"shared": {**FILE_RULE, "instructions": "From first?"}, "a": FILE_RULE},
+        {"shared": {**FILE_RULE, "question": "From first?"}, "a": FILE_RULE},
     )
     second = write_json(
         tmp_path / "second.json",
-        {"shared": {**FILE_RULE, "instructions": "From second?"}, "b": FILE_RULE},
+        {"shared": {**FILE_RULE, "question": "From second?"}, "b": FILE_RULE},
     )
 
     rules = _load(_loader([first, second]))
 
     assert list(rules) == ["shared", "a", "b"]
-    assert rules["shared"].instructions == "From second?"
+    assert rules["shared"].question == "From second?"
 
 
 def test_missing_pack_is_skipped_among_several(tmp_path: Path) -> None:

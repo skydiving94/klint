@@ -125,7 +125,7 @@ def test_rules_file_given_with_the_request_is_asked_too(
     target = write_text(tmp_path / "a.py", "x = 1\n")
     rules = write_text(
         tmp_path / "rules.json",
-        '{"typed": {"type": "choice", "instructions": "Is it typed?"}}',
+        '{"typed": {"type": "choice", "question": "Is it typed?"}}',
     )
     judge = fake_judge()
 

@@ -53,7 +53,7 @@ class RuleSpec:
 
     rule_id: str
     question_type: QuestionType
-    instructions: str
+    question: str
     target_unit_types: tuple[str, ...]
     languages: tuple[str, ...]
     tags: tuple[str, ...]
