@@ -132,7 +132,7 @@ def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_o
     # judge is built but never asked, as the target is missing.
     write_json(
         Path.cwd() / "klint.json",
-        {"env": {"KEV_MODE": "remote", "KEV_MODLE_NAME": "x"}},
+        {"env": {"KLINT_JUDGE_MODE": "remote", "KLINT_JUDGE_MODLE": "x"}},
     )
     target = tmp_path / "absent.py"
     monkeypatch.setattr(sys, "argv", ["klint", str(target)])
@@ -143,7 +143,7 @@ def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_o
     assert exit_code == ExitCode.RUN_ERROR
     warning_line, error_line = capsys.readouterr().err.splitlines()
     assert warning_line.startswith("[klint] Warning: ")
-    assert "unknown keys ['KEV_MODLE_NAME']" in warning_line
+    assert "unknown keys ['KLINT_JUDGE_MODLE']" in warning_line
     assert error_line.startswith("[klint] Error: Audit target does not exist")
 
 
@@ -185,7 +185,7 @@ def test_command_that_cannot_run_exits_with_status_2(
     capsys: pytest.CaptureFixture[str],
     cli_main: Callable[[], int],
 ) -> None:
-    shell_env["KEV_MODE"] = "remote"
+    shell_env["KLINT_JUDGE_MODE"] = "remote"
     monkeypatch.setattr(sys, "argv", ["klint", str(tmp_path / "absent")])
 
     exit_code = cli_main()
@@ -214,14 +214,14 @@ def test_unknown_mode_stops_the_command_before_any_judge_is_built(
     capsys: pytest.CaptureFixture[str],
     cli_main: Callable[[], int],
 ) -> None:
-    shell_env["KEV_MODE"] = "locl"
+    shell_env["KLINT_JUDGE_MODE"] = "locl"
     monkeypatch.setattr(sys, "argv", ["klint", str(tmp_path)])
 
     exit_code = cli_main()
 
     (error_line,) = capsys.readouterr().err.splitlines()
     assert exit_code == ExitCode.RUN_ERROR
-    assert "KEV_MODE 'locl'" in error_line
+    assert "KLINT_JUDGE_MODE 'locl'" in error_line
     assert "valid values: ['local', 'remote']" in error_line
 
 
@@ -237,9 +237,9 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
         tmp_path / "project" / "klint.json",
         {
             "env": {
-                "KEV_MODE": "remote",
-                "KEV_BASE_URL": system_one_server.base_url,
-                "KEV_MODEL_NAME": "from-klint-json",
+                "KLINT_JUDGE_MODE": "remote",
+                "KLINT_JUDGE_BASE_URL": system_one_server.base_url,
+                "KLINT_JUDGE_MODEL": "from-klint-json",
             },
             "rules": {
                 "shared": {**FILE_RULE, "instructions": "From klint.json?"},
@@ -250,7 +250,7 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
     rules_file = write_json(
         tmp_path / "custom.json",
         {
-            "env": {"KEV_MODEL_NAME": "from-rules-file"},
+            "env": {"KLINT_JUDGE_MODEL": "from-rules-file"},
             "rules": {
                 "shared": {**FILE_RULE, "instructions": "From --rules?"},
                 "custom_only": FILE_RULE,

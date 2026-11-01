@@ -5,6 +5,10 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
+from klint.app.deprecated_setting_names import (
+    DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
+    translate_deprecated_setting_names,
+)
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.file_traits_override import FileTraitsOverride
 
@@ -13,12 +17,12 @@ CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 # may set.
 KNOWN_SETTING_NAMES = frozenset(
     {
-        "KEV_MODEL_NAME",
+        "KLINT_JUDGE_MODEL",
         "KEV_DEFAULT_RULES_PATH",
         "KEV_DEFAULT_PROJECT_RULES_PATH",
-        "KEV_MODE",
-        "KEV_BASE_URL",
-        "KEV_API_KEY",
+        "KLINT_JUDGE_MODE",
+        "KLINT_JUDGE_BASE_URL",
+        "KLINT_JUDGE_API_KEY",
     }
 )
 _ENV_BLOCK_KEY = "env"
@@ -124,17 +128,21 @@ def _load_env_block(config: dict[object, object], config_path: Path) -> dict[str
             "be a JSON object"
         )
         return {}
-    unknown = sorted(str(key) for key in env_block if key not in KNOWN_SETTING_NAMES)
+    accepted_keys = KNOWN_SETTING_NAMES | DEPRECATED_SETTING_NAME_TO_SETTING_NAME.keys()
+    unknown = sorted(str(key) for key in env_block if key not in accepted_keys)
     if unknown:
         _warn(
             f"The '{_ENV_BLOCK_KEY}' block in '{config_path}' has unknown keys "
             f"{unknown}, which are ignored; known keys: {sorted(KNOWN_SETTING_NAMES)}"
         )
-    return {
-        str(key): str(value)
-        for key, value in env_block.items()
-        if key in KNOWN_SETTING_NAMES and value is not None
-    }
+    return translate_deprecated_setting_names(
+        {
+            str(key): str(value)
+            for key, value in env_block.items()
+            if key in accepted_keys and value is not None
+        },
+        f"in '{config_path}'",
+    )
 
 
 def _load_fallback_rule_packs(

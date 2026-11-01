@@ -47,8 +47,8 @@ These override personal defaults for work under #22.
 1. Start the model server in the kev checkout (`uv sync --extra serve` once first):
    `cd ~/Developer/kev && uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8009`
 2. In the klint worktree, run against it (the default URL is already `http://127.0.0.1:8009`):
-   `KEV_MODE=remote uv run klint examples/`
-   `KEV_MODE=remote uv run klint-structure examples/mock_bad_project/`
+   `KLINT_JUDGE_MODE=remote uv run klint examples/`
+   `KLINT_JUDGE_MODE=remote uv run klint-structure examples/mock_bad_project/`
 3. Record the results in the wave PR.
 - One server can serve every session. If port 8009 is already serving, reuse it.
-- After #14 renames the variables, use `KLINT_JUDGE_MODE` and `KLINT_JUDGE_BASE_URL`.
+- Point at another server with `KLINT_JUDGE_BASE_URL`.

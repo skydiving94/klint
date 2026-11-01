@@ -299,7 +299,7 @@ def test_custom_rules_merge_whatever_the_traits(
 def test_klint_json_rules_block_is_read(tmp_path: Path) -> None:
     config = write_json(
         tmp_path / "klint.json",
-        {"env": {"KEV_MODE": "local"}, "rules": {"only": FILE_RULE}},
+        {"env": {"KLINT_JUDGE_MODE": "local"}, "rules": {"only": FILE_RULE}},
     )
     assert list(_load(_loader([config]))) == ["only"]
 
@@ -352,7 +352,7 @@ def test_keys_beside_a_rules_block_are_not_rules(tmp_path: Path) -> None:
     pack = write_json(
         tmp_path / "pack.json",
         {
-            "env": {"KEV_MODE": "local"},
+            "env": {"KLINT_JUDGE_MODE": "local"},
             "fallback_rule_packs": ["docs.json"],
             "rules": {"a": FILE_RULE},
         },
@@ -365,7 +365,7 @@ def test_keys_beside_a_rules_block_are_not_rules(tmp_path: Path) -> None:
 def test_every_key_of_a_flat_file_but_its_header_is_a_rule(tmp_path: Path) -> None:
     pack = write_json(
         tmp_path / "pack.json",
-        {"applies_to": {}, "env": {"KEV_MODE": "local"}, "a": FILE_RULE},
+        {"applies_to": {}, "env": {"KLINT_JUDGE_MODE": "local"}, "a": FILE_RULE},
     )
 
     with pytest.warns(KlintWarning, match="Rule 'env' .* is skipped"):
@@ -382,7 +382,7 @@ def test_project_rules_merge_over_the_packs_for_every_file_and_custom_ones_over_
     project = write_json(
         tmp_path / "klint.json",
         {
-            "env": {"KEV_MODE": "local"},
+            "env": {"KLINT_JUDGE_MODE": "local"},
             "rules": {
                 "shared": {**FILE_RULE, "instructions": "From the project?"},
                 "project_only": FILE_RULE,

@@ -61,10 +61,10 @@ runs:
     - name: Run klint Audit
       shell: bash
       env:
-        KEV_MODE: ${{ inputs.kev_mode }}
-        KEV_MODEL_NAME: ${{ inputs.kev_model_name }}
-        KEV_BASE_URL: ${{ inputs.kev_base_url }}
-        KEV_API_KEY: ${{ inputs.kev_api_key }}
+        KLINT_JUDGE_MODE: ${{ inputs.kev_mode }}
+        KLINT_JUDGE_MODEL: ${{ inputs.kev_model_name }}
+        KLINT_JUDGE_BASE_URL: ${{ inputs.kev_base_url }}
+        KLINT_JUDGE_API_KEY: ${{ inputs.kev_api_key }}
       run: |
         CLI_CMD="klint"
         if [ "${{ inputs.mode }}" = "project" ]; then

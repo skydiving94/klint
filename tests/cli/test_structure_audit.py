@@ -423,8 +423,8 @@ def test_old_command_name_runs_the_structure_audit_with_a_warning(
     system_one_server: StubSystemOneServer,
 ) -> None:
     package = write_text(tmp_path / "pkg" / "a.py", "x = 1\n").parent
-    shell_env["KEV_MODE"] = "remote"
-    shell_env["KEV_BASE_URL"] = system_one_server.base_url
+    shell_env["KLINT_JUDGE_MODE"] = "remote"
+    shell_env["KLINT_JUDGE_BASE_URL"] = system_one_server.base_url
     monkeypatch.setattr(sys, "argv", ["klint-project", str(package), "--json"])
 
     exit_code = klint_project_alias.cli_main()

@@ -15,8 +15,9 @@ dependencies = [
     "injector>=0.23",
 ]
 
-# The in-process model runtime, needed only when KEV_MODE=local. Optional for
-# people installing klint; developers get it through the dev group below.
+# The in-process model runtime, needed only when KLINT_JUDGE_MODE=local.
+# Optional for people installing klint; developers get it through the dev
+# group below.
 # kev itself supports Python 3.12 and 3.13 only, so on other versions this
 # extra installs nothing.
 [project.optional-dependencies]

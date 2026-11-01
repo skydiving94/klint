@@ -1,7 +1,7 @@
 {
   "env": {
-    "KEV_MODE": "local",
-    "KEV_MODEL_NAME": "jaredpalmer/kev-4b"
+    "KLINT_JUDGE_MODE": "local",
+    "KLINT_JUDGE_MODEL": "jaredpalmer/kev-4b"
   },
   "rules": {
     "no_raw_print_statements": {

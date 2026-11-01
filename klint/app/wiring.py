@@ -82,7 +82,7 @@ class KlintModule(Module):
     @provider
     def provide_judge(self, settings: AppSettings) -> BaseJudge:
         # A single binding, so that the remote mode never loads the model.
-        match settings.kev_mode:
+        match settings.judge_mode:
             case JudgeMode.LOCAL:
                 from klint.infra.system_one.local import LocalKevJudge
 
@@ -90,11 +90,11 @@ class KlintModule(Module):
             case JudgeMode.REMOTE:
                 return RemoteSystemOneJudge(
                     model_name=settings.model_name,
-                    base_url=settings.kev_base_url,
-                    api_key=settings.kev_api_key,
+                    base_url=settings.judge_base_url,
+                    api_key=settings.judge_api_key,
                 )
             case _:
-                assert_never(settings.kev_mode)
+                assert_never(settings.judge_mode)
 
     @singleton
     @provider

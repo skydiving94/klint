@@ -104,7 +104,7 @@ def make_settings(
     fallback_rule_packs: Sequence[Path] = (TIDY_RULE_PACK,),
     file_contents_rule_pack_override: Path | None = None,
     project_structure_rule_pack_override: Path | None = None,
-    kev_mode: JudgeMode = JudgeMode.REMOTE,
+    judge_mode: JudgeMode = JudgeMode.REMOTE,
     language_to_file_extensions_path: Path = DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
 ) -> AppSettings:
     """Return settings that point at the given rule packs and data files.
@@ -114,7 +114,7 @@ def make_settings(
     """
     return AppSettings(
         model_name="fake",
-        kev_mode=kev_mode,
+        judge_mode=judge_mode,
         built_in_rule_packs=tuple(built_in_rule_packs),
         fallback_rule_packs=tuple(fallback_rule_packs),
         file_contents_rule_pack_override=file_contents_rule_pack_override,
