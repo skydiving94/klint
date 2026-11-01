@@ -27,7 +27,7 @@ class AuditableHunkSummaryUnit(AuditableUnit):
 
     def get_location(self) -> Location:
         """Return where the summary sits in the change-summary document."""
-        return Location(source=f"{self.hunk.pointer}/summary")
+        return Location(path=f"{self.hunk.pointer}/summary")
 
     def get_evidence_location(self) -> Location:
         """Return the lines the hunk adds, in the file after the change.
@@ -38,12 +38,12 @@ class AuditableHunkSummaryUnit(AuditableUnit):
         hunk = self.hunk
         if hunk.new_line_count > 0:
             return Location(
-                source=self.file_path,
+                path=self.file_path,
                 start_line=hunk.new_start,
                 end_line=hunk.new_start + hunk.new_line_count - 1,
             )
         return Location(
-            source=self.file_old_path or self.file_path,
+            path=self.file_old_path or self.file_path,
             start_line=hunk.old_start,
             end_line=hunk.old_start + hunk.old_line_count - 1,
         )

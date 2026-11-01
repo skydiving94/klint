@@ -39,7 +39,7 @@ class AuditableFileMetadataUnit(AuditableUnit):
     is_unparseable: bool = False
 
     def get_location(self) -> Location | None:
-        return Location(source=self.file_path or self.unit_id)
+        return Location(path=self.file_path or self.unit_id)
 
     def get_context(self) -> FileMetadataContext:
         return FileMetadataContext(

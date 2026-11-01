@@ -18,7 +18,7 @@ class AuditableFileUnit(AuditableUnit):
 
     def get_location(self) -> Location | None:
         return Location(
-            source=self.file_path or self.unit_id,
+            path=self.file_path or self.unit_id,
             start_line=self.start_line,
             end_line=self.end_line,
         )

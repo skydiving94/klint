@@ -152,7 +152,7 @@ def _format_evidence_suffix(evidence_location: Location | None) -> str:
         return ""
     line_range = evidence_location.line_range
     lines = "" if line_range is None else f" lines {line_range[0]}-{line_range[1]}"
-    return f" {_ANSI.DIM}(evidence: {evidence_location.source}{lines}){_ANSI.RESET}"
+    return f" {_ANSI.DIM}(evidence: {evidence_location.path}{lines}){_ANSI.RESET}"
 
 
 def format_audit_report(

@@ -40,7 +40,7 @@ class AuditableDirectoryUnit(AuditableUnit):
         return path.name or path.resolve().name or self.directory_path
 
     def get_location(self) -> Location | None:
-        return Location(source=self.directory_path or self.unit_id)
+        return Location(path=self.directory_path or self.unit_id)
 
     def get_context(self) -> ProjectDirectoryContext:
         return ProjectDirectoryContext(

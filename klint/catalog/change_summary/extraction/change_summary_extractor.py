@@ -90,14 +90,14 @@ def _list_unit_and_nested(unit: AuditableUnit) -> list[AuditableUnit]:
 
 def _check_unit_ids_differ(units: list[AuditableUnit]) -> None:
     """Raise ValueError naming the first unit ID two units share."""
-    unit_id_to_location: dict[str, str] = {}
+    unit_id_to_path: dict[str, str] = {}
     for unit in units:
         location = unit.get_location()
-        source = "" if location is None else location.source
-        earlier_source = unit_id_to_location.setdefault(unit.unit_id, source)
-        if earlier_source != source:
+        path = "" if location is None else location.path
+        earlier_path = unit_id_to_path.setdefault(unit.unit_id, path)
+        if earlier_path != path:
             raise ValueError(
-                f"Change-summary document: {source} has the ID '{unit.unit_id}', "
-                f"as {earlier_source} does; each hunk ID, file path and package "
+                f"Change-summary document: {path} has the ID '{unit.unit_id}', "
+                f"as {earlier_path} does; each hunk ID, file path and package "
                 "path appears once"
             )

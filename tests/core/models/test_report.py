@@ -89,7 +89,7 @@ def test_finding_dict_has_the_finding_keys_with_the_unit_context_apart() -> None
         "choice_key_to_probability": None,
         "question": "?",
         "tags": ["style"],
-        "location": {"source": "a.py", "start_line": 1, "end_line": 9},
+        "location": {"path": "a.py", "start_line": 1, "end_line": 9},
         "evidence_location": None,
         "context": {"rule_id": "from the unit"},
     }

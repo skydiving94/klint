@@ -23,7 +23,7 @@
       "question": "Do the packages import each other without cycles?",
       "tags": [],
       "location": {
-        "source": "examples/mock_bad_project",
+        "path": "examples/mock_bad_project",
         "start_line": null,
         "end_line": null
       },
@@ -48,7 +48,7 @@
       "question": "Do the packages import each other without cycles?",
       "tags": [],
       "location": {
-        "source": "examples/mock_bad_project/api",
+        "path": "examples/mock_bad_project/api",
         "start_line": null,
         "end_line": null
       },
@@ -72,7 +72,7 @@
       "question": "Do the packages import each other without cycles?",
       "tags": [],
       "location": {
-        "source": "examples/mock_bad_project/domain",
+        "path": "examples/mock_bad_project/domain",
         "start_line": null,
         "end_line": null
       },
@@ -96,7 +96,7 @@
       "question": "Do the packages import each other without cycles?",
       "tags": [],
       "location": {
-        "source": "examples/mock_bad_project/utils",
+        "path": "examples/mock_bad_project/utils",
         "start_line": null,
         "end_line": null
       },

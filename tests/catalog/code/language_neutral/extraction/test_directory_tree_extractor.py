@@ -22,7 +22,7 @@ def test_directory_tree_extractor_builds_one_root_unit() -> None:
 
     assert unit.unit_type == "project_directory"
     assert unit.unit_id == str(MOCK_PROJECT)
-    assert unit.get_location() == Location(source=str(MOCK_PROJECT))
+    assert unit.get_location() == Location(path=str(MOCK_PROJECT))
     assert unit.get_context() == ProjectDirectoryContext(
         file_names=[], subdirectory_names=["api", "domain", "utils"]
     )

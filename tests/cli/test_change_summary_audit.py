@@ -88,7 +88,7 @@ def test_json_lists_each_summary_its_status_and_the_findings(
         "path": "app/greet.py",
         "summary": "Removes the unused import of os.",
     }
-    assert finding["location"]["source"].endswith("/hunks/1/summary")
+    assert finding["location"]["path"].endswith("/hunks/1/summary")
 
 
 def test_every_answer_is_shown_with_all_answers(
