@@ -462,7 +462,7 @@ def test_malformed_custom_rule_stops_the_command_naming_the_rule_and_the_file(
 ) -> None:
     custom = write_json(
         tmp_path / "custom.json",
-        {"house_rule": {**FILE_RULE, "target_unit_types": "file"}},
+        {"house_rule": {**FILE_RULE, "unit_types": "file"}},
     )
     target = write_text(tmp_path / "a.py", "x = 1\n")
     judge = fake_judge()
@@ -472,7 +472,7 @@ def test_malformed_custom_rule_stops_the_command_naming_the_rule_and_the_file(
     (error_line,) = capsys.readouterr().err.splitlines()
     assert exit_code == ExitCode.RUN_ERROR
     assert error_line == (
-        "[klint] Error: Rule 'house_rule' has invalid target_unit_types 'file' "
+        "[klint] Error: Rule 'house_rule' has invalid unit_types 'file' "
         f"in '{custom.resolve()}'; expected a list of strings"
     )
     assert judge.requests == []

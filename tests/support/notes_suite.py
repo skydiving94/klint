@@ -50,7 +50,7 @@ POLITE_RULE = AuditRule(
     rule_id="polite_note",
     question_type=QuestionType.CHOICE,
     question="Is the note polite?",
-    target_unit_types=["note"],
+    unit_types=["note"],
 )
 NOTES_COMMAND = AuditCommand(
     name="klint-notes",

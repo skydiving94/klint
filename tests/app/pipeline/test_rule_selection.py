@@ -23,13 +23,13 @@ from tests.support.notes_suite import (
 
 
 def _rule(
-    rule_id: str, target_unit_types: list[str], languages: list[str] | None = None
+    rule_id: str, unit_types: list[str], languages: list[str] | None = None
 ) -> AuditRule:
     return AuditRule(
         rule_id=rule_id,
         question_type=QuestionType.CHOICE,
         question=f"Is {rule_id} kept?",
-        target_unit_types=target_unit_types,
+        unit_types=unit_types,
         languages=languages or [],
     )
 

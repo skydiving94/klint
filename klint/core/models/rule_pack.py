@@ -45,7 +45,7 @@ class PackScope:
 class RuleSpec:
     """One rule as its file writes it.
 
-    target_unit_types is the default when the rule names none. languages
+    unit_types is the default when the rule names none. languages
     are the rule's own, before its pack's header narrows them; empty when
     it names none. unit_tags are the unit tags the rule is limited to;
     empty when it names none.
@@ -54,7 +54,7 @@ class RuleSpec:
     rule_id: str
     question_type: QuestionType
     question: str
-    target_unit_types: tuple[str, ...]
+    unit_types: tuple[str, ...]
     languages: tuple[str, ...]
     tags: tuple[str, ...]
     unit_tags: tuple[str, ...] = ()

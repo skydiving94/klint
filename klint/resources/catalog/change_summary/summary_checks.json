@@ -5,31 +5,31 @@
     "no_false_statement": {
       "type": "choice",
       "question": "How does the hypothesis relate to the premise?",
-      "target_unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["accuracy"]
     },
     "no_unsupported_reason": {
       "type": "choice",
       "question": "Is every 'why' in the hypothesis (a reason, goal, or benefit of the change) stated in the premise? A hypothesis with no 'why' passes.",
-      "target_unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["accuracy"]
     },
     "no_contradiction_with_level_below": {
       "type": "choice",
       "question": "Does the hypothesis agree with every checked summary in the premise?",
-      "target_unit_types": ["file_summary", "package_summary"],
+      "unit_types": ["file_summary", "package_summary"],
       "tags": ["accuracy"]
     },
     "covers_every_change": {
       "type": "choice",
       "question": "Does the hypothesis mention every change the premise shows?",
-      "target_unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["completeness"]
     },
     "covers_key_changes": {
       "type": "choice",
       "question": "Does the hypothesis mention the main change the premise shows?",
-      "target_unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["completeness"]
     }
   }

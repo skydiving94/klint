@@ -6,6 +6,6 @@
   "tidy_directory": {
     "type": "choice",
     "question": "Is the directory tidy?",
-    "target_unit_types": ["project_directory"]
+    "unit_types": ["project_directory"]
   }
 }

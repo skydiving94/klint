@@ -4,7 +4,7 @@
     "god_component": {
       "type": "choice",
       "question": "Is each class, function, or component focused on a single clear responsibility rather than acting as a 'god component' that mixes unrelated concerns?",
-      "target_unit_types": ["file"]
+      "unit_types": ["file"]
     }
   }
 }

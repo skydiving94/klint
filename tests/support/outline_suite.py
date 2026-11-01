@@ -50,7 +50,7 @@ CLEAR_SECTION_RULE = AuditRule(
     rule_id="clear_section",
     question_type=QuestionType.CHOICE,
     question="Is the section clear?",
-    target_unit_types=["outline_section"],
+    unit_types=["outline_section"],
 )
 
 

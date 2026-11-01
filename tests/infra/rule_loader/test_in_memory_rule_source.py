@@ -49,9 +49,7 @@ def test_rules_are_loaded_from_a_source_held_in_memory() -> None:
 
 
 def test_rule_problem_in_a_source_in_memory_names_where_the_pack_is_from() -> None:
-    pack = build_rule_pack(
-        "rules sent by the editor", "a", target_unit_types=("paragraph",)
-    )
+    pack = build_rule_pack("rules sent by the editor", "a", unit_types=("paragraph",))
     loader = RulePackLoader(
         [InMemoryRuleSource(pack)], [], UNIT_REGISTRY, TEST_PACK_LANGUAGES
     )

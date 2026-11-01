@@ -51,7 +51,7 @@ KNOWN_LANGUAGES = frozenset(
 )
 
 FILE_RULE: RuleSpec = {"type": "choice", "question": "Is it tidy?"}
-DIR_RULE: RuleSpec = {**FILE_RULE, "target_unit_types": ["project_directory"]}
+DIR_RULE: RuleSpec = {**FILE_RULE, "unit_types": ["project_directory"]}
 
 
 def build_unit_registry() -> UnitRegistry:
@@ -206,12 +206,12 @@ def build_rule_pack(
     origin: str,
     *rule_ids: str,
     languages: tuple[str, ...] | None = None,
-    target_unit_types: tuple[str, ...] = ("file",),
+    unit_types: tuple[str, ...] = ("file",),
 ) -> rule_pack.RulePackSpec:
     """Return a pack of choice rules asking "Is <rule_id> kept?", with no file.
 
     The pack is limited to ``languages`` when given, and each rule targets
-    ``target_unit_types``.
+    ``unit_types``.
     """
     return rule_pack.RulePackSpec(
         origin=origin,
@@ -221,7 +221,7 @@ def build_rule_pack(
                 rule_id=rule_id,
                 question_type=QuestionType.CHOICE,
                 question=f"Is {rule_id} kept?",
-                target_unit_types=target_unit_types,
+                unit_types=unit_types,
                 languages=(),
                 tags=(),
             )

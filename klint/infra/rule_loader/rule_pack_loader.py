@@ -131,7 +131,7 @@ class RulePackLoader(BaseRuleLoader):
             rule_id=spec.rule_id,
             question_type=spec.question_type,
             question=spec.question,
-            target_unit_types=list(spec.target_unit_types),
+            unit_types=list(spec.unit_types),
             languages=languages,
             tags=list(spec.tags),
             unit_tags=list(spec.unit_tags),
@@ -178,11 +178,9 @@ class RulePackLoader(BaseRuleLoader):
     def _check_unit_types(self, spec: RuleSpec, origin: str) -> None:
         """Raise when the rule names a unit type no suite registers."""
         known = set(self._unit_registry.known_unit_types())
-        unknown = [
-            unit_type for unit_type in spec.target_unit_types if unit_type not in known
-        ]
+        unknown = [unit_type for unit_type in spec.unit_types if unit_type not in known]
         if unknown:
             raise ValueError(
-                f"Rule '{spec.rule_id}' has unknown target_unit_types {unknown} "
+                f"Rule '{spec.rule_id}' has unknown unit_types {unknown} "
                 f"in '{origin}'; known: {sorted(known)}"
             )

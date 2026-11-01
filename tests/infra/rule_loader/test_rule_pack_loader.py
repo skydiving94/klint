@@ -108,7 +108,7 @@ def test_built_in_typescript_file_rules_are_choice_questions_about_files() -> No
 
     assert rules
     assert all(r.question_type is QuestionType.CHOICE for r in rules.values())
-    assert all(r.target_unit_types == ["file"] for r in rules.values())
+    assert all(r.unit_types == ["file"] for r in rules.values())
 
 
 def test_built_in_packs_are_chosen_by_the_language_of_the_file() -> None:
@@ -200,13 +200,13 @@ def test_rules_of_a_pack_that_is_not_chosen_are_not_read(tmp_path: Path) -> None
         tmp_path / "pack.json",
         _pack(
             {"languages": ["typescript"]},
-            {"broken": {**FILE_RULE, "target_unit_types": ["nope"]}},
+            {"broken": {**FILE_RULE, "unit_types": ["nope"]}},
         ),
     )
     loader = _loader([pack])
 
     assert _load(loader, PYTHON) == {}
-    with pytest.raises(ValueError, match="unknown target_unit_types"):
+    with pytest.raises(ValueError, match="unknown unit_types"):
         _load(loader, TYPESCRIPT)
 
 
@@ -419,20 +419,20 @@ def test_file_that_cannot_be_read_as_rules_stops_with_an_error_naming_it(
         _load(_loader([pack]))
 
 
-def test_target_unit_types_default_to_file_and_explicit_ones_are_kept(
+def test_unit_types_default_to_file_and_explicit_ones_are_kept(
     tmp_path: Path,
 ) -> None:
     pack = write_json(tmp_path / "pack.json", {"a": FILE_RULE, "b": DIR_RULE})
     rules = _load(_loader([pack]))
-    assert rules["a"].target_unit_types == ["file"]
-    assert rules["b"].target_unit_types == ["project_directory"]
+    assert rules["a"].unit_types == ["file"]
+    assert rules["b"].unit_types == ["project_directory"]
 
 
-def test_unknown_target_unit_type_is_rejected(tmp_path: Path) -> None:
+def test_unknown_unit_type_is_rejected(tmp_path: Path) -> None:
     pack = write_json(
-        tmp_path / "pack.json", {"a": {**FILE_RULE, "target_unit_types": ["nope"]}}
+        tmp_path / "pack.json", {"a": {**FILE_RULE, "unit_types": ["nope"]}}
     )
-    with pytest.raises(ValueError, match="unknown target_unit_types"):
+    with pytest.raises(ValueError, match="unknown unit_types"):
         _load(_loader([pack]))
 
 
@@ -447,8 +447,8 @@ def test_unknown_question_type_is_rejected(tmp_path: Path) -> None:
     [
         ("type", "yesno", "has unknown type 'yesno'"),
         ("type", 1, "has unknown type 1"),
-        ("target_unit_types", "file", "has invalid target_unit_types 'file'"),
-        ("target_unit_types", ["nope"], r"has unknown target_unit_types \['nope'\]"),
+        ("unit_types", "file", "has invalid unit_types 'file'"),
+        ("unit_types", ["nope"], r"has unknown unit_types \['nope'\]"),
         ("question", 7, "has invalid question 7"),
     ],
 )
@@ -549,7 +549,7 @@ def test_languages_tags_and_unit_tags_are_read_from_a_rule(tmp_path: Path) -> No
             [],
             [],
         )
-    assert rules["plain"].target_unit_types == ["file"]
+    assert rules["plain"].unit_types == ["file"]
 
 
 @pytest.mark.parametrize("field_name", ["languages", "tags", "unit_tags"])
@@ -589,11 +589,11 @@ def test_built_in_rules_set_no_tags() -> None:
 
 def test_rule_loading_only_accepts_registered_unit_types(tmp_path: Path) -> None:
     pack = write_json(
-        tmp_path / "pack.json", {"a": {**FILE_RULE, "target_unit_types": ["file"]}}
+        tmp_path / "pack.json", {"a": {**FILE_RULE, "unit_types": ["file"]}}
     )
     loader = _loader([pack], unit_registry=UnitRegistry())
 
-    with pytest.raises(ValueError, match="unknown target_unit_types"):
+    with pytest.raises(ValueError, match="unknown unit_types"):
         asyncio.run(loader.load_rules(PYTHON))
 
 

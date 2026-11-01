@@ -131,7 +131,7 @@ def test_a_problem_below_the_least_confidence_rolls_up_to_no_one() -> None:
 def test_custom_rules_are_asked_beside_the_summary_checks() -> None:
     judge = HypothesisJudge()
     custom_rules = InMemoryRuleSource(
-        build_rule_pack("custom", "names_a_ticket", target_unit_types=("file_summary",))
+        build_rule_pack("custom", "names_a_ticket", unit_types=("file_summary",))
     )
     request = AuditRequest(
         audit_input=InMemoryBytesInput(

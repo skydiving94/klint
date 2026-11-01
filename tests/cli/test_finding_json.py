@@ -86,7 +86,7 @@ def test_findings_on_files_directories_and_file_metadata_share_their_keys(
         tmp_path / "rules.json",
         {
             "directory_rule": DIR_RULE,
-            "file_metadata_rule": {**FILE_RULE, "target_unit_types": ["file_metadata"]},
+            "file_metadata_rule": {**FILE_RULE, "unit_types": ["file_metadata"]},
             "file_rule": FILE_RULE,
         },
     )

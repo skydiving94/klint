@@ -102,7 +102,7 @@ def test_imports_at_the_start_of_a_file_tag_it(tmp_path: Path) -> None:
 
 
 def test_project_audit_tags_the_files_of_a_directory_alike(tmp_path: Path) -> None:
-    file_metadata_rule = {**FILE_RULE, "target_unit_types": ["file_metadata"]}
+    file_metadata_rule = {**FILE_RULE, "unit_types": ["file_metadata"]}
     rules = write_json(
         tmp_path / "rules.json",
         {"frontend_file": {**file_metadata_rule, "unit_tags": ["frontend"]}},

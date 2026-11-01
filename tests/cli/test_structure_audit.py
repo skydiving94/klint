@@ -334,7 +334,7 @@ def test_custom_rule_can_target_the_files_inside_a_directory(
 ) -> None:
     python_file_rule = {
         **FILE_RULE,
-        "target_unit_types": ["file_metadata"],
+        "unit_types": ["file_metadata"],
         "languages": ["python"],
     }
     custom = write_json(

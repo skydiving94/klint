@@ -80,7 +80,7 @@ def test_tags_do_not_affect_which_units_a_rule_applies_to() -> None:
     assert tagged.is_applicable_to(_file("python"))
 
 
-def test_rule_applies_only_to_its_target_unit_types() -> None:
+def test_rule_applies_only_to_its_unit_types() -> None:
     unit = AuditableFileUnit(unit_id="a.py", content="x = 1")
     file_rule = AuditRule("r", QuestionType.CHOICE, "?")
     dir_rule = AuditRule("r", QuestionType.CHOICE, "?", ["project_directory"])

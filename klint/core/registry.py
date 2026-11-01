@@ -7,7 +7,7 @@ class UnitRegistry:
     """Maps each unit_type tag to the unit class that declares it.
 
     Suites add their unit classes through ``register_unit``; rule loading
-    checks a rule's target unit types against ``known_unit_types``.
+    checks a rule's unit types against ``known_unit_types``.
     """
 
     def __init__(self) -> None:

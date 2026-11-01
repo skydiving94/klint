@@ -7,7 +7,7 @@ from typing import TypeGuard
 
 from klint.core.klint_warning import KlintWarning, describe_deprecated_name
 from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import DEFAULT_TARGET_UNIT_TYPES
+from klint.core.models.rule import DEFAULT_UNIT_TYPES
 from klint.core.models.rule_pack import (
     PackScope,
     RulePackSpec,
@@ -17,11 +17,14 @@ from klint.core.models.rule_pack import (
 )
 
 RULE_FIELD_NAMES = frozenset(
-    {"type", "question", "target_unit_types", "languages", "tags", "unit_tags"}
+    {"type", "question", "unit_types", "languages", "tags", "unit_tags"}
 )
 # Each old rule field name, and the name that replaces it. An old name still
 # works, with a warning, for one release.
-DEPRECATED_FIELD_NAME_TO_FIELD_NAME = {"instructions": "question"}
+DEPRECATED_FIELD_NAME_TO_FIELD_NAME = {
+    "instructions": "question",
+    "target_unit_types": "unit_types",
+}
 # The header of a pack: which files the pack is for.
 HEADER_KEY = "applies_to"
 _HEADER_FIELD_NAMES = frozenset({"languages"})
@@ -173,10 +176,10 @@ def _read_rule(
             rule_id=rule_id,
             question_type=_read_question_type(raw_rule["type"], rule_id, path),
             question=_read_question(raw_rule["question"], rule_id, path),
-            target_unit_types=(
-                _read_string_list(raw_rule, "target_unit_types", rule_id, path)
-                if "target_unit_types" in raw_rule
-                else DEFAULT_TARGET_UNIT_TYPES
+            unit_types=(
+                _read_string_list(raw_rule, "unit_types", rule_id, path)
+                if "unit_types" in raw_rule
+                else DEFAULT_UNIT_TYPES
             ),
             languages=_read_string_list(raw_rule, "languages", rule_id, path),
             tags=_read_string_list(raw_rule, "tags", rule_id, path),

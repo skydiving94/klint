@@ -53,3 +53,36 @@ def test_old_instructions_field_is_still_asked_with_one_warning_per_file(
         "second": "Is it second?",
         "both": "New?",
     }
+
+
+def test_old_target_unit_types_field_still_picks_the_units_with_a_warning(
+    tmp_path: Path,
+    fake_judge: type[FakeJudge],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rules_file = write_json(
+        tmp_path / "rules.json",
+        {
+            "for_files": {
+                "type": "choice",
+                "question": "Is the file tidy?",
+                "target_unit_types": ["file"],
+            },
+            "for_directories": {
+                "type": "choice",
+                "question": "Is the directory tidy?",
+                "target_unit_types": ["project_directory"],
+            },
+        },
+    )
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    judge = fake_judge()
+    settings = make_settings(built_in_rule_packs=[], fallback_rule_packs=[])
+    app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
+
+    asyncio.run(app.run([str(target), "--json", "--rules", str(rules_file)]))
+
+    assert capsys.readouterr().err.splitlines() == [
+        _describe_deprecation("target_unit_types", "unit_types", rules_file)
+    ]
+    assert judge.asked_rule_ids() == [["for_files"]]
