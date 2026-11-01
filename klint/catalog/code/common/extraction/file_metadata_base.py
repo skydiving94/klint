@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 
 
 class BaseFileMetadataExtractor(ABC):

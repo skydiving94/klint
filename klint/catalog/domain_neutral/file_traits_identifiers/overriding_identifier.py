@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from pathlib import Path
 
-from klint.catalog.common.file_traits_identifiers.path_glob import (
+from klint.catalog.domain_neutral.file_traits_identifiers.path_glob import (
     does_path_match_glob,
 )
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier

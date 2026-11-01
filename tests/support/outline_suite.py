@@ -14,7 +14,7 @@ from injector import Binder
 
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
-from klint.catalog.common.sources.json_document_source import (
+from klint.catalog.domain_neutral.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.cli.runner import AuditCommand

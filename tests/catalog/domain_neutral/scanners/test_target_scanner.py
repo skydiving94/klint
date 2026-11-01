@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.common.file_traits_identifiers.extension_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.catalog.domain_neutral.scanners.target_scanner import TargetScanner
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.ignored_names import IgnoredNames

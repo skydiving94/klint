@@ -10,7 +10,7 @@ from klint.catalog.code.common.extraction.file_metadata_base import (
 )
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
 from klint.core.klint_warning import leave_out_file_on_failure

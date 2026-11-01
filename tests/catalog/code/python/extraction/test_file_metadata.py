@@ -8,7 +8,7 @@ from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataU
 from klint.catalog.code.python.extraction.file_metadata import (
     PythonFileMetadataExtractor,
 )
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.core.klint_warning import KlintWarning
 from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text

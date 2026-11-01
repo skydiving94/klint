@@ -6,10 +6,10 @@ from typing import ClassVar
 
 from injector import Binder, inject
 
-from klint.catalog.common.sources.directory_tree_source import (
+from klint.catalog.domain_neutral.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )
-from klint.catalog.common.sources.json_document_source import (
+from klint.catalog.domain_neutral.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.cli.runner import AuditCommand

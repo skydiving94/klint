@@ -1,9 +1,9 @@
 from pathlib import Path, PurePath
 
-from klint.catalog.common.file_traits_identifiers.imports import (
+from klint.catalog.domain_neutral.file_traits_identifiers.imports import (
     find_imported_modules,
 )
-from klint.catalog.common.file_traits_identifiers.path_glob import (
+from klint.catalog.domain_neutral.file_traits_identifiers.path_glob import (
     does_path_match_glob,
 )
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier

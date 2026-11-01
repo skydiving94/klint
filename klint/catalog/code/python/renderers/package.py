@@ -7,7 +7,9 @@ from klint.catalog.code.common.renderers.directory import (
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.python.module_names import collect_module_names
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.renderers.character_budget import join_lines_within_budget
+from klint.catalog.domain_neutral.renderers.character_budget import (
+    join_lines_within_budget,
+)
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.models.render_input import RenderInput
 

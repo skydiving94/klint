@@ -9,8 +9,8 @@ from typing import Any
 import pytest
 from injector import Binder
 
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.project_audit import PROJECT_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp

@@ -2,7 +2,7 @@
 
 import pytest
 
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.registry import UnitRegistry
 
 

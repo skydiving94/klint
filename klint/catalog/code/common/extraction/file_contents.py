@@ -2,8 +2,8 @@
 
 import asyncio
 
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
-from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
 from klint.core.interfaces.extractor import BaseUnitExtractor

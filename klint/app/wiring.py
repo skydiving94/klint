@@ -17,13 +17,13 @@ from injector import Binder, Injector, Module, provider, singleton
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
-from klint.catalog.common.file_traits_identifiers.extension_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.common.file_traits_identifiers.overriding_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers.overriding_identifier import (
     OverridingFileTraitsIdentifier,
 )
-from klint.catalog.common.file_traits_identifiers.tag_detecting_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers.tag_detecting_identifier import (  # noqa: E501
     TagDetectingFileTraitsIdentifier,
 )
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier

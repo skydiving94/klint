@@ -5,7 +5,7 @@ from pathlib import Path
 from klint.catalog.code.common.extraction.language_neutral_file_metadata import (
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 

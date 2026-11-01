@@ -1,7 +1,7 @@
 import asyncio
 
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.models.unit import AuditableUnit
 

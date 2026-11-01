@@ -3,7 +3,9 @@
 from collections.abc import Sequence
 
 from klint.catalog.change_summary.document import ChangeKind
-from klint.catalog.common.renderers.character_budget import join_lines_within_budget
+from klint.catalog.domain_neutral.renderers.character_budget import (
+    join_lines_within_budget,
+)
 
 # The fewest characters worth giving the premise; with less room, it is left
 # out and the judge is told so.

@@ -34,16 +34,16 @@ from klint.catalog.code.python.extraction.package_factory import (
 )
 from klint.catalog.code.python.renderers.package import PythonPackageRenderer
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
-from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
-from klint.catalog.common.extraction.whole_file import WholeFileExtractor
-from klint.catalog.common.renderers.whole_file import WholeFileRenderer
-from klint.catalog.common.sources.directory_tree_source import (
+from klint.catalog.domain_neutral.extraction.whole_file import WholeFileExtractor
+from klint.catalog.domain_neutral.renderers.whole_file import WholeFileRenderer
+from klint.catalog.domain_neutral.sources.directory_tree_source import (
     DirectoryTreeSourceFactory,
 )
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader

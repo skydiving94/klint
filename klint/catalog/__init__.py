@@ -4,7 +4,7 @@ from injector import Binder, Module
 
 from klint.catalog.change_summary import ChangeSummarySuiteModule
 from klint.catalog.code import CodeSuiteModule
-from klint.catalog.common import DomainNeutralSuiteModule
+from klint.catalog.domain_neutral import DomainNeutralSuiteModule
 
 
 class BuiltInSuitesModule(Module):

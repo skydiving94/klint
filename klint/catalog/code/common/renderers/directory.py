@@ -1,6 +1,8 @@
 from klint.catalog.code.common.renderers.file_metadata import describe_file_metadata
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
-from klint.catalog.common.renderers.character_budget import join_lines_within_budget
+from klint.catalog.domain_neutral.renderers.character_budget import (
+    join_lines_within_budget,
+)
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.models.render_input import RenderInput
 

@@ -3,7 +3,7 @@
 import pytest
 
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.models.question_type import QuestionType
 from klint.core.models.rule import AuditRule
 from klint.core.models.unit_traits import UnitTraits

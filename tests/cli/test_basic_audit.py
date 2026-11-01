@@ -12,7 +12,7 @@ from injector import Binder
 
 from klint.app.settings import AppSettings
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.cli.basic_audit import FILE_AUDIT_COMMAND
 from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp, run_command_from_shell

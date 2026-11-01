@@ -28,8 +28,8 @@ from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
-from klint.catalog.common.extraction.traits_based_extraction_delegator import (
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
 from tests.support.builders import (

@@ -3,7 +3,7 @@
 import asyncio
 from pathlib import Path
 
-from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.catalog.domain_neutral.scanners.target_scanner import TargetScanner
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.interfaces.source import BaseAuditSource, BaseAuditSourceFactory

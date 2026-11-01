@@ -3,7 +3,7 @@ from klint.catalog.code.common.extraction.file_metadata_base import (
     list_binary_file,
 )
 from klint.catalog.code.common.units.file_metadata import AuditableFileMetadataUnit
-from klint.catalog.common.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 
 
 class LanguageNeutralFileMetadataExtractor(BaseFileMetadataExtractor):

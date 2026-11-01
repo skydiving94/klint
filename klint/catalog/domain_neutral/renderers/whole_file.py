@@ -1,5 +1,7 @@
-from klint.catalog.common.renderers.character_budget import join_lines_within_budget
-from klint.catalog.common.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.renderers.character_budget import (
+    join_lines_within_budget,
+)
+from klint.catalog.domain_neutral.units.file import AuditableFileUnit
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.models.render_input import RenderInput
 

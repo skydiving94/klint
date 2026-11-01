@@ -15,10 +15,10 @@ from klint.catalog.code.common.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.common.practice_scale import PRACTICE_SCALE
 from klint.catalog.code.common.units.directory import AuditableDirectoryUnit
 from klint.catalog.code.python.units.package import AuditablePythonPackageUnit
-from klint.catalog.common.file_traits_identifiers.extension_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.common.scanners.target_scanner import TargetScanner
+from klint.catalog.domain_neutral.scanners.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge

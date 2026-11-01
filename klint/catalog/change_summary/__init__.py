@@ -23,8 +23,8 @@ from klint.catalog.change_summary.units.hunk_summary import AuditableHunkSummary
 from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
-from klint.catalog.common.built_in_files import locate_built_in_catalog_file
-from klint.catalog.common.sources.json_document_source import (
+from klint.catalog.domain_neutral.built_in_files import locate_built_in_catalog_file
+from klint.catalog.domain_neutral.sources.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.core.interfaces.suite import BaseSuite
