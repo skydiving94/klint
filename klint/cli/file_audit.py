@@ -4,7 +4,8 @@ import asyncio
 import sys
 
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
-from klint.cli.runner import AuditCommand, run_command_from_shell
+from klint.cli.runner import AuditCommand
+from klint.cli.shell_invocation import run_command_from_shell
 
 FILE_AUDIT_COMMAND = AuditCommand(
     name="klint",
