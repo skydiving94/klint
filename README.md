@@ -159,6 +159,7 @@ klint examples/
 ~~~
 
 * **What leaves your machine**: the code of each audited unit (for `klint-change-summary`, each summary and its code) and the rule questions are sent to TypeSafe. Use the local `kev` for code that must stay on your machine.
+* **Which judge**: each command's first line names the judge it asks, for example `[klint] Judge: jev-latest at https://api.typesafe.ai (remote, API key set)`. `klint` reads `KLINT_JUDGE_API_KEY`, not the `TYPESAFE_API_KEY` that TypeSafe's SDK reads.
 * **A refused key**: `klint` skips each unit with "did not accept the API key" (or "needs an API key, and none was given") and exits with code 2 when no unit could be audited.
 * **Setting names**: `KLINT_JUDGE_MODE`, `KLINT_JUDGE_BASE_URL`, `KLINT_JUDGE_MODEL` and `KLINT_JUDGE_API_KEY` replace the `KEV_*` names, which still work for one release.
 
