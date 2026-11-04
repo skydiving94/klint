@@ -3,7 +3,8 @@
 import asyncio
 import sys
 
-from klint.cli.runner import print_warning_line, run_command_from_shell
+from klint.cli.runner import print_warning_line
+from klint.cli.shell_invocation import run_command_from_shell
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from klint.core import describe_deprecated_name
 

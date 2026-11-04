@@ -1,7 +1,6 @@
 """What the klint commands share: arguments, running the audit, printing the result."""
 
 import argparse
-import asyncio
 import json
 import sys
 import warnings
@@ -11,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-from klint.app import AppSettings
 from klint.app.pipeline import AuditPipeline, AuditRequest
 from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
@@ -19,7 +17,6 @@ from klint.cli.formatter import (
     TerminalScanProgressListener,
     format_audit_report,
 )
-from klint.cli.wiring import create_command_injector
 from klint.core import KlintWarning, warn_about_deprecated_name
 from klint.core.interfaces import BaseAuditProgressListener
 from klint.core.models.audits import DiskPathInput
@@ -94,7 +91,7 @@ def print_warning_line(command: AuditCommand, message: str) -> None:
 
 
 @contextmanager
-def _print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]:
+def print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]:
     """Print each KlintWarning raised inside the block as one line, as it is raised.
 
     Any other warning raised inside is shown as it would be outside the block.
@@ -194,7 +191,7 @@ class AuditCommandApp:
 
     async def run(self, argv: Sequence[str] | None = None) -> ExitCode:
         """Parse ``argv`` and run the command; return the exit code."""
-        with _print_klint_warnings_raised_inside(self._command):
+        with print_klint_warnings_raised_inside(self._command):
             arguments = parse_command_arguments(self._command, argv)
         return await self.run_with_arguments(arguments)
 
@@ -220,7 +217,7 @@ class AuditCommandApp:
             audit_progress_listener=_ProgressListener(progress, command.name),
         )
         try:
-            with _print_klint_warnings_raised_inside(command):
+            with print_klint_warnings_raised_inside(command):
                 outcome = await self._audit_pipeline.run_audit(request)
         except (OSError, ValueError) as exc:
             # The audit cannot run, for example the target or a rules file
@@ -270,23 +267,3 @@ class AuditCommandApp:
             )
         failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS
-
-
-async def run_command_from_shell(command: AuditCommand) -> ExitCode:
-    """Run ``command`` with the arguments the shell passed; return the exit code."""
-    try:
-        with _print_klint_warnings_raised_inside(command):
-            arguments = parse_command_arguments(command, sys.argv[1:])
-            settings = await asyncio.to_thread(
-                AppSettings.from_env, arguments.target, arguments.custom_rules_path
-            )
-            injector = create_command_injector(settings)
-            audit_pipeline = injector.get(AuditPipeline)
-    except (OSError, ValueError) as error:
-        # The command cannot be set up, for example a config or data file is
-        # not valid.
-        print_error_line(command, error)
-        return ExitCode.RUN_ERROR
-    print(f"[{command.name}] Judge: {settings.describe_judge()}", file=sys.stderr)
-    app = AuditCommandApp(command, audit_pipeline)
-    return await app.run_with_arguments(arguments)

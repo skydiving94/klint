@@ -11,8 +11,8 @@ from klint.cli.runner import (
     AuditCommand,
     AuditCommandApp,
     parse_command_arguments,
-    run_command_from_shell,
 )
+from klint.cli.shell_invocation import run_command_from_shell
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND, run_structure_audit
 from klint.cli.wiring import create_command_injector
 
