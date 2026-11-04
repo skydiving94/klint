@@ -1,7 +1,9 @@
 """Binds what klint's constructors cannot state themselves.
 
 Each class asks for what it needs with @inject. What is left here is what
-its signature cannot express: the settings and what is chosen from them.
+its signature cannot express: the settings and what is chosen from them,
+and the classes of klint.core, which imports no third-party package and so
+cannot use @inject.
 The suites an audit draws on are added by the caller; each one binds what
 it needs itself.
 """
@@ -17,31 +19,27 @@ from injector import Binder, Injector, Module, provider, singleton
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.judge_mode import JudgeMode
 from klint.app.settings import AppSettings
-from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers import (
     ExtensionFileTraitsIdentifier,
-)
-from klint.catalog.domain_neutral.file_traits_identifiers.overriding_identifier import (
     OverridingFileTraitsIdentifier,
-)
-from klint.catalog.domain_neutral.file_traits_identifiers.tag_detecting_identifier import (  # noqa: E501
     TagDetectingFileTraitsIdentifier,
 )
-from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.interfaces.judge import BaseJudge
-from klint.core.interfaces.rule_loader import BaseRuleLoader
-from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.interfaces.suite import BaseSuite
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.file_traits_override import FileTraitsOverride
-from klint.core.registry import UnitRegistry
-from klint.infra.language_to_file_extensions_loader.language_table_loader import (
-    load_file_extension_to_language,
+from klint.core import Auditor, KlintWarning, UnitRegistry
+from klint.core.interfaces import (
+    AuditKind,
+    BaseFileTraitsIdentifier,
+    BaseJudge,
+    BaseRuleLoader,
+    BaseRuleSource,
+    BaseSuite,
 )
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
-from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
-from klint.infra.system_one.http_judge import HttpSystemOneJudge
-from klint.infra.tag_detection_loader.tag_table_loader import load_tag_detection_table
+from klint.core.models.scanning import FileTraitsOverride
+from klint.infra.rule_loader import JsonFileRuleSource, RulePackLoader
+from klint.infra.system_one import HttpSystemOneJudge
+from klint.infra.table_loader import (
+    load_file_extension_to_language,
+    load_tag_detection_table,
+)
 
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
@@ -84,9 +82,7 @@ class KlintModule(Module):
         # A single binding, so that the remote mode never loads the model.
         match settings.judge_mode:
             case JudgeMode.LOCAL:
-                from klint.infra.system_one.in_process_judge import (
-                    InProcessSystemOneJudge,
-                )
+                from klint.infra.system_one import InProcessSystemOneJudge
 
                 return InProcessSystemOneJudge(checkpoint=settings.model_name)
             case JudgeMode.REMOTE:
@@ -97,6 +93,10 @@ class KlintModule(Module):
                 )
             case _:
                 assert_never(settings.judge_mode)
+
+    @provider
+    def provide_auditor(self, judge: BaseJudge) -> Auditor:
+        return Auditor(judge)
 
     @singleton
     @provider

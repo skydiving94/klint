@@ -8,15 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli import file_audit, structure_audit
-from klint.cli.exit_code import ExitCode
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.cli.runner import (
+from klint.cli import (
+    FILE_AUDIT_COMMAND,
+    STRUCTURE_AUDIT_COMMAND,
     AuditCommand,
+    ExitCode,
     parse_command_arguments,
     run_command_from_shell,
+    run_file_audit,
+    run_structure_audit,
 )
-from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -178,7 +179,7 @@ def test_exit_code_says_whether_a_failure_was_found(
     assert exit_code == expected_exit_code
 
 
-@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [run_file_audit, run_structure_audit])
 def test_command_that_cannot_run_exits_with_status_2(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -195,7 +196,7 @@ def test_command_that_cannot_run_exits_with_status_2(
     assert "does not exist" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [run_file_audit, run_structure_audit])
 def test_command_line_that_cannot_be_parsed_exits_with_status_2(
     monkeypatch: pytest.MonkeyPatch, cli_main: Callable[[], int]
 ) -> None:
@@ -207,7 +208,7 @@ def test_command_line_that_cannot_be_parsed_exits_with_status_2(
     assert stopped.value.code == ExitCode.RUN_ERROR
 
 
-@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [run_file_audit, run_structure_audit])
 def test_unknown_mode_stops_the_command_before_any_judge_is_built(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

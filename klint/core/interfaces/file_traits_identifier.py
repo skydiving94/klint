@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.units import UnitTraits
 
 
 class BaseFileTraitsIdentifier(ABC):

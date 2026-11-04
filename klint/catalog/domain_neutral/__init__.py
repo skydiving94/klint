@@ -1,25 +1,27 @@
 """The suite of units that do not depend on what kind of content is audited."""
 
-from injector import Binder, Module
+from klint.catalog.domain_neutral.built_in_files import locate_built_in_catalog_file
+from klint.catalog.domain_neutral.character_budget import join_lines_within_budget
+from klint.catalog.domain_neutral.directory_tree_source import (
+    DirectoryTreeSourceFactory,
+)
+from klint.catalog.domain_neutral.domain_neutral_suite import (
+    DomainNeutralSuite,
+    DomainNeutralSuiteModule,
+)
+from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
+from klint.catalog.domain_neutral.json_document_source import JsonDocumentSourceFactory
+from klint.catalog.domain_neutral.target_scanner import TargetScanner
+from klint.catalog.domain_neutral.whole_file_renderer import WholeFileRenderer
 
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
-from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_kind import AuditKind
-from klint.core.registry import UnitRegistry
-
-
-class DomainNeutralSuite(BaseSuite):
-    """Unit types that fit any content; other suites build their audits on them."""
-
-    def list_audit_kinds(self) -> list[AuditKind]:
-        return []
-
-    def register_unit_types(self, registry: UnitRegistry) -> None:
-        registry.register_unit(AuditableFileUnit)
-
-
-class DomainNeutralSuiteModule(Module):
-    """Adds the domain-neutral suite to an audit."""
-
-    def configure(self, binder: Binder) -> None:
-        binder.multibind(list[BaseSuite], to=[DomainNeutralSuite])
+__all__ = [
+    "AuditableFileUnit",
+    "DirectoryTreeSourceFactory",
+    "DomainNeutralSuite",
+    "DomainNeutralSuiteModule",
+    "JsonDocumentSourceFactory",
+    "TargetScanner",
+    "WholeFileRenderer",
+    "join_lines_within_budget",
+    "locate_built_in_catalog_file",
+]

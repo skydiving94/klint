@@ -2,21 +2,18 @@ import asyncio
 from collections import defaultdict
 from collections.abc import Sequence
 
-from injector import inject
-
-from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.interfaces.judge import BaseJudge
-from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.audit_order import AuditOrder
-from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
-from klint.core.models.render_input import RenderInput
-from klint.core.models.report import AuditFinding, AuditReport
-from klint.core.models.rule import AuditRule
-from klint.core.models.rule_set import RuleSet
-from klint.core.models.scale import AnswerScale
-from klint.core.models.unit import AuditableUnit
-from klint.core.models.unit_tree import (
+from klint.core.interfaces import (
+    AuditKind,
+    BaseAuditProgressListener,
+    BaseJudge,
+    BaseUnitRenderer,
+)
+from klint.core.models.audits import AuditOrder, RenderInput
+from klint.core.models.judging import AnswerScale, JudgeQuestion, JudgeRequest
+from klint.core.models.reports import AuditFinding, AuditReport
+from klint.core.models.rules import AuditRule, RuleSet
+from klint.core.models.units import (
+    AuditableUnit,
     list_ancestor_unit_ids,
     map_unit_id_to_parent_unit_id,
 )
@@ -34,7 +31,6 @@ class Auditor:
     unit whose audit fails is left out and the others go on.
     """
 
-    @inject
     def __init__(self, judge: BaseJudge) -> None:
         self._judge = judge
 

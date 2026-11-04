@@ -6,7 +6,7 @@ from enum import Enum
 
 from klint.catalog.change_summary.summary_accuracy_scale import CANNOT_TELL
 from klint.catalog.change_summary.summary_check_tag import SummaryCheckTag
-from klint.core.models.report import AuditFinding
+from klint.core.models.reports import AuditFinding
 
 
 class ChildSummaryVerdict(Enum):

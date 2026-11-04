@@ -5,15 +5,12 @@ import copy
 import json
 from typing import Any
 
-from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
-from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
-from klint.catalog.change_summary.extraction.change_summary_extractor import (
-    ChangeSummaryExtractor,
-)
-from klint.core.models.audit_input import InMemoryBytesInput
-from klint.core.models.json_value import JsonValue
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
-from klint.core.models.unit import AuditableUnit
+from klint.app.pipeline import AuditOutcome, AuditRequest
+from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID, ChangeSummaryExtractor
+from klint.core.models.audits import InMemoryBytesInput
+from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.reports import JsonValue
+from klint.core.models.units import AuditableUnit
 from tests.support.builders import build_audit_pipeline
 from tests.support.fakes import FakeJudge
 

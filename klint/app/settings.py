@@ -16,7 +16,7 @@ from klint.app.project_config import (
     read_project_config,
     warn_about_settings_in_rules_file,
 )
-from klint.core.models.file_traits_override import FileTraitsOverride
+from klint.core.models.scanning import FileTraitsOverride
 
 # The model and the server address the judge uses unless a setting names others.
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"

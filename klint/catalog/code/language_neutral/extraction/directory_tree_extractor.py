@@ -2,24 +2,22 @@ import asyncio
 from collections import Counter
 from collections.abc import Iterator, Sequence
 
+from klint.catalog.code.language_neutral.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
 from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.language_neutral.units.directory_unit import (
-    AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
-    TraitsBasedExtractionDelegator,
-)
-from klint.core.klint_warning import leave_out_file_on_failure
-from klint.core.models.scanned_tree import ScannedDirectory, ScannedFile
-from klint.core.models.unit_traits import UnitTraits
+from klint.catalog.domain_neutral.extraction import TraitsBasedExtractionDelegator
+from klint.core import leave_out_file_on_failure
+from klint.core.models.scanning import ScannedDirectory, ScannedFile
+from klint.core.models.units import UnitTraits
 
 
 class DirectoryTreeExtractor:

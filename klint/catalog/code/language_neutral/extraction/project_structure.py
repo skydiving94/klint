@@ -7,9 +7,9 @@ from injector import inject
 from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
     DirectoryTreeExtractor,
 )
-from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.scanned_tree import ScannedTarget
-from klint.core.models.unit import AuditableUnit
+from klint.core.interfaces import BaseUnitExtractor
+from klint.core.models.scanning import ScannedTarget
+from klint.core.models.units import AuditableUnit
 
 
 class ProjectStructureExtractor(BaseUnitExtractor[ScannedTarget]):

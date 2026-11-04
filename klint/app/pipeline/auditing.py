@@ -3,10 +3,9 @@
 from injector import inject
 
 from klint.app.pipeline.audit_preparer import PendingAuditPortfolio
-from klint.core.auditor import Auditor
-from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.report import AuditReport
+from klint.core import Auditor
+from klint.core.interfaces import AuditKind, BaseAuditProgressListener
+from klint.core.models.reports import AuditReport
 
 
 class UnitAuditing:

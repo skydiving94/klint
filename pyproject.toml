@@ -38,11 +38,11 @@ dev = [
 ]
 
 [project.scripts]
-klint = "klint.cli.file_audit:cli_main"
-klint-structure = "klint.cli.structure_audit:cli_main"
+klint = "klint.cli:run_file_audit"
+klint-structure = "klint.cli:run_structure_audit"
 # The old name of klint-structure, kept for one release.
-klint-project = "klint.cli.klint_project_alias:cli_main"
-klint-change-summary = "klint.cli.change_summary_audit:cli_main"
+klint-project = "klint.cli:run_klint_project_alias"
+klint-change-summary = "klint.cli:run_change_summary_audit"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -124,6 +124,37 @@ layers = [
     "klint.infra",
     "klint.core",
 ]
+
+# The core holds klint's own model and the interfaces the outer layers
+# implement, so it imports the standard library alone. Every top-level
+# package outside klint is in the graph (include_external_packages), the
+# standard library's too, and "*" matches each of them; klint itself
+# overlaps klint.core and is skipped. The standard-library modules the core
+# uses are let through by ignore_imports.
+[[tool.importlinter.contracts]]
+name = "Core: klint.core imports no third-party package"
+type = "forbidden"
+source_modules = ["klint.core"]
+forbidden_modules = ["*"]
+ignore_imports = [
+    "klint.core.** -> __future__",
+    "klint.core.** -> abc",
+    "klint.core.** -> asyncio",
+    "klint.core.** -> collections",
+    "klint.core.** -> contextlib",
+    "klint.core.** -> dataclasses",
+    "klint.core.** -> enum",
+    "klint.core.** -> pathlib",
+    "klint.core.** -> typing",
+    "klint.core.** -> warnings",
+]
+unmatched_ignore_imports_alerting = "none"
+broken_contract_guidance = """
+A third-party package belongs in an outer layer (klint.infra, klint.catalog
+or klint.app), behind an interface in klint.core.interfaces. A module of the
+standard library is let through by adding it to this contract's
+ignore_imports.
+"""
 
 # A named suite is any package under klint/catalog but the domain-neutral one,
 # klint.catalog.domain_neutral; each new suite is added to forbidden_modules.

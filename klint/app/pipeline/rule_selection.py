@@ -2,11 +2,9 @@
 
 from collections.abc import Sequence
 
-from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.rule_set import RuleSet
-from klint.core.models.unit import AuditableUnit
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.interfaces import AuditKind, BaseRuleSource
+from klint.core.models.rules import RuleSet
+from klint.core.models.units import AuditableUnit, UnitTraits
 
 
 class RuleSelection:

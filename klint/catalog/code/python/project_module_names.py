@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 
 
 def list_project_module_names(package: AuditablePythonPackageUnit) -> set[str]:

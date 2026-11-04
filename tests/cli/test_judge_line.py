@@ -7,10 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.change_summary_audit import CHANGE_SUMMARY_COMMAND
-from klint.cli.exit_code import ExitCode
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.cli.runner import run_command_from_shell
+from klint.cli import (
+    CHANGE_SUMMARY_COMMAND,
+    FILE_AUDIT_COMMAND,
+    ExitCode,
+    run_command_from_shell,
+)
 from tests.support.builders import write_text
 from tests.support.stub_system_one_server import StubSystemOneServer
 

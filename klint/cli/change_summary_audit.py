@@ -21,9 +21,9 @@ CHANGE_SUMMARY_COMMAND = AuditCommand(
 )
 
 
-def cli_main() -> int:
+def run_change_summary_audit() -> int:
     return asyncio.run(run_command_from_shell(CHANGE_SUMMARY_COMMAND))
 
 
 if __name__ == "__main__":
-    sys.exit(cli_main())
+    sys.exit(run_change_summary_audit())

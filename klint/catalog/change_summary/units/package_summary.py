@@ -7,8 +7,7 @@ from klint.catalog.change_summary.units.summary_context import (
     ChangeSummaryContext,
     SummaryLevel,
 )
-from klint.core.models.location import Location
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units import AuditableUnit, Location
 
 
 @dataclass(frozen=True)

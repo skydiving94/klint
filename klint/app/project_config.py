@@ -9,8 +9,8 @@ from klint.app.deprecated_setting_names import (
     DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
     translate_deprecated_setting_names,
 )
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.file_traits_override import FileTraitsOverride
+from klint.core import KlintWarning
+from klint.core.models.scanning import FileTraitsOverride
 
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
 # The settings an environment variable, or the "env" block of a klint.json,

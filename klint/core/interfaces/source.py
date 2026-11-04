@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.audit_input import AuditInput
+from klint.core.models.audits import AuditInput
 
 # What a source reads its audit input into, such as a scanned directory tree
 # or a parsed document.

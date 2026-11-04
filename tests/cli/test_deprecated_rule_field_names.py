@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
+from klint.cli import FILE_AUDIT_COMMAND
 from tests.support.builders import (
     build_audit_command_app,
     make_settings,

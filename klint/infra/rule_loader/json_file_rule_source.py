@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.models.rule_pack import RulePackSpec
+from klint.core.interfaces import BaseRuleSource
+from klint.core.models.rules import RulePackSpec
 from klint.infra.rule_loader.rule_pack_reader import read_rule_pack
 
 

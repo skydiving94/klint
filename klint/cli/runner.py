@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
-from klint.app.settings import AppSettings
+from klint.app import AppSettings
+from klint.app.pipeline import AuditPipeline, AuditRequest
 from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
@@ -20,10 +20,10 @@ from klint.cli.formatter import (
     format_audit_report,
 )
 from klint.cli.wiring import create_command_injector
-from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.klint_warning import KlintWarning, warn_about_deprecated_name
-from klint.core.models.audit_input import DiskPathInput
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
+from klint.core import KlintWarning, warn_about_deprecated_name
+from klint.core.interfaces import BaseAuditProgressListener
+from klint.core.models.audits import DiskPathInput
+from klint.infra.rule_loader import JsonFileRuleSource
 
 
 @dataclass(frozen=True)
