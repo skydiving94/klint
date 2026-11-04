@@ -1,7 +1,9 @@
 """Binds what klint's constructors cannot state themselves.
 
 Each class asks for what it needs with @inject. What is left here is what
-its signature cannot express: the settings and what is chosen from them.
+its signature cannot express: the settings and what is chosen from them,
+and the classes of klint.core, which imports no third-party package and so
+cannot use @inject.
 The suites an audit draws on are added by the caller; each one binds what
 it needs itself.
 """
@@ -26,6 +28,7 @@ from klint.catalog.domain_neutral.file_traits_identifiers.overriding_identifier 
 from klint.catalog.domain_neutral.file_traits_identifiers.tag_detecting_identifier import (  # noqa: E501
     TagDetectingFileTraitsIdentifier,
 )
+from klint.core.auditor import Auditor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_loader import BaseRuleLoader
@@ -97,6 +100,10 @@ class KlintModule(Module):
                 )
             case _:
                 assert_never(settings.judge_mode)
+
+    @provider
+    def provide_auditor(self, judge: BaseJudge) -> Auditor:
+        return Auditor(judge)
 
     @singleton
     @provider

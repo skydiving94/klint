@@ -2,8 +2,6 @@ import asyncio
 from collections import defaultdict
 from collections.abc import Sequence
 
-from injector import inject
-
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.renderer import BaseUnitRenderer
@@ -34,7 +32,6 @@ class Auditor:
     unit whose audit fails is left out and the others go on.
     """
 
-    @inject
     def __init__(self, judge: BaseJudge) -> None:
         self._judge = judge
 
