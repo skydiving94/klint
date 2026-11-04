@@ -287,5 +287,6 @@ async def run_command_from_shell(command: AuditCommand) -> ExitCode:
         # not valid.
         print_error_line(command, error)
         return ExitCode.RUN_ERROR
+    print(f"[{command.name}] Judge: {settings.describe_judge()}", file=sys.stderr)
     app = AuditCommandApp(command, audit_pipeline)
     return await app.run_with_arguments(arguments)

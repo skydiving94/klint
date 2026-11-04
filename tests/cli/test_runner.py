@@ -141,8 +141,9 @@ def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_o
 
     # The command went on past the warning, as far as the missing target.
     assert exit_code == ExitCode.RUN_ERROR
-    warning_line, error_line = capsys.readouterr().err.splitlines()
+    warning_line, judge_line, error_line = capsys.readouterr().err.splitlines()
     assert warning_line.startswith("[klint] Warning: ")
+    assert judge_line.startswith("[klint] Judge: ")
     assert "unknown keys ['KLINT_JUDGE_MODLE']" in warning_line
     assert error_line.startswith("[klint] Error: Audit target does not exist")
 
@@ -263,8 +264,9 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    (warning_line,) = capsys.readouterr().err.splitlines()
+    warning_line, judge_line = capsys.readouterr().err.splitlines()
     assert warning_line.startswith(f"[klint] Warning: The 'env' key in '{rules_file}'")
+    assert judge_line.startswith("[klint] Judge: from-klint-json at ")
     # Settings come from klint.json only; the rules of both files are asked,
     # and those of --rules win by rule ID.
     (received,) = system_one_server.received

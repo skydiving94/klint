@@ -435,7 +435,9 @@ def test_old_command_name_runs_the_structure_audit_with_a_warning(
     assert exit_code == ExitCode.NO_PROBLEMS
     assert captured.err.splitlines() == [
         "[klint-structure] Warning: 'klint-project' is deprecated and stops "
-        "working in the next release; use 'klint-structure' instead"
+        "working in the next release; use 'klint-structure' instead",
+        "[klint-structure] Judge: jaredpalmer/kev-4b at "
+        f"{system_one_server.base_url} (remote, no API key)",
     ]
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert len(system_one_server.received) == 1

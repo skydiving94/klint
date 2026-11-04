@@ -3,6 +3,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
+from typing import assert_never
 
 from klint.app.deprecated_setting_names import (
     DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
@@ -239,3 +240,15 @@ class AppSettings:
                 () if config is None else config.file_traits_overrides
             ),
         )
+
+    def describe_judge(self) -> str:
+        """Say which judge these settings choose and where it runs, never the key."""
+        match self.judge_mode:
+            case JudgeMode.LOCAL:
+                return f"{self.model_name}, run in this process (local)"
+            case JudgeMode.REMOTE:
+                key_note = "API key set" if self.judge_api_key else "no API key"
+                where = f"at {self.judge_base_url}"
+                return f"{self.model_name} {where} (remote, {key_note})"
+            case _:
+                assert_never(self.judge_mode)
