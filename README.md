@@ -85,7 +85,7 @@ klint-structure examples/mock_bad_project/ --min-confidence 0.25 --json
 ~~~
 
 ### What a command prints
-* **The judge**: the first line on stderr names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local)`.
+* **The judge**: a line on stderr, before the audit, names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local)`.
 * **The report**: findings are grouped by unit and sorted by confidence. Each unit with a problem is marked `OWN PROBLEM`, or `DESCENDANT PROBLEM` when the problem is in a unit nested inside it.
 * **JSON**: with `--json`, stdout holds one object: the audited units (`examined_files`, `examined_directories` or `examined_summaries`), `unit_id_to_roll_up_status`, and `findings`. Each finding gives its `rule_id`, `unit_id`, `answer`, `confidence`, `question`, `tags` and `location` (`path`, `start_line`, `end_line`).
 
