@@ -190,3 +190,17 @@ def test_lines_are_counted_by_the_line_breaks_python_reads(
     }
     subjects = result.judge.map_subject_to_asked_rule_ids()
     assert "def second() -> int:\n    return 2" in subjects
+
+
+def test_parser_warnings_about_the_audited_code_are_not_shown(
+    tmp_path: Path, capsys: Capture, recwarn: pytest.WarningsRecorder
+) -> None:
+    target = write_text(
+        tmp_path / "pattern.py",
+        'import re\n\n\ndef digits():\n    return re.compile("\\d+")\n',
+    )
+
+    result = _audit(tmp_path, target, capsys)
+
+    assert list(result.unit_id_to_location) == [f"{target}::digits"]
+    assert [str(warning.message) for warning in recwarn] == []

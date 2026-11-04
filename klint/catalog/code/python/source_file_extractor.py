@@ -54,7 +54,12 @@ def _read_members(
     """Return the units at the top of the file; none, with a warning, if unparseable."""
     path = dispatched_file.path
     try:
-        tree = ast.parse(content, filename=str(path))
+        with warnings.catch_warnings():
+            # What the parser warns about, such as an invalid escape sequence
+            # in a string, is the audited code's concern, not this run's.
+            warnings.simplefilter("ignore", SyntaxWarning)
+            warnings.simplefilter("ignore", DeprecationWarning)
+            tree = ast.parse(content, filename=str(path))
     except (SyntaxError, ValueError, MemoryError, RecursionError) as error:
         # The parser reports source nested too deeply for it as a MemoryError
         # or a RecursionError, and a null byte as a ValueError.
