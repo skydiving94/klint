@@ -21,10 +21,15 @@ from klint.catalog.code.language_neutral.extraction import (
 )
 from klint.catalog.code.python import (
     SUITE_LANGUAGE,
+    AuditablePythonClassUnit,
+    AuditablePythonFunctionUnit,
     AuditablePythonPackageUnit,
+    PythonClassRenderer,
     PythonFileMetadataExtractor,
+    PythonFunctionRenderer,
     PythonPackageRenderer,
     PythonPackageUnitFactory,
+    PythonSourceFileExtractor,
 )
 from klint.catalog.domain_neutral import (
     AuditableFileUnit,
@@ -85,7 +90,11 @@ class CodeSuite(BaseSuite):
                 ),
                 rule_loader=rule_loader,
                 answer_scale=PRACTICE_SCALE,
-                unit_class_to_renderer={AuditableFileUnit: WholeFileRenderer()},
+                unit_class_to_renderer={
+                    AuditableFileUnit: WholeFileRenderer(),
+                    AuditablePythonClassUnit: PythonClassRenderer(),
+                    AuditablePythonFunctionUnit: PythonFunctionRenderer(),
+                },
             ),
             AuditKind(
                 kind_id=PROJECT_STRUCTURE_KIND_ID,
@@ -108,6 +117,8 @@ class CodeSuite(BaseSuite):
         registry.register_unit(AuditableFileUnit)
         registry.register_unit(AuditableFileMetadataUnit)
         registry.register_unit(AuditableDirectoryUnit)
+        registry.register_unit(AuditablePythonClassUnit)
+        registry.register_unit(AuditablePythonFunctionUnit)
 
 
 class CodeSuiteModule(Module):
@@ -120,7 +131,10 @@ class CodeSuiteModule(Module):
 
     def configure(self, binder: Binder) -> None:
         binder.multibind(list[BaseSuite], to=[CodeSuite])
-        binder.multibind(dict[str, BaseUnitExtractor[DispatchedFile]], to={})
+        binder.multibind(
+            dict[str, BaseUnitExtractor[DispatchedFile]],
+            to={SUITE_LANGUAGE: PythonSourceFileExtractor},
+        )
         binder.multibind(
             dict[str, BaseFileMetadataExtractor],
             to={SUITE_LANGUAGE: PythonFileMetadataExtractor},

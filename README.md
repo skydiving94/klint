@@ -63,7 +63,7 @@ klint-change-summary examples/change_summary/summaries.json
 
 | Command | What it audits | Argument |
 | :--- | :--- | :--- |
-| `klint` | The contents of each file, against the file rules. | A file or a directory. |
+| `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory. |
 | `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory. |
 | `klint-change-summary` | An agent's summaries of a change: each hunk against its code, and each file, package and the commit against the checked summaries below it. | A change-summary JSON document; see [examples/change_summary/README.md](examples/change_summary/README.md). |
 
@@ -87,7 +87,7 @@ klint-structure examples/mock_bad_project/ --min-confidence 0.25 --json
 ### What a command prints
 * **The judge**: a line on stderr, before the audit, names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local)`.
 * **The report**: findings are grouped by unit and sorted by confidence. Each unit with a problem is marked `OWN PROBLEM`, or `DESCENDANT PROBLEM` when the problem is in a unit nested inside it.
-* **JSON**: with `--json`, stdout holds one object: the audited units (`examined_files`, `examined_directories` or `examined_summaries`), `unit_id_to_roll_up_status`, and `findings`. Each finding gives its `rule_id`, `unit_id`, `answer`, `confidence`, `question`, `tags` and `location` (`path`, `start_line`, `end_line`).
+* **JSON**: with `--json`, stdout holds one object: the audited units (`examined_files`, `examined_directories` or `examined_summaries`), `unit_id_to_roll_up_status`, and `findings`. Each finding gives its `rule_id`, `unit_id`, `answer`, `confidence`, `question`, `tags`, `location` (`path`, `start_line`, `end_line`) and `context` (for a Python class or function, its `qualified_name`).
 
 ### Exit codes
 | Code | Meaning |
@@ -153,10 +153,41 @@ Because `klint` evaluates whether code **follows** a practice (`Pass`) or **viol
 | :--- | :--- |
 | `type` | `"choice"`. |
 | `question` | The question the judge answers about each unit. |
-| `unit_types` | The units the rule is asked about: `file` (`klint`); `project_directory` and `file_metadata`, a file's outline (`klint-structure`); `hunk_summary`, `file_summary` and `package_summary` (`klint-change-summary`). Default `["file"]`. |
+| `unit_types` | The units the rule is asked about: `file`, and `class` and `function` in a Python file (`klint`); `project_directory` and `file_metadata`, a file's outline (`klint-structure`); `hunk_summary`, `file_summary` and `package_summary` (`klint-change-summary`). Default `["file"]`. |
 | `languages` | Limits the rule to files of these languages, for example `["python"]`. |
 | `unit_tags` | Limits the rule to files with one of these tags, `backend` or `frontend`. A file with no detected tag is asked every rule. |
 | `tags` | Labels for what the rule is about, such as `"security"`. |
+
+### Python classes and functions
+`klint` reads a Python file as a `file` unit and, nested in it, a unit for each class and function. A rule for them is then asked about a short piece of code instead of the whole file, and its findings point to the exact method.
+
+| Unit type | What it is | What the judge reads |
+| :--- | :--- | :--- |
+| `class` | Each class at the top of a file, and each class defined in a class. | The class with each method's body replaced by `...`: its decorators, bases, docstring, class-level statements and method signatures stay. |
+| `function` | Each function at the top of a file, and each method, async or not. A function defined inside a function, such as a decorator's wrapper, is part of the outer function. | The function's source, decorators included. |
+
+* A class or function defined inside an `if`, `try`, `with` or loop statement counts as defined where that statement is.
+* **IDs and lines**: a unit's ID is its file's path and its qualified name, as in `shop/cart.py::Cart.add`. When two units share a qualified name, as a property and its setter do, each ID ends with its first line, as in `shop/cart.py::Cart.total:14`. A finding gives the unit's lines in `location` and its qualified name in `context`.
+* **Roll-up**: a method sits under its class and a class under its file. A problem in a method marks its class and its file `DESCENDANT PROBLEM`.
+* **Long units**: a class or function over the 2,000-character budget is shown from its first line, as far as the budget goes, as a long file is.
+* **Unparseable files**: a Python file that cannot be parsed is still judged whole, with a warning, and its classes and functions are not judged on their own.
+
+For Python, the built-in rules about one function are asked about each class or function instead of the whole file (`python/functions_and_classes.json`):
+* `function`: `n_plus_1_query`, `improper_error_handling`, `sync_blocking_io`, `missing_input_validation` and `over_fetching_data`.
+* `class` and `function`: `god_component`.
+* `hardcoded_secrets` and `tight_coupling` stay on the whole file, where a module's constants and imports are.
+
+For every other language, the built-in rules are still asked about the whole file.
+
+~~~json
+{
+  "short_functions": {
+    "type": "choice",
+    "question": "Is each function short enough to read at a glance rather than running through many unrelated steps?",
+    "unit_types": ["function"]
+  }
+}
+~~~
 
 ## Judges
 

@@ -22,12 +22,15 @@ from klint.core.models.scanning import FileTraitsOverride
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
 _DEFAULT_BASE_URL = "http://127.0.0.1:8009"
 # Built-in rule packs, relative to klint/resources/catalog/ and merged in this
-# order. Each pack states in its header the files it loads for.
+# order. Each pack states in its header the files it loads for. A rule of a
+# later pack replaces the rule of the same ID in an earlier one, for the files
+# the later pack loads for.
 _BUILT_IN_RULE_PACKS = (
     "code/language_neutral/backend.json",
     "code/typescript/react.json",
     "code/language_neutral/file_design.json",
     "code/python/package_structure.json",
+    "code/python/functions_and_classes.json",
 )
 # The packs a file whose language is not identified is asked, unless the
 # config file names its own.
