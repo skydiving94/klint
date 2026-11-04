@@ -1,30 +1,68 @@
 name: klint Self-Audit
-run-name: klint Audit on ${{ github.ref_name }} by @${{ github.actor }}
+run-name: klint Self-Audit on ${{ github.ref_name }} by @${{ github.actor }}
 
+# klint audits its own code and lists what it finds in the job summary. The
+# job reports and does not block: it fails only when an audit cannot run.
+# Before a pull request into main merges, each finding is fixed, or rebutted
+# in a comment on the pull request.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
+      # A run without the repository's secrets, such as one for a pull
+      # request from a fork, cannot ask Jev, so it skips the audits.
+      - name: Check for the judge's API key
+        id: key
+        shell: bash
+        env:
+          KLINT_JUDGE_API_KEY: ${{ secrets.KLINT_JUDGE_API_KEY }}
+        run: |
+          if [ -n "$KLINT_JUDGE_API_KEY" ]; then
+            echo "is_set=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_set=false" >> "$GITHUB_OUTPUT"
+            message="The KLINT_JUDGE_API_KEY secret is not available to this run, as on a pull request from a fork, so the self-audit is skipped."
+            echo "::notice title=klint Self-Audit::$message"
+            echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Checkout repository
+        if: steps.key.outputs.is_set == 'true'
         uses: actions/checkout@v4
 
-      - name: Run klint Project Structure Audit on klint/
+      - name: Audit the structure of klint/
+        if: steps.key.outputs.is_set == 'true'
         uses: ./
         with:
           target: "klint/"
-          mode: "project"
+          mode: "structure"
           min_confidence: "0.50"
-          kev_model_name: "jaredpalmer/kev-0.8b"
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+          fail_on_problems: "false"
 
-      - name: Run klint File Audit on klint/
+      # Runs even when the structure audit could not, so that both report.
+      - name: Audit the files of klint/
+        if: ${{ !cancelled() && steps.key.outputs.is_set == 'true' }}
         uses: ./
         with:
           target: "klint/"
           mode: "file"
           min_confidence: "0.75"
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+          fail_on_problems: "false"
