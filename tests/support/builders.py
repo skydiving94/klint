@@ -19,8 +19,7 @@ from klint.catalog.domain_neutral import TargetScanner
 from klint.catalog.domain_neutral.file_traits_identifiers import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.cli.runner import AuditCommand, AuditCommandApp
-from klint.cli.wiring import create_command_injector
+from klint.cli import AuditCommand, AuditCommandApp, create_command_injector
 from klint.core import UnitRegistry
 from klint.core.interfaces import BaseJudge
 from klint.core.models.audits import DiskPathInput

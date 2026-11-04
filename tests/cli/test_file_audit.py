@@ -13,9 +13,12 @@ from injector import Binder
 from klint.app import AppSettings
 from klint.catalog.code.language_neutral import PRACTICE_SCALE
 from klint.catalog.domain_neutral.extraction import DispatchedFile
-from klint.cli.exit_code import ExitCode
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.cli.runner import AuditCommandApp, run_command_from_shell
+from klint.cli import (
+    FILE_AUDIT_COMMAND,
+    AuditCommandApp,
+    ExitCode,
+    run_command_from_shell,
+)
 from klint.core.interfaces import BaseJudge, BaseUnitExtractor
 from klint.core.models.judging import JudgeQuestion, QuestionType
 from klint.core.models.units import AuditableUnit

@@ -10,7 +10,7 @@ from klint.catalog.domain_neutral import (
     DirectoryTreeSourceFactory,
     JsonDocumentSourceFactory,
 )
-from klint.cli.runner import AuditCommand
+from klint.cli import AuditCommand
 from klint.core import UnitRegistry
 from klint.core.interfaces import (
     AuditKind,

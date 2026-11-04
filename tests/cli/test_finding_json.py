@@ -11,9 +11,7 @@ from injector import Binder
 
 from klint.catalog.domain_neutral import AuditableFileUnit
 from klint.catalog.domain_neutral.extraction import DispatchedFile
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.cli.runner import AuditCommandApp
-from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
+from klint.cli import FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND, AuditCommandApp
 from klint.core.interfaces import BaseUnitExtractor
 from klint.core.models.units import AuditableUnit, UnitContext
 from tests.support.builders import (

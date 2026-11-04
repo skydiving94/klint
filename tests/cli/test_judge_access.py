@@ -5,8 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.exit_code import ExitCode
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
+from klint.cli import FILE_AUDIT_COMMAND, ExitCode
 from klint.infra.system_one import HttpSystemOneJudge
 from tests.support.builders import build_audit_command_app, write_text
 from tests.support.stub_system_one_server import StubSystemOneServer

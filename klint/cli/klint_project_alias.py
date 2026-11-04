@@ -10,7 +10,7 @@ from klint.core import describe_deprecated_name
 _OLD_COMMAND_NAME = "klint-project"
 
 
-def cli_main() -> int:
+def run_klint_project_alias() -> int:
     print_warning_line(
         STRUCTURE_AUDIT_COMMAND,
         describe_deprecated_name(_OLD_COMMAND_NAME, STRUCTURE_AUDIT_COMMAND.name),
@@ -19,4 +19,4 @@ def cli_main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(cli_main())
+    sys.exit(run_klint_project_alias())

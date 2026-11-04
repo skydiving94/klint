@@ -12,7 +12,7 @@ from klint.catalog.domain_neutral.extraction import (
     read_file_start,
     traits_based_extraction_delegator,
 )
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
+from klint.cli import FILE_AUDIT_COMMAND
 from klint.core.interfaces import BaseUnitExtractor
 from klint.core.models.units import AuditableUnit
 from tests.support.builders import (

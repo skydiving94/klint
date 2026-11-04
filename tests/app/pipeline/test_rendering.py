@@ -12,7 +12,7 @@ from injector import Binder
 from klint.app import AuditKindRegistry
 from klint.app.pipeline import AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.cli.wiring import create_command_injector
+from klint.cli import create_command_injector
 from klint.core.interfaces import AuditKind, BaseSuite
 from klint.core.models.audits import InMemoryBytesInput
 from klint.core.models.reports import JsonValue

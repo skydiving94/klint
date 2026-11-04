@@ -10,7 +10,7 @@ from injector import Binder
 
 from klint.app.pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
-from klint.cli.exit_code import ExitCode
+from klint.cli import ExitCode
 from klint.core.interfaces import AuditKind, BaseSuite
 from klint.core.models.audits import DiskPathInput
 from tests.support.builders import (

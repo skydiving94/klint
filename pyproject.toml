@@ -38,11 +38,11 @@ dev = [
 ]
 
 [project.scripts]
-klint = "klint.cli.file_audit:cli_main"
-klint-structure = "klint.cli.structure_audit:cli_main"
+klint = "klint.cli:run_file_audit"
+klint-structure = "klint.cli:run_structure_audit"
 # The old name of klint-structure, kept for one release.
-klint-project = "klint.cli.klint_project_alias:cli_main"
-klint-change-summary = "klint.cli.change_summary_audit:cli_main"
+klint-project = "klint.cli:run_klint_project_alias"
+klint-change-summary = "klint.cli:run_change_summary_audit"
 
 [tool.setuptools.packages.find]
 where = ["."]

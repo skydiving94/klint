@@ -14,10 +14,13 @@ from klint.catalog.code.language_neutral import AuditableFileMetadataUnit
 from klint.catalog.code.language_neutral.extraction import BaseFileMetadataExtractor
 from klint.catalog.code.python import PythonFileMetadataExtractor
 from klint.catalog.domain_neutral.extraction import DispatchedFile
-from klint.cli import klint_project_alias
-from klint.cli.exit_code import ExitCode
-from klint.cli.runner import AuditCommandApp, run_command_from_shell
-from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
+from klint.cli import (
+    STRUCTURE_AUDIT_COMMAND,
+    AuditCommandApp,
+    ExitCode,
+    run_command_from_shell,
+    run_klint_project_alias,
+)
 from klint.core.interfaces import BaseJudge
 from tests.support.builders import (
     DIR_RULE,
@@ -423,7 +426,7 @@ def test_old_command_name_runs_the_structure_audit_with_a_warning(
     shell_env["KLINT_JUDGE_BASE_URL"] = system_one_server.base_url
     monkeypatch.setattr(sys, "argv", ["klint-project", str(package), "--json"])
 
-    exit_code = klint_project_alias.cli_main()
+    exit_code = run_klint_project_alias()
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
