@@ -54,7 +54,7 @@ klint/
 │   ├── code/                # The code suite: file contents (klint) and project structure (klint-structure)
 │   │   ├── language_neutral/  # Units, renderers and extractors shared by every programming language
 │   │   │   └── extraction/
-│   │   └── python/          # Python file outlines and package units
+│   │   └── python/          # Python file outlines, package units, and the class and function units of a file
 │   └── change_summary/      # The change-summary suite (klint-change-summary)
 │       ├── units/           # One unit for each hunk, file and package summary
 │       └── renderers/       # What the judge reads about each summary
@@ -68,7 +68,7 @@ klint/
 │       ├── audits/  judging/  reports/  rules/  scanning/  units/
 └── resources/catalog/       # Built-in rule packs and tables, laid out like catalog/
     ├── code/language_neutral/   # backend.json, file_design.json, language_to_file_extensions.json, tag_detection.json
-    ├── code/python/             # package_structure.json
+    ├── code/python/             # package_structure.json, functions_and_classes.json
     ├── code/typescript/         # react.json
     └── change_summary/          # summary_checks.json
 tests/                       # Mirrors klint/; tests/support holds the fake judge, builders and a stub System One server
