@@ -4,16 +4,14 @@ import asyncio
 from pathlib import Path
 
 from klint.catalog.domain_neutral.target_scanner import TargetScanner
-from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.interfaces.source import BaseAuditSource, BaseAuditSourceFactory
-from klint.core.models.audits.audit_input import (
-    AuditInput,
-    DiskPathInput,
-    InMemoryBytesInput,
+from klint.core.interfaces import (
+    BaseAuditSource,
+    BaseAuditSourceFactory,
+    BaseFileTraitsIdentifier,
+    BaseScanProgressListener,
 )
-from klint.core.models.scanning.ignored_names import IgnoredNames
-from klint.core.models.scanning.scanned_tree import ScannedTarget
+from klint.core.models.audits import AuditInput, DiskPathInput, InMemoryBytesInput
+from klint.core.models.scanning import IgnoredNames, ScannedTarget
 
 
 class DirectoryTreeSource(BaseAuditSource[ScannedTarget]):

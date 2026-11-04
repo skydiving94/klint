@@ -2,8 +2,8 @@
 
 import pytest
 
-from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
-from klint.core.registry import UnitRegistry
+from klint.catalog.domain_neutral import AuditableFileUnit
+from klint.core import UnitRegistry
 
 
 def test_new_registry_is_empty_and_registering_twice_is_harmless() -> None:

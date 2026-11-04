@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.audits.audit_input import AuditInput
-from klint.core.models.units.acquired_units import AcquiredUnits
+from klint.core.models.audits import AuditInput
+from klint.core.models.units import AcquiredUnits
 
 
 class BaseUnitSource(ABC):

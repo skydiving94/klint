@@ -2,10 +2,9 @@
 
 from dataclasses import dataclass
 
-from klint.core.models.judging.scale import AnswerChoice
-from klint.core.models.reports.report import AuditFinding, AuditReport
-from klint.core.models.units.location import Location
-from klint.core.models.units.unit import UnitContext
+from klint.core.models.judging import AnswerChoice
+from klint.core.models.reports import AuditFinding, AuditReport
+from klint.core.models.units import Location, UnitContext
 from tests.support.builders import FAIL, LACK_OF_EVIDENCE, PASS
 
 

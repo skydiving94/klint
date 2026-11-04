@@ -4,10 +4,9 @@ import asyncio
 
 from injector import Module, provider, singleton
 
-from klint.core.interfaces.judge import BaseJudge
-from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
-from klint.core.models.rules.rule_pack import RulePackSpec
+from klint.core.interfaces import BaseJudge, BaseRuleSource
+from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.rules import RulePackSpec
 
 
 class FakeJudge(BaseJudge):

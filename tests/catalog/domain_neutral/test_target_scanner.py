@@ -4,14 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
+from klint.catalog.domain_neutral import TargetScanner
+from klint.catalog.domain_neutral.file_traits_identifiers import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.domain_neutral.target_scanner import TargetScanner
-from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.scanning.ignored_names import IgnoredNames
-from klint.core.models.scanning.scanned_tree import ScannedDirectory
+from klint.core import KlintWarning
+from klint.core.interfaces import BaseScanProgressListener
+from klint.core.models.scanning import IgnoredNames, ScannedDirectory
 from tests.support.builders import MakeUnreadable, write_text
 
 SCANNER = TargetScanner(

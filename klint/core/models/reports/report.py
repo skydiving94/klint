@@ -1,11 +1,10 @@
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 
-from klint.core.models.judging.scale import AnswerChoice
+from klint.core.models.judging import AnswerChoice
 from klint.core.models.reports.json_value import JsonValue
 from klint.core.models.reports.roll_up_status import RollUpStatus
-from klint.core.models.units.location import Location
-from klint.core.models.units.unit import UnitContext
+from klint.core.models.units import Location, UnitContext
 
 
 @dataclass(frozen=True)

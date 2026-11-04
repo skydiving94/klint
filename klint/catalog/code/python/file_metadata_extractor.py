@@ -1,14 +1,12 @@
 import ast
 
-from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
+from klint.catalog.code.language_neutral import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.extraction import (
     BaseFileMetadataExtractor,
     list_binary_file,
 )
-from klint.catalog.code.language_neutral.file_metadata_unit import (
-    AuditableFileMetadataUnit,
-)
-from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.core.klint_warning import warn_about_unparseable_file
+from klint.catalog.domain_neutral.extraction import DispatchedFile
+from klint.core import warn_about_unparseable_file
 
 
 class PythonFileMetadataExtractor(BaseFileMetadataExtractor):

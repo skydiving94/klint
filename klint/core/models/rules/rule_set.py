@@ -3,8 +3,7 @@
 from collections.abc import Mapping, Sequence
 
 from klint.core.models.rules.rule import AuditRule
-from klint.core.models.units.unit import AuditableUnit
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.core.models.units import AuditableUnit, UnitTraits
 
 
 class RuleSet:

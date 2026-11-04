@@ -1,11 +1,9 @@
 from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.domain_neutral.character_budget import (
-    join_lines_within_budget,
-)
-from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.audits.render_input import RenderInput
+from klint.catalog.domain_neutral import join_lines_within_budget
+from klint.core.interfaces import BaseUnitRenderer
+from klint.core.models.audits import RenderInput
 
 
 class FileMetadataRenderer(BaseUnitRenderer):

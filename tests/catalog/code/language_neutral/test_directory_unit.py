@@ -3,13 +3,11 @@
 from pathlib import Path
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.code.language_neutral.file_metadata_unit import (
-    AuditableFileMetadataUnit,
-)
-from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
-from klint.core.models.judging.question_type import QuestionType
-from klint.core.models.rules.rule import AuditRule
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.catalog.code.language_neutral import AuditableFileMetadataUnit
+from klint.catalog.code.python import AuditablePythonPackageUnit
+from klint.core.models.judging import QuestionType
+from klint.core.models.rules import AuditRule
+from klint.core.models.units import UnitTraits
 from tests.support.builders import list_judge_subjects, write_text
 
 

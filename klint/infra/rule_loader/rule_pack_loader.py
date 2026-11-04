@@ -2,17 +2,15 @@ import asyncio
 import warnings
 from collections.abc import Collection, Iterator, Sequence
 
-from klint.core.interfaces.rule_loader import BaseRuleLoader
-from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.rules.rule import AuditRule
-from klint.core.models.rules.rule_pack import (
+from klint.core import KlintWarning, UnitRegistry
+from klint.core.interfaces import BaseRuleLoader, BaseRuleSource
+from klint.core.models.rules import (
+    AuditRule,
     RulePackSpec,
     RuleProblemSeverity,
     RuleSpec,
 )
-from klint.core.models.units.unit_traits import UnitTraits
-from klint.core.registry import UnitRegistry
+from klint.core.models.units import UnitTraits
 from klint.infra.rule_loader.rule_pack_reader import HEADER_KEY
 
 

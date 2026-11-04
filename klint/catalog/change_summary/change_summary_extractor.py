@@ -5,16 +5,14 @@ from klint.catalog.change_summary.document_reader import (
     ROOT_PACKAGE_PATH,
     read_change_summary_document,
 )
-from klint.catalog.change_summary.units.file_summary import AuditableFileSummaryUnit
-from klint.catalog.change_summary.units.hunk_summary_unit import (
+from klint.catalog.change_summary.units import (
+    AuditableFileSummaryUnit,
     AuditableHunkSummaryUnit,
-)
-from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
-from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.reports.json_value import JsonValue
-from klint.core.models.units.unit import AuditableUnit
+from klint.core.interfaces import BaseUnitExtractor
+from klint.core.models.reports import JsonValue
+from klint.core.models.units import AuditableUnit
 
 
 class ChangeSummaryExtractor(BaseUnitExtractor[JsonValue]):

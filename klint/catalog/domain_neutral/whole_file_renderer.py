@@ -2,8 +2,8 @@ from klint.catalog.domain_neutral.character_budget import (
     join_lines_within_budget,
 )
 from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
-from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.audits.render_input import RenderInput
+from klint.core.interfaces import BaseUnitRenderer
+from klint.core.models.audits import RenderInput
 
 
 class WholeFileRenderer(BaseUnitRenderer):

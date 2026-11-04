@@ -3,14 +3,13 @@
 import asyncio
 import json
 
-from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.interfaces.source import BaseAuditSource, BaseAuditSourceFactory
-from klint.core.models.audits.audit_input import (
-    AuditInput,
-    DiskPathInput,
-    InMemoryBytesInput,
+from klint.core.interfaces import (
+    BaseAuditSource,
+    BaseAuditSourceFactory,
+    BaseScanProgressListener,
 )
-from klint.core.models.reports.json_value import JsonValue
+from klint.core.models.audits import AuditInput, DiskPathInput, InMemoryBytesInput
+from klint.core.models.reports import JsonValue
 
 # The media type of JSON content; a type with the "+json" suffix is JSON too.
 JSON_MEDIA_TYPE = "application/json"

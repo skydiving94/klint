@@ -14,12 +14,10 @@ from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
 from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
-    TraitsBasedExtractionDelegator,
-)
-from klint.core.klint_warning import leave_out_file_on_failure
-from klint.core.models.scanning.scanned_tree import ScannedDirectory, ScannedFile
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.catalog.domain_neutral.extraction import TraitsBasedExtractionDelegator
+from klint.core import leave_out_file_on_failure
+from klint.core.models.scanning import ScannedDirectory, ScannedFile
+from klint.core.models.units import UnitTraits
 
 
 class DirectoryTreeExtractor:

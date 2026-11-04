@@ -2,11 +2,10 @@
 
 from pathlib import Path
 
-from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.klint_warning import warn_about_unreadable_directory
-from klint.core.models.scanning.ignored_names import IgnoredNames
-from klint.core.models.scanning.scanned_tree import (
+from klint.core import warn_about_unreadable_directory
+from klint.core.interfaces import BaseFileTraitsIdentifier, BaseScanProgressListener
+from klint.core.models.scanning import (
+    IgnoredNames,
     ScannedDirectory,
     ScannedFile,
     ScannedTarget,

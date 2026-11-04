@@ -4,15 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.code.language_neutral.file_metadata_unit import (
-    AuditableFileMetadataUnit,
-)
-from klint.catalog.code.python.file_metadata_extractor import (
-    PythonFileMetadataExtractor,
-)
-from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.catalog.code.language_neutral import AuditableFileMetadataUnit
+from klint.catalog.code.python import PythonFileMetadataExtractor
+from klint.catalog.domain_neutral.extraction import DispatchedFile
+from klint.core import KlintWarning
+from klint.core.models.units import UnitTraits
 from tests.support.builders import write_text
 
 PYTHON = UnitTraits(language="python")

@@ -1,7 +1,7 @@
 """The ranking stage: the order a report lists its findings in."""
 
-from klint.core.models.audits.audit_kind import AuditKind
-from klint.core.models.reports.report import AuditFinding, AuditReport
+from klint.core.interfaces import AuditKind
+from klint.core.models.reports import AuditFinding, AuditReport
 
 
 class FindingRanking:

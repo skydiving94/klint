@@ -1,18 +1,14 @@
 from dataclasses import replace
 from pathlib import Path
 
-from klint.catalog.code.language_neutral.directory_unit import (
+from klint.catalog.code.language_neutral import (
     AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.extraction.directory_factory import (
-    BaseDirectoryUnitFactory,
-)
-from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
+from klint.catalog.code.language_neutral.extraction import BaseDirectoryUnitFactory
 from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 from klint.catalog.code.python.project_module_names import list_project_module_names
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.core.models.units import UnitTraits
 
 
 class PythonPackageUnitFactory(BaseDirectoryUnitFactory):

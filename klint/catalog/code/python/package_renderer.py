@@ -1,19 +1,15 @@
 from collections.abc import Iterator
 
-from klint.catalog.code.language_neutral.directory_renderer import (
+from klint.catalog.code.language_neutral import (
+    AuditableDirectoryUnit,
     format_display_path,
     list_tree_lines,
 )
-from klint.catalog.code.language_neutral.directory_unit import (
-    AuditableDirectoryUnit,
-)
 from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 from klint.catalog.code.python.project_module_names import list_project_module_names
-from klint.catalog.domain_neutral.character_budget import (
-    join_lines_within_budget,
-)
-from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.audits.render_input import RenderInput
+from klint.catalog.domain_neutral import join_lines_within_budget
+from klint.core.interfaces import BaseUnitRenderer
+from klint.core.models.audits import RenderInput
 
 
 class PythonPackageRenderer(BaseUnitRenderer):

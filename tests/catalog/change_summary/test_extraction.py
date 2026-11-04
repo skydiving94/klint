@@ -5,8 +5,8 @@ from dataclasses import asdict
 
 import pytest
 
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.units.location import Location
+from klint.core import KlintWarning
+from klint.core.models.units import Location
 from tests.support.change_summary import (
     APP_PACKAGE_POINTER,
     GREET_FILE_POINTER,

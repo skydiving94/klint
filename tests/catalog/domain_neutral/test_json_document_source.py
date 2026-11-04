@@ -5,12 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
-from klint.core.models.audits.audit_input import (
-    AuditInput,
-    DiskPathInput,
-    InMemoryBytesInput,
-)
+from klint.app.pipeline import AuditOutcome, AuditRequest
+from klint.core.models.audits import AuditInput, DiskPathInput, InMemoryBytesInput
 from tests.support.builders import build_audit_pipeline, write_text
 from tests.support.fakes import FakeJudge
 from tests.support.notes_suite import (

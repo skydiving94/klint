@@ -3,11 +3,10 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.judging.scale import AnswerChoice
-from klint.core.models.reports.report import AuditFinding
-from klint.core.models.reports.roll_up_status import RollUpStatus
-from klint.core.models.units.location import Location
+from klint.core.interfaces import BaseScanProgressListener
+from klint.core.models.judging import AnswerChoice
+from klint.core.models.reports import AuditFinding, RollUpStatus
+from klint.core.models.units import Location
 
 
 class _ANSI:

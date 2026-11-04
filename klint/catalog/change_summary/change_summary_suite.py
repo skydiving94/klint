@@ -5,35 +5,28 @@ from injector import Binder, Module, ProviderOf, inject
 from klint.catalog.change_summary.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
-from klint.catalog.change_summary.renderers.hunk_summary_renderer import (
-    HunkSummaryRenderer,
-)
-from klint.catalog.change_summary.renderers.upper_level_summary import (
+from klint.catalog.change_summary.renderers import (
     FileSummaryRenderer,
+    HunkSummaryRenderer,
     PackageSummaryRenderer,
 )
 from klint.catalog.change_summary.summary_accuracy_scale import (
     SUMMARY_ACCURACY_SCALE,
 )
 from klint.catalog.change_summary.summary_check_tag import SummaryCheckTag
-from klint.catalog.change_summary.units.file_summary import AuditableFileSummaryUnit
-from klint.catalog.change_summary.units.hunk_summary_unit import (
+from klint.catalog.change_summary.units import (
+    AuditableFileSummaryUnit,
     AuditableHunkSummaryUnit,
-)
-from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
-from klint.catalog.domain_neutral.built_in_files import locate_built_in_catalog_file
-from klint.catalog.domain_neutral.json_document_source import (
+from klint.catalog.domain_neutral import (
     JsonDocumentSourceFactory,
+    locate_built_in_catalog_file,
 )
-from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audits.audit_input import AuditInputKind
-from klint.core.models.audits.audit_kind import AuditKind, UnitSource
-from klint.core.models.audits.audit_order import AuditOrder
-from klint.core.registry import UnitRegistry
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
-from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
+from klint.core import UnitRegistry
+from klint.core.interfaces import AuditKind, BaseSuite, UnitSource
+from klint.core.models.audits import AuditInputKind, AuditOrder
+from klint.infra.rule_loader import JsonFileRuleSource, RulePackLoader
 
 # The kind of audit this suite offers: a change-summary document, verified.
 CHANGE_SUMMARY_KIND_ID = "change_summary"

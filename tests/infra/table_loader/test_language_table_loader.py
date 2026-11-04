@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.infra.table_loader.language_table_loader import (
-    load_file_extension_to_language,
-)
+from klint.infra.table_loader import load_file_extension_to_language
 from tests.support.builders import write_json, write_text
 from tests.support.paths import DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS
 

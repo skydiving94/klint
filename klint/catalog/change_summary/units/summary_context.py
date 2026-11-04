@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from klint.core.models.units.unit import UnitContext
+from klint.core.models.units import UnitContext
 
 
 class SummaryLevel(StrEnum):

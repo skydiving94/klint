@@ -2,69 +2,50 @@
 
 from injector import Binder, Module, ProviderOf, inject, provider
 
-from klint.catalog.code import python
-from klint.catalog.code.language_neutral.directory_renderer import (
-    DirectoryRenderer,
-)
-from klint.catalog.code.language_neutral.directory_unit import (
+from klint.catalog.code.language_neutral import (
+    CODE_IGNORED_NAMES,
+    PRACTICE_SCALE,
     AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.extraction.directory_factory import (
-    BaseDirectoryUnitFactory,
-)
-from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
-    DirectoryTreeExtractor,
-)
-from klint.catalog.code.language_neutral.extraction.file_contents import (
-    FileContentsExtractor,
-)
-from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
-    BaseFileMetadataExtractor,
-)
-from klint.catalog.code.language_neutral.extraction.language_neutral_directory_factory import (  # noqa: E501
-    LanguageNeutralDirectoryUnitFactory,
-)
-from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
-    LanguageNeutralFileMetadataExtractor,
-)
-from klint.catalog.code.language_neutral.extraction.project_structure import (
-    ProjectStructureExtractor,
-)
-from klint.catalog.code.language_neutral.file_metadata_renderer import (
+    AuditableFileMetadataUnit,
+    DirectoryRenderer,
     FileMetadataRenderer,
 )
-from klint.catalog.code.language_neutral.file_metadata_unit import (
-    AuditableFileMetadataUnit,
+from klint.catalog.code.language_neutral.extraction import (
+    BaseDirectoryUnitFactory,
+    BaseFileMetadataExtractor,
+    DirectoryTreeExtractor,
+    FileContentsExtractor,
+    LanguageNeutralDirectoryUnitFactory,
+    LanguageNeutralFileMetadataExtractor,
+    ProjectStructureExtractor,
 )
-from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
-from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.python.file_metadata_extractor import (
+from klint.catalog.code.python import (
+    SUITE_LANGUAGE,
+    AuditablePythonPackageUnit,
     PythonFileMetadataExtractor,
-)
-from klint.catalog.code.python.package_factory import (
+    PythonPackageRenderer,
     PythonPackageUnitFactory,
 )
-from klint.catalog.code.python.package_renderer import PythonPackageRenderer
-from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
-from klint.catalog.domain_neutral.directory_tree_source import (
+from klint.catalog.domain_neutral import (
+    AuditableFileUnit,
     DirectoryTreeSourceFactory,
+    WholeFileRenderer,
 )
-from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
+from klint.catalog.domain_neutral.extraction import (
+    DispatchedFile,
     TraitsBasedExtractionDelegator,
-)
-from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
     WholeFileExtractor,
 )
-from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
-from klint.catalog.domain_neutral.whole_file_renderer import WholeFileRenderer
-from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.interfaces.rule_loader import BaseRuleLoader
-from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audits.audit_input import AuditInputKind
-from klint.core.models.audits.audit_kind import AuditKind, UnitSource
-from klint.core.registry import UnitRegistry
+from klint.core import UnitRegistry
+from klint.core.interfaces import (
+    AuditKind,
+    BaseFileTraitsIdentifier,
+    BaseRuleLoader,
+    BaseSuite,
+    BaseUnitExtractor,
+    UnitSource,
+)
+from klint.core.models.audits import AuditInputKind
 
 # The kinds of audit this suite offers: each file's contents, and the
 # structure of a project's directories.
@@ -142,11 +123,11 @@ class CodeSuiteModule(Module):
         binder.multibind(dict[str, BaseUnitExtractor[DispatchedFile]], to={})
         binder.multibind(
             dict[str, BaseFileMetadataExtractor],
-            to={python.SUITE_LANGUAGE: PythonFileMetadataExtractor},
+            to={SUITE_LANGUAGE: PythonFileMetadataExtractor},
         )
         binder.multibind(
             dict[str, BaseDirectoryUnitFactory],
-            to={python.SUITE_LANGUAGE: PythonPackageUnitFactory},
+            to={SUITE_LANGUAGE: PythonPackageUnitFactory},
         )
 
     @provider

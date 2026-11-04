@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.core.models.units import UnitTraits
 
 
 @dataclass

@@ -14,12 +14,12 @@ from klint.catalog.change_summary.renderers.premise_and_hypothesis import (
     describe_file_change,
     join_premise_and_hypothesis,
 )
-from klint.catalog.change_summary.units.file_summary import AuditableFileSummaryUnit
-from klint.catalog.change_summary.units.package_summary import (
+from klint.catalog.change_summary.units import (
+    AuditableFileSummaryUnit,
     AuditablePackageSummaryUnit,
 )
-from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.audits.render_input import RenderInput
+from klint.core.interfaces import BaseUnitRenderer
+from klint.core.models.audits import RenderInput
 
 
 class FileSummaryRenderer(BaseUnitRenderer):

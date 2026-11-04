@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from klint.core.models.rules.rule_pack import RulePackSpec
+from klint.core.models.rules import RulePackSpec
 
 
 class BaseRuleSource(ABC):

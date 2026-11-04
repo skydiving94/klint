@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from klint.core.models.judging.question_type import QuestionType
-from klint.core.models.units.unit import AuditableUnit
+from klint.core.models.judging import QuestionType
+from klint.core.models.units import AuditableUnit
 
 # The unit types a rule is asked about when it names none.
 DEFAULT_UNIT_TYPES = ("file",)

@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.judging import QuestionType
 
 
 @dataclass(frozen=True)

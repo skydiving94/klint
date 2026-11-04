@@ -5,10 +5,10 @@ import warnings
 from pathlib import Path
 from typing import TypeGuard
 
-from klint.core.klint_warning import KlintWarning, describe_deprecated_name
-from klint.core.models.judging.question_type import QuestionType
-from klint.core.models.rules.rule import DEFAULT_UNIT_TYPES
-from klint.core.models.rules.rule_pack import (
+from klint.core import KlintWarning, describe_deprecated_name
+from klint.core.models.judging import QuestionType
+from klint.core.models.rules import (
+    DEFAULT_UNIT_TYPES,
     PackScope,
     RulePackSpec,
     RuleProblem,

@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 
-from klint.catalog.code.language_neutral.directory_unit import (
-    AuditableDirectoryUnit,
-)
+from klint.catalog.code.language_neutral import AuditableDirectoryUnit
 
 
 @dataclass(frozen=True)

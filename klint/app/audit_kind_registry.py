@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-from klint.core.models.audits.audit_kind import AuditKind
+from klint.core.interfaces import AuditKind
 
 
 class AuditKindRegistry:

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from klint.core.models.audits.render_input import RenderInput
+from klint.core.models.audits import RenderInput
 
 
 class BaseUnitRenderer(ABC):

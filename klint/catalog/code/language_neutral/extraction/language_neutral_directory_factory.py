@@ -9,7 +9,7 @@ from klint.catalog.code.language_neutral.extraction.directory_factory import (
 from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.core.models.units.unit_traits import UnitTraits
+from klint.core.models.units import UnitTraits
 
 
 class LanguageNeutralDirectoryUnitFactory(BaseDirectoryUnitFactory):
