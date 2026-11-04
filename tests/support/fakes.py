@@ -6,8 +6,8 @@ from injector import Module, provider, singleton
 
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
-from klint.core.models.rule_pack import RulePackSpec
+from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.rules.rule_pack import RulePackSpec
 
 
 class FakeJudge(BaseJudge):

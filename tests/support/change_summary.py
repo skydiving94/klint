@@ -10,10 +10,10 @@ from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
 from klint.catalog.change_summary.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
-from klint.core.models.audit_input import InMemoryBytesInput
-from klint.core.models.json_value import JsonValue
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.audits.audit_input import InMemoryBytesInput
+from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.reports.json_value import JsonValue
+from klint.core.models.units.unit import AuditableUnit
 from tests.support.builders import build_audit_pipeline
 from tests.support.fakes import FakeJudge
 

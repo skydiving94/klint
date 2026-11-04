@@ -22,7 +22,7 @@ from klint.cli.formatter import (
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.klint_warning import KlintWarning, warn_about_deprecated_name
-from klint.core.models.audit_input import DiskPathInput
+from klint.core.models.audits.audit_input import DiskPathInput
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 
 

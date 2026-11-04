@@ -8,8 +8,8 @@ from klint.catalog.code.language_neutral.extraction.directory_tree_extractor imp
     DirectoryTreeExtractor,
 )
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.scanned_tree import ScannedTarget
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.scanning.scanned_tree import ScannedTarget
+from klint.core.models.units.unit import AuditableUnit
 
 
 class ProjectStructureExtractor(BaseUnitExtractor[ScannedTarget]):

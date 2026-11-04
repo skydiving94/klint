@@ -6,7 +6,7 @@ from klint.catalog.change_summary.units.hunk_summary_unit import (
     AuditableHunkSummaryUnit,
 )
 from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.render_input import RenderInput
+from klint.core.models.audits.render_input import RenderInput
 
 
 class HunkSummaryRenderer(BaseUnitRenderer):

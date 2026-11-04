@@ -8,8 +8,8 @@ import pytest
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.models.audit_input import DiskPathInput, InMemoryBytesInput
-from klint.core.models.scale import AnswerChoice
+from klint.core.models.audits.audit_input import DiskPathInput, InMemoryBytesInput
+from klint.core.models.judging.scale import AnswerChoice
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from tests.support.builders import (
     FAIL,

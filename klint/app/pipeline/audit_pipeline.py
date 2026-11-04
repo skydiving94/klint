@@ -12,8 +12,8 @@ from klint.app.pipeline.roll_up import FindingRollUp
 from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.audit_input import AuditInput
-from klint.core.models.report import AuditReport
+from klint.core.models.audits.audit_input import AuditInput
+from klint.core.models.reports.report import AuditReport
 
 
 @dataclass(frozen=True)

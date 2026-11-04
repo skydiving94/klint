@@ -1,6 +1,6 @@
 """The answer scale for asking whether content follows a described practice."""
 
-from klint.core.models.scale import AnswerChoice, AnswerScale
+from klint.core.models.judging.scale import AnswerChoice, AnswerScale
 
 PRACTICE_SCALE = AnswerScale(
     name="practice",

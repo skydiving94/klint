@@ -18,8 +18,8 @@ from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator i
     TraitsBasedExtractionDelegator,
 )
 from klint.core.klint_warning import leave_out_file_on_failure
-from klint.core.models.scanned_tree import ScannedDirectory, ScannedFile
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.scanning.scanned_tree import ScannedDirectory, ScannedFile
+from klint.core.models.units.unit_traits import UnitTraits
 
 
 class DirectoryTreeExtractor:

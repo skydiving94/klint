@@ -12,7 +12,7 @@ from klint.catalog.code.python.file_metadata_extractor import (
 )
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.units.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 PYTHON = UnitTraits(language="python")

@@ -8,10 +8,10 @@ from klint.app.pipeline.acquisition import UnitAcquisition
 from klint.app.pipeline.rule_selection import RuleSelection
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.audit_input import AuditInput
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.rule_set import RuleSet
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.audits.audit_input import AuditInput
+from klint.core.models.audits.audit_kind import AuditKind
+from klint.core.models.rules.rule_set import RuleSet
+from klint.core.models.units.unit import AuditableUnit
 
 
 @dataclass(frozen=True)

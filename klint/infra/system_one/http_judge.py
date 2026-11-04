@@ -5,7 +5,7 @@ import urllib.request
 from http import HTTPStatus
 
 from klint.core.interfaces.judge import BaseJudge
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
 from klint.infra.system_one.system_one_format import (
     build_system_one_questions,
     read_system_one_answers,

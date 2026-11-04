@@ -12,7 +12,7 @@ from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFi
 from klint.catalog.domain_neutral.extraction.file_start import read_file_start
 from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units.unit import AuditableUnit
 from tests.support.builders import (
     build_audit_command_app,
     list_judge_subjects,

@@ -26,10 +26,10 @@ from klint.catalog.domain_neutral.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge
-from klint.core.models import rule_pack
-from klint.core.models.audit_input import DiskPathInput
-from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
-from klint.core.models.question_type import QuestionType
+from klint.core.models.audits.audit_input import DiskPathInput
+from klint.core.models.judging.judge_exchange import JudgeQuestion, JudgeRequest
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.rules import rule_pack
 from klint.core.registry import UnitRegistry
 from klint.infra.table_loader.language_table_loader import (
     load_file_extension_to_language,

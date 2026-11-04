@@ -10,8 +10,8 @@ from klint.catalog.domain_neutral.extraction.file_start import (
     read_file_start,
 )
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.models.scanned_tree import ScannedFile
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.scanning.scanned_tree import ScannedFile
+from klint.core.models.units.unit_traits import UnitTraits
 
 # What is picked: a file extractor or a directory unit factory, for example.
 ExtractorT = TypeVar("ExtractorT")

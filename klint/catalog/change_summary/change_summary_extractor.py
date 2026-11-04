@@ -13,8 +13,8 @@ from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.json_value import JsonValue
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.reports.json_value import JsonValue
+from klint.core.models.units.unit import AuditableUnit
 
 
 class ChangeSummaryExtractor(BaseUnitExtractor[JsonValue]):

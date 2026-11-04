@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable, Mapping
 
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units.unit import AuditableUnit
 
 
 def map_unit_id_to_parent_unit_id(units: Iterable[AuditableUnit]) -> dict[str, str]:

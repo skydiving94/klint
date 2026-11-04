@@ -15,7 +15,7 @@ from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.unit import AuditableUnit, UnitContext
+from klint.core.models.units.unit import AuditableUnit, UnitContext
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,

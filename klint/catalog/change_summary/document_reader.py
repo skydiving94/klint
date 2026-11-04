@@ -17,7 +17,7 @@ from klint.catalog.change_summary.document import (
     PackageSummary,
 )
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.json_value import JsonValue
+from klint.core.models.reports.json_value import JsonValue
 
 # The path of the root package: the directory the change is in.
 ROOT_PACKAGE_PATH = "."

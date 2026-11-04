@@ -35,8 +35,8 @@ from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.file_traits_override import FileTraitsOverride
+from klint.core.models.audits.audit_kind import AuditKind
+from klint.core.models.scanning.file_traits_override import FileTraitsOverride
 from klint.core.registry import UnitRegistry
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader

@@ -7,7 +7,7 @@ import pytest
 from klint.catalog.code.language_neutral.directory_unit import (
     ProjectDirectoryContext,
 )
-from klint.core.models.location import Location
+from klint.core.models.units.location import Location
 from tests.support.builders import (
     build_directory_tree_extractor,
     build_target_scanner,

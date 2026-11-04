@@ -4,9 +4,9 @@ import pytest
 
 from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.units.unit_traits import UnitTraits
 
 
 def _build_rule(

@@ -9,9 +9,9 @@ from typing import Any
 import pytest
 
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.units.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader

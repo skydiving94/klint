@@ -1,9 +1,9 @@
 """The acquisition stage: what a run goes through, read from its input."""
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.acquired_units import AcquiredUnits
-from klint.core.models.audit_input import AuditInput
-from klint.core.models.audit_kind import AuditKind
+from klint.core.models.audits.audit_input import AuditInput
+from klint.core.models.audits.audit_kind import AuditKind
+from klint.core.models.units.acquired_units import AcquiredUnits
 
 
 class UnitAcquisition:

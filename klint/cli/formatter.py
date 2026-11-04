@@ -4,10 +4,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.location import Location
-from klint.core.models.report import AuditFinding
-from klint.core.models.roll_up_status import RollUpStatus
-from klint.core.models.scale import AnswerChoice
+from klint.core.models.judging.scale import AnswerChoice
+from klint.core.models.reports.report import AuditFinding
+from klint.core.models.reports.roll_up_status import RollUpStatus
+from klint.core.models.units.location import Location
 
 
 class _ANSI:

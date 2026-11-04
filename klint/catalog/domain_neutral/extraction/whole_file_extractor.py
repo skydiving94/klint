@@ -3,7 +3,7 @@ import asyncio
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
 from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units.unit import AuditableUnit
 
 
 class WholeFileExtractor(BaseUnitExtractor[DispatchedFile]):

@@ -6,7 +6,7 @@ import urllib.error
 import pytest
 
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
 from klint.infra.system_one.http_judge import HttpSystemOneJudge
 from tests.support.builders import build_judge_request
 from tests.support.stub_system_one_server import StubSystemOneServer

@@ -10,9 +10,9 @@ from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
     WholeFileExtractor,
 )
 from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
-from klint.core.models.location import Location
-from klint.core.models.unit import AuditableUnit, UnitContext
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.units.location import Location
+from klint.core.models.units.unit import AuditableUnit, UnitContext
+from klint.core.models.units.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 

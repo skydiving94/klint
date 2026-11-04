@@ -5,9 +5,13 @@ from collections.abc import Collection, Iterator, Sequence
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.rule import AuditRule
-from klint.core.models.rule_pack import RulePackSpec, RuleProblemSeverity, RuleSpec
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.rules.rule_pack import (
+    RulePackSpec,
+    RuleProblemSeverity,
+    RuleSpec,
+)
+from klint.core.models.units.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
 from klint.infra.rule_loader.rule_pack_reader import HEADER_KEY
 

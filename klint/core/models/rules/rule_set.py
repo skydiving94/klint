@@ -2,9 +2,9 @@
 
 from collections.abc import Mapping, Sequence
 
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit import AuditableUnit
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.units.unit import AuditableUnit
+from klint.core.models.units.unit_traits import UnitTraits
 
 
 class RuleSet:

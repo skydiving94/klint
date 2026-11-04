@@ -7,9 +7,9 @@ from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.units.unit_traits import UnitTraits
 from tests.support.builders import list_judge_subjects, write_text
 
 

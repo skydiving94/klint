@@ -22,14 +22,14 @@ from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
 from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import AuditInputKind, InMemoryBytesInput
-from klint.core.models.audit_kind import AuditKind, UnitSource
-from klint.core.models.audit_order import AuditOrder
-from klint.core.models.json_value import JsonValue
-from klint.core.models.question_type import QuestionType
-from klint.core.models.render_input import RenderInput
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.audits.audit_input import AuditInputKind, InMemoryBytesInput
+from klint.core.models.audits.audit_kind import AuditKind, UnitSource
+from klint.core.models.audits.audit_order import AuditOrder
+from klint.core.models.audits.render_input import RenderInput
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.reports.json_value import JsonValue
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.units.unit import AuditableUnit
 from klint.core.registry import UnitRegistry
 from tests.support.builders import build_audit_pipeline
 from tests.support.notes_suite import FixedRuleLoader

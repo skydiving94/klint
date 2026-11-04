@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import TypeVar
 
-from klint.core.models.report import AuditFinding
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.reports.report import AuditFinding
+from klint.core.models.units.unit import AuditableUnit
 
 # The class of unit a renderer describes.
 UnitT = TypeVar("UnitT", bound=AuditableUnit)

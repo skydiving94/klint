@@ -8,8 +8,8 @@ from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator i
 )
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.klint_warning import leave_out_file_on_failure
-from klint.core.models.scanned_tree import ScannedFile, ScannedTarget
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.scanning.scanned_tree import ScannedFile, ScannedTarget
+from klint.core.models.units.unit import AuditableUnit
 
 
 class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):

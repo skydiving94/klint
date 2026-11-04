@@ -18,9 +18,9 @@ from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp, run_command_from_shell
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.judge import BaseJudge
-from klint.core.models.judge_exchange import JudgeQuestion
-from klint.core.models.question_type import QuestionType
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.judging.judge_exchange import JudgeQuestion
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.units.unit import AuditableUnit
 from klint.infra.system_one.http_judge import HttpSystemOneJudge
 from tests.support.builders import (
     DIR_RULE,

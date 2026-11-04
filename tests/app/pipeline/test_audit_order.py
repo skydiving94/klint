@@ -5,8 +5,8 @@ import pytest
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 from klint.cli.wiring import create_command_injector
-from klint.core.models.audit_order import AuditOrder
-from klint.core.models.json_value import JsonValue
+from klint.core.models.audits.audit_order import AuditOrder
+from klint.core.models.reports.json_value import JsonValue
 from tests.support.builders import make_settings
 from tests.support.fakes import CountingJudge, FakeJudge, SubjectJudge
 from tests.support.outline_suite import SUBJECT_TO_PARENT_SUBJECT, run_outline_audit

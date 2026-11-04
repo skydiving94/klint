@@ -9,10 +9,10 @@ from injector import Binder
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import DiskPathInput
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import AuditRule
+from klint.core.models.audits.audit_input import DiskPathInput
+from klint.core.models.audits.audit_kind import AuditKind
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.rules.rule import AuditRule
 from tests.support.builders import (
     FILE_RULE,
     build_audit_pipeline,

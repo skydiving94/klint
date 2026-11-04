@@ -19,17 +19,17 @@ from klint.core.interfaces.renderer import BaseUnitRenderer
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import AuditInputKind
-from klint.core.models.audit_kind import AuditKind, UnitSource
-from klint.core.models.ignored_names import IgnoredNames
-from klint.core.models.json_value import JsonValue
-from klint.core.models.question_type import QuestionType
-from klint.core.models.render_input import RenderInput
-from klint.core.models.rule import AuditRule
-from klint.core.models.scale import AnswerChoice, AnswerScale
-from klint.core.models.scanned_tree import ScannedTarget
-from klint.core.models.unit import AuditableUnit
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.audits.audit_input import AuditInputKind
+from klint.core.models.audits.audit_kind import AuditKind, UnitSource
+from klint.core.models.audits.render_input import RenderInput
+from klint.core.models.judging.question_type import QuestionType
+from klint.core.models.judging.scale import AnswerChoice, AnswerScale
+from klint.core.models.reports.json_value import JsonValue
+from klint.core.models.rules.rule import AuditRule
+from klint.core.models.scanning.ignored_names import IgnoredNames
+from klint.core.models.scanning.scanned_tree import ScannedTarget
+from klint.core.models.units.unit import AuditableUnit
+from klint.core.models.units.unit_traits import UnitTraits
 from klint.core.registry import UnitRegistry
 
 NOTES_KIND_ID = "notes"

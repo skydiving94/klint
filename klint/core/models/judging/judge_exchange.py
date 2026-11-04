@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from klint.core.models.question_type import QuestionType
+from klint.core.models.judging.question_type import QuestionType
 
 
 @dataclass(frozen=True)

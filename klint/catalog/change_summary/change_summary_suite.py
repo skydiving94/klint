@@ -28,9 +28,9 @@ from klint.catalog.domain_neutral.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import AuditInputKind
-from klint.core.models.audit_kind import AuditKind, UnitSource
-from klint.core.models.audit_order import AuditOrder
+from klint.core.models.audits.audit_input import AuditInputKind
+from klint.core.models.audits.audit_kind import AuditKind, UnitSource
+from klint.core.models.audits.audit_order import AuditOrder
 from klint.core.registry import UnitRegistry
 from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
 from klint.infra.rule_loader.rule_pack_loader import RulePackLoader

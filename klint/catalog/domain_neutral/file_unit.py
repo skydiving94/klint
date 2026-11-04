@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from klint.core.models.location import Location
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units.location import Location
+from klint.core.models.units.unit import AuditableUnit
 
 
 @dataclass(frozen=True)

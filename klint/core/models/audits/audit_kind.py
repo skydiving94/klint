@@ -10,12 +10,12 @@ from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.interfaces.source import BaseAuditSourceFactory
 from klint.core.interfaces.unit_source import BaseUnitSource
-from klint.core.models.acquired_units import AcquiredUnits
-from klint.core.models.audit_input import AuditInput, AuditInputKind
-from klint.core.models.audit_order import AuditOrder
-from klint.core.models.render_input import DEFAULT_CHARACTER_BUDGET
-from klint.core.models.scale import AnswerScale
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.audits.audit_input import AuditInput, AuditInputKind
+from klint.core.models.audits.audit_order import AuditOrder
+from klint.core.models.audits.render_input import DEFAULT_CHARACTER_BUDGET
+from klint.core.models.judging.scale import AnswerScale
+from klint.core.models.units.acquired_units import AcquiredUnits
+from klint.core.models.units.unit import AuditableUnit
 
 # What the source reads an audit input into, and the extractor takes.
 InputT = TypeVar("InputT")

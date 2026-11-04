@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
 
 
 class BaseJudge(ABC):

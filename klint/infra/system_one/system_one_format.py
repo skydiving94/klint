@@ -2,7 +2,7 @@
 
 from typing import TypedDict
 
-from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.judging.judge_exchange import JudgeAnswer, JudgeRequest
 
 
 class SystemOneQuestion(TypedDict):

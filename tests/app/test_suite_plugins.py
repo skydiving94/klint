@@ -12,8 +12,8 @@ from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
 from klint.cli.exit_code import ExitCode
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import DiskPathInput
-from klint.core.models.audit_kind import AuditKind
+from klint.core.models.audits.audit_input import DiskPathInput
+from klint.core.models.audits.audit_kind import AuditKind
 from tests.support.builders import (
     build_audit_command_app,
     build_audit_pipeline,

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from klint.core.models.tag_detection_table import TagDetectionTable
+from klint.core.models.scanning.tag_detection_table import TagDetectionTable
 from klint.infra.table_loader.json_object_file import read_json_object_file
 
 _TABLE_NAMES = frozenset({"extension_to_tags", "path_glob_to_tags", "import_to_tags"})

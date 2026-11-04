@@ -3,7 +3,7 @@
 import pytest
 
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.core.models.scale import AnswerChoice, AnswerScale
+from klint.core.models.judging.scale import AnswerChoice, AnswerScale
 
 
 def test_choice_lookup_ignores_case_and_rejects_unknown_keys() -> None:

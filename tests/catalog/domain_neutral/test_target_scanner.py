@@ -10,8 +10,8 @@ from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier i
 from klint.catalog.domain_neutral.target_scanner import TargetScanner
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.klint_warning import KlintWarning
-from klint.core.models.ignored_names import IgnoredNames
-from klint.core.models.scanned_tree import ScannedDirectory
+from klint.core.models.scanning.ignored_names import IgnoredNames
+from klint.core.models.scanning.scanned_tree import ScannedDirectory
 from tests.support.builders import MakeUnreadable, write_text
 
 SCANNER = TargetScanner(

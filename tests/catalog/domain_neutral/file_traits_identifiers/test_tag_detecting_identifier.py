@@ -10,8 +10,8 @@ from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier i
 from klint.catalog.domain_neutral.file_traits_identifiers.tag_detecting_identifier import (  # noqa: E501
     TagDetectingFileTraitsIdentifier,
 )
-from klint.core.models.tag_detection_table import TagDetectionTable
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.scanning.tag_detection_table import TagDetectionTable
+from klint.core.models.units.unit_traits import UnitTraits
 
 BACKEND = frozenset({"backend"})
 FRONTEND = frozenset({"frontend"})

@@ -5,7 +5,7 @@ from klint.catalog.domain_neutral.character_budget import (
     join_lines_within_budget,
 )
 from klint.core.interfaces.renderer import BaseUnitRenderer
-from klint.core.models.render_input import RenderInput
+from klint.core.models.audits.render_input import RenderInput
 
 
 class FileMetadataRenderer(BaseUnitRenderer):

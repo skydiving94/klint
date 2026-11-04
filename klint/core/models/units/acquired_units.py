@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units.unit import AuditableUnit
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,7 @@ from klint.catalog.code.language_neutral.extraction.language_neutral_file_metada
     LanguageNeutralFileMetadataExtractor,
 )
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.units.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 

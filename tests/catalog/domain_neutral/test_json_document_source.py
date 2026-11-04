@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
-from klint.core.models.audit_input import (
+from klint.core.models.audits.audit_input import (
     AuditInput,
     DiskPathInput,
     InMemoryBytesInput,

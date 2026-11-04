@@ -62,8 +62,8 @@ from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader
 from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import AuditInputKind
-from klint.core.models.audit_kind import AuditKind, UnitSource
+from klint.core.models.audits.audit_input import AuditInputKind
+from klint.core.models.audits.audit_kind import AuditKind, UnitSource
 from klint.core.registry import UnitRegistry
 
 # The kinds of audit this suite offers: each file's contents, and the
