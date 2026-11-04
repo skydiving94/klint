@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 from klint.catalog.change_summary.document import ChangeKind
-from klint.catalog.domain_neutral.renderers.character_budget import (
+from klint.catalog.domain_neutral.character_budget import (
     join_lines_within_budget,
 )
 

@@ -7,7 +7,7 @@ from typing import Any
 
 from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
 from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
-from klint.catalog.change_summary.extraction.change_summary_extractor import (
+from klint.catalog.change_summary.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
 from klint.core.models.audit_input import InMemoryBytesInput

@@ -1,12 +1,12 @@
 from pathlib import Path
 
+from klint.catalog.code.language_neutral.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
-from klint.catalog.code.language_neutral.units.directory_unit import (
-    AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.core.models.unit_traits import UnitTraits

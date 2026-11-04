@@ -4,11 +4,11 @@ from dataclasses import asdict
 
 import pytest
 
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
+from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
 from klint.core.models.unit import AuditableUnit
 from klint.core.models.unit_traits import UnitTraits
 

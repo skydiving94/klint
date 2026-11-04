@@ -2,16 +2,16 @@ import asyncio
 from collections import Counter
 from collections.abc import Iterator, Sequence
 
+from klint.catalog.code.language_neutral.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
 from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
     BaseFileMetadataExtractor,
 )
-from klint.catalog.code.language_neutral.units.directory_unit import (
-    AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (

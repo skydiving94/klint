@@ -3,6 +3,12 @@
 from injector import Binder, Module, ProviderOf, inject, provider
 
 from klint.catalog.code import python
+from klint.catalog.code.language_neutral.directory_renderer import (
+    DirectoryRenderer,
+)
+from klint.catalog.code.language_neutral.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
@@ -24,28 +30,25 @@ from klint.catalog.code.language_neutral.extraction.language_neutral_file_metada
 from klint.catalog.code.language_neutral.extraction.project_structure import (
     ProjectStructureExtractor,
 )
-from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
-from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.language_neutral.renderers.directory_renderer import (
-    DirectoryRenderer,
-)
-from klint.catalog.code.language_neutral.renderers.file_metadata_renderer import (
+from klint.catalog.code.language_neutral.file_metadata_renderer import (
     FileMetadataRenderer,
 )
-from klint.catalog.code.language_neutral.units.directory_unit import (
-    AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.extraction.file_metadata_extractor import (
+from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.python.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
-from klint.catalog.code.python.extraction.package_factory import (
+from klint.catalog.code.python.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.code.python.renderers.package_renderer import PythonPackageRenderer
-from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.code.python.package_renderer import PythonPackageRenderer
+from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.directory_tree_source import (
+    DirectoryTreeSourceFactory,
+)
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
@@ -53,11 +56,8 @@ from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator i
 from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
     WholeFileExtractor,
 )
-from klint.catalog.domain_neutral.renderers.whole_file_renderer import WholeFileRenderer
-from klint.catalog.domain_neutral.sources.directory_tree_source import (
-    DirectoryTreeSourceFactory,
-)
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
+from klint.catalog.domain_neutral.whole_file_renderer import WholeFileRenderer
 from klint.core.interfaces.extractor import BaseUnitExtractor
 from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
 from klint.core.interfaces.rule_loader import BaseRuleLoader

@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from klint.catalog.code.language_neutral.units.directory_unit import (
+from klint.catalog.code.language_neutral.directory_unit import (
     ProjectDirectoryContext,
 )
 from klint.core.models.location import Location

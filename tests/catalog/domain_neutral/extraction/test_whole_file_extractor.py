@@ -9,7 +9,7 @@ from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFi
 from klint.catalog.domain_neutral.extraction.whole_file_extractor import (
     WholeFileExtractor,
 )
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
 from klint.core.models.location import Location
 from klint.core.models.unit import AuditableUnit, UnitContext
 from klint.core.models.unit_traits import UnitTraits

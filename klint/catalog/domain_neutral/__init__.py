@@ -2,7 +2,7 @@
 
 from injector import Binder, Module
 
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
 from klint.core.interfaces.suite import BaseSuite
 from klint.core.models.audit_kind import AuditKind
 from klint.core.registry import UnitRegistry

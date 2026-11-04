@@ -6,7 +6,7 @@ package's and the commit's against the checked summaries one level down.
 
 from injector import Binder, Module, ProviderOf, inject
 
-from klint.catalog.change_summary.extraction.change_summary_extractor import (
+from klint.catalog.change_summary.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
 from klint.catalog.change_summary.renderers.hunk_summary_renderer import (
@@ -28,7 +28,7 @@ from klint.catalog.change_summary.units.package_summary import (
     AuditablePackageSummaryUnit,
 )
 from klint.catalog.domain_neutral.built_in_files import locate_built_in_catalog_file
-from klint.catalog.domain_neutral.sources.json_document_source import (
+from klint.catalog.domain_neutral.json_document_source import (
     JsonDocumentSourceFactory,
 )
 from klint.core.interfaces.suite import BaseSuite

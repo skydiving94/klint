@@ -6,6 +6,9 @@ from pathlib import Path
 import pytest
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
+from klint.catalog.code.language_neutral.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
 )
@@ -21,19 +24,16 @@ from klint.catalog.code.language_neutral.extraction.language_neutral_directory_f
 from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.catalog.code.language_neutral.units.directory_unit import (
-    AuditableDirectoryUnit,
-)
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+from klint.catalog.code.language_neutral.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
-from klint.catalog.code.python.extraction.file_metadata_extractor import (
+from klint.catalog.code.python.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
-from klint.catalog.code.python.extraction.package_factory import (
+from klint.catalog.code.python.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
 from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,

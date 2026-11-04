@@ -10,7 +10,7 @@ import pytest
 from injector import Binder
 
 from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
+from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
 from klint.cli.file_audit import FILE_AUDIT_COMMAND
 from klint.cli.runner import AuditCommandApp
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND

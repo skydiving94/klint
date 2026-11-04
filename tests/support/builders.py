@@ -10,19 +10,19 @@ from klint.app.judge_mode import JudgeMode
 from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
 from klint.app.settings import AppSettings
 from klint.app.wiring import BindingOverride
+from klint.catalog.code.language_neutral.directory_unit import (
+    AuditableDirectoryUnit,
+)
 from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
     DirectoryTreeExtractor,
 )
 from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
 from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
-from klint.catalog.code.language_neutral.units.directory_unit import (
-    AuditableDirectoryUnit,
-)
-from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.catalog.domain_neutral.scanners.target_scanner import TargetScanner
+from klint.catalog.domain_neutral.target_scanner import TargetScanner
 from klint.cli.runner import AuditCommand, AuditCommandApp
 from klint.cli.wiring import create_command_injector
 from klint.core.interfaces.judge import BaseJudge
@@ -31,7 +31,7 @@ from klint.core.models.audit_input import DiskPathInput
 from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
 from klint.core.models.question_type import QuestionType
 from klint.core.registry import UnitRegistry
-from klint.infra.language_to_file_extensions_loader.language_table_loader import (
+from klint.infra.table_loader.language_table_loader import (
     load_file_extension_to_language,
 )
 from tests.support.fakes import FakeJudge, JudgeBindingOverride
