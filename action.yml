@@ -1,77 +1,220 @@
 name: "klint - Semantic & Architectural Code Auditor"
-description: "Audit files and package trees for architectural antipatterns using local kev or remote /v1/systemone models."
+description: "Audit files and project structure against plain-English rules, judged by a local kev model or a remote /v1/systemone server such as Jev."
 inputs:
   target:
     description: "File or directory path to audit"
     required: false
     default: "."
   mode:
-    description: "Audit mode: 'file' (klint) or 'project' (klint-structure)"
+    description: "'file' runs klint on each file's contents; 'structure' runs klint-structure on the project's directories. 'project' is the old name of 'structure', deprecated."
     required: false
     default: "file"
   min_confidence:
-    description: "Minimum confidence threshold (0.0 to 1.0)"
+    description: "Minimum confidence (0.0 to 1.0) a failure needs to be reported and to count as a problem"
     required: false
     default: "0.60"
   rules:
-    description: "Optional path to custom rules JSON file"
+    description: "Optional path to a rules JSON file whose rules merge over the built-in ones"
     required: false
     default: ""
+  judge_mode:
+    description: "Where the judge runs: 'local' (kev in the runner) or 'remote' (a /v1/systemone server). Sets KLINT_JUDGE_MODE. Default: local."
+    required: false
+    default: ""
+  judge_model:
+    description: "The judge model: a Hugging Face repo ID when local (e.g. jaredpalmer/kev-0.8b, jaredpalmer/kev-4b), the server's model name when remote (e.g. jev-latest). Sets KLINT_JUDGE_MODEL. Default: jaredpalmer/kev-0.8b."
+    required: false
+    default: ""
+  judge_base_url:
+    description: "The /v1/systemone server's address when judge_mode is 'remote' (e.g. https://api.typesafe.ai for Jev). Sets KLINT_JUDGE_BASE_URL. Default: http://127.0.0.1:8009."
+    required: false
+    default: ""
+  judge_api_key:
+    description: "The API key the remote server asks for; pass it from a secret. Sets KLINT_JUDGE_API_KEY."
+    required: false
+    default: ""
+  fail_on_problems:
+    description: "'true' fails the step when klint finds problems (exit 1); 'false' reports them and passes. A run that cannot audit (exit 2) fails the step either way."
+    required: false
+    default: "true"
   kev_mode:
-    description: "'local' (in-process kev) or 'remote' (/v1/systemone endpoint)"
-    required: false
-    default: "local"
-  kev_model_name:
-    description: "Model checkpoint or name (e.g. jaredpalmer/kev-0.8b, jaredpalmer/kev-4b, jev-latest)"
-    required: false
-    default: "jaredpalmer/kev-0.8b"
-  kev_base_url:
-    description: "Remote /v1/systemone base URL when kev_mode is 'remote'"
-    required: false
-    default: "http://127.0.0.1:8009"
-  kev_api_key:
-    description: "Optional API key for remote /v1/systemone endpoint"
+    description: "Deprecated: use judge_mode. Works until the next release, with a warning."
     required: false
     default: ""
+  kev_model_name:
+    description: "Deprecated: use judge_model. Works until the next release, with a warning."
+    required: false
+    default: ""
+  kev_base_url:
+    description: "Deprecated: use judge_base_url. Works until the next release, with a warning."
+    required: false
+    default: ""
+  kev_api_key:
+    description: "Deprecated: use judge_api_key. Works until the next release, with a warning."
+    required: false
+    default: ""
+outputs:
+  exit_code:
+    description: "klint's exit code: 0 when no problem is found, 1 when one is, 2 when the audit cannot run"
+    value: ${{ steps.audit.outputs.exit_code }}
 
 runs:
   using: "composite"
   steps:
+    # Each input reaches a script through an environment variable, never
+    # written into the script, so that no input value can run as code.
+    - name: Read the inputs
+      id: settings
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        FAIL_ON_PROBLEMS: ${{ inputs.fail_on_problems }}
+        JUDGE_MODE: ${{ inputs.judge_mode }}
+        JUDGE_MODEL: ${{ inputs.judge_model }}
+        JUDGE_BASE_URL: ${{ inputs.judge_base_url }}
+        KEV_MODE: ${{ inputs.kev_mode }}
+        KEV_MODEL_NAME: ${{ inputs.kev_model_name }}
+        KEV_BASE_URL: ${{ inputs.kev_base_url }}
+        # Whether a key is given, never the key itself.
+        IS_KEV_API_KEY_SET: ${{ inputs.kev_api_key != '' }}
+      run: |
+        # Warns that the old name $2 was used when its value $1 is set.
+        warn_about_old_name() {
+          if [ -n "$1" ]; then
+            echo "::warning title=klint::'$2' is deprecated and stops working in the next release; use '$3' instead"
+          fi
+        }
+        # Prints the first of its arguments that is set.
+        pick_first_set() {
+          for value in "$@"; do
+            if [ -n "$value" ]; then
+              echo "$value"
+              return
+            fi
+          done
+        }
+        warn_about_old_name "$KEV_MODE" kev_mode judge_mode
+        warn_about_old_name "$KEV_MODEL_NAME" kev_model_name judge_model
+        warn_about_old_name "$KEV_BASE_URL" kev_base_url judge_base_url
+        if [ "$IS_KEV_API_KEY_SET" = "true" ]; then
+          warn_about_old_name set kev_api_key judge_api_key
+        fi
+        judge_mode=$(pick_first_set "$JUDGE_MODE" "$KEV_MODE" local | tr '[:upper:]' '[:lower:]')
+        judge_model=$(pick_first_set "$JUDGE_MODEL" "$KEV_MODEL_NAME" jaredpalmer/kev-0.8b)
+        judge_base_url=$(pick_first_set "$JUDGE_BASE_URL" "$KEV_BASE_URL" http://127.0.0.1:8009)
+        case "$judge_mode" in
+          local|remote) ;;
+          *) echo "::error title=klint::judge_mode must be 'local' or 'remote', not '$judge_mode'"; exit 2 ;;
+        esac
+        case "$MODE" in
+          file) command=klint ;;
+          structure) command=klint-structure ;;
+          project)
+            warn_about_old_name "$MODE" "mode: project" "mode: structure"
+            command=klint-structure ;;
+          *) echo "::error title=klint::mode must be 'file' or 'structure', not '$MODE'"; exit 2 ;;
+        esac
+        case "$FAIL_ON_PROBLEMS" in
+          true|false) ;;
+          *) echo "::error title=klint::fail_on_problems must be 'true' or 'false', not '$FAIL_ON_PROBLEMS'"; exit 2 ;;
+        esac
+        {
+          echo "command=$command"
+          echo "judge_mode=$judge_mode"
+          echo "judge_model=$judge_model"
+          echo "judge_base_url=$judge_base_url"
+        } >> "$GITHUB_OUTPUT"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
 
     - name: Cache Hugging Face model weights
-      if: inputs.kev_mode == 'local'
+      if: steps.settings.outputs.judge_mode == 'local'
       uses: actions/cache@v4
       with:
         path: ~/.cache/huggingface/hub
-        key: ${{ runner.os }}-hf-${{ inputs.kev_model_name }}
+        key: ${{ runner.os }}-hf-${{ steps.settings.outputs.judge_model }}
 
     - name: Install klint
       shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        JUDGE_MODE: ${{ steps.settings.outputs.judge_mode }}
       run: |
-        if [ "${{ inputs.kev_mode }}" = "local" ]; then
-          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-          pip install --no-cache-dir "kev[serve] @ git+https://github.com/jaredpalmer/kev.git"
+        # klint depends on torch; its CPU build is far smaller than the default one.
+        pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+        if [ "$JUDGE_MODE" = "local" ]; then
+          # The "local" extra adds kev, which runs the model in this process.
+          pip install --no-cache-dir -e "$ACTION_PATH[local]"
+        else
+          pip install --no-cache-dir -e "$ACTION_PATH"
         fi
-        pip install --no-cache-dir -e "${{ github.action_path }}"
 
-    - name: Run klint Audit
+    - name: Run klint
+      id: audit
       shell: bash
       env:
-        KLINT_JUDGE_MODE: ${{ inputs.kev_mode }}
-        KLINT_JUDGE_MODEL: ${{ inputs.kev_model_name }}
-        KLINT_JUDGE_BASE_URL: ${{ inputs.kev_base_url }}
-        KLINT_JUDGE_API_KEY: ${{ inputs.kev_api_key }}
+        COMMAND: ${{ steps.settings.outputs.command }}
+        TARGET: ${{ inputs.target }}
+        MIN_CONFIDENCE: ${{ inputs.min_confidence }}
+        RULES: ${{ inputs.rules }}
+        FAIL_ON_PROBLEMS: ${{ inputs.fail_on_problems }}
+        KLINT_JUDGE_MODE: ${{ steps.settings.outputs.judge_mode }}
+        KLINT_JUDGE_MODEL: ${{ steps.settings.outputs.judge_model }}
+        KLINT_JUDGE_BASE_URL: ${{ steps.settings.outputs.judge_base_url }}
+        KLINT_JUDGE_API_KEY: ${{ inputs.judge_api_key || inputs.kev_api_key }}
       run: |
-        CLI_CMD="klint"
-        if [ "${{ inputs.mode }}" = "project" ]; then
-          CLI_CMD="klint-structure"
+        if [ -n "$KLINT_JUDGE_API_KEY" ]; then
+          echo "::add-mask::$KLINT_JUDGE_API_KEY"
         fi
-        RULES_FLAG=""
-        if [ -n "${{ inputs.rules }}" ]; then
-          RULES_FLAG="--rules ${{ inputs.rules }}"
+        args=("$TARGET" --min-confidence "$MIN_CONFIDENCE")
+        if [ -n "$RULES" ]; then
+          args+=(--rules "$RULES")
         fi
-        $CLI_CMD "${{ inputs.target }}" --min-confidence "${{ inputs.min_confidence }}" $RULES_FLAG
+        report=$(mktemp "$RUNNER_TEMP/klint-report.XXXXXX")
+        set +e
+        "$COMMAND" "${args[@]}" 2>&1 | tee "$report"
+        exit_code=${PIPESTATUS[0]}
+        set -e
+        echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+
+        case "$exit_code" in
+          0) outcome="No problems found" ;;
+          1) outcome="Problems found" ;;
+          *) outcome="The audit could not run" ;;
+        esac
+        # A step's summary holds at most 1 MiB; the log keeps the whole report.
+        summary_limit=900000
+        esc=$(printf '\033')
+        {
+          echo "### klint: \`$COMMAND $TARGET\`"
+          echo
+          echo "$outcome (exit $exit_code), at a minimum confidence of $MIN_CONFIDENCE."
+          echo
+          echo '````text'
+          sed "s/${esc}\[[0-9;]*[A-Za-z]//g" "$report" | head -c "$summary_limit"
+          echo
+          echo '````'
+          if [ "$(wc -c < "$report")" -gt "$summary_limit" ]; then
+            echo
+            echo "The report is cut short here; the step's log has all of it."
+          fi
+          echo
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        case "$exit_code" in
+          0) ;;
+          1)
+            if [ "$FAIL_ON_PROBLEMS" = "true" ]; then
+              echo "::error title=klint::$COMMAND found problems in $TARGET; see the job summary"
+              exit 1
+            fi
+            echo "::notice title=klint::$COMMAND found problems in $TARGET; see the job summary"
+            ;;
+          *)
+            echo "::error title=klint::$COMMAND could not run the audit of $TARGET (exit $exit_code)"
+            exit "$exit_code"
+            ;;
+        esac
