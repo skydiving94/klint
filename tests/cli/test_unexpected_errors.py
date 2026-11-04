@@ -34,5 +34,6 @@ def test_local_judge_without_its_runtime_exits_2_with_an_error_line(
 
     err_lines = capsys.readouterr().err.splitlines()
     assert exit_code == ExitCode.RUN_ERROR
-    assert err_lines[-1].startswith("[klint] Error: unexpected ModuleNotFoundError: ")
-    assert "Traceback (most recent call last):" in err_lines
+    # One line says why the command stopped; no traceback is shown.
+    assert len(err_lines) == 1
+    assert err_lines[0].startswith("[klint] Error: unexpected ModuleNotFoundError: ")

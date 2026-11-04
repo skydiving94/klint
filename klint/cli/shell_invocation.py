@@ -2,7 +2,6 @@
 
 import asyncio
 import sys
-import traceback
 
 from klint.app import AppSettings
 from klint.app.pipeline import AuditPipeline
@@ -20,14 +19,14 @@ from klint.cli.wiring import create_command_injector
 async def run_command_from_shell(command: AuditCommand) -> ExitCode:
     """Run ``command`` with the arguments the shell passed; return the exit code.
 
-    An error the command does not expect is printed with its traceback, and
-    the command exits with RUN_ERROR: exit 1 says that problems were found,
-    so a crash must not end with it.
+    An error the command does not expect is printed as one error line, like
+    any other reason the command stops, and the command exits with
+    RUN_ERROR: exit 1 says that problems were found, so a crash must not end
+    with it.
     """
     try:
         return await _run_command(command)
     except Exception as error:
-        traceback.print_exc()
         print_error_line(command, f"unexpected {type(error).__name__}: {error}")
         return ExitCode.RUN_ERROR
 
