@@ -92,10 +92,31 @@ def test_a_hunk_with_no_summary_is_a_finding_the_judge_is_not_asked(
     assert finding["evidence_location"]["path"] == "app/greet.py"
     assert finding["context"]["summary"] is None
     assert output["unit_id_to_roll_up_status"]["./"] == "descendant_problem"
-    assert len(judge.requests) == len(GREETER_UNIT_IDS) - 1
-    assert "- Hunk 2: no summary was written" in judge.find_subject(
-        "Greets a stripped name with 'Hello, <name>!' and drops an unused import."
+    assert len(judge.requests) == len(GREETER_UNIT_IDS) - 2
+
+
+def test_a_summary_above_one_left_out_cannot_be_told_and_is_not_judged(
+    greeter: Path, capsys: Capture
+) -> None:
+    summaries = copy_greeter_summaries()
+    del summaries["files"][0]["hunks"][1]
+    judge = HypothesisJudge()
+
+    verify_summaries(
+        greeter / "summaries.json",
+        judge,
+        summaries,
+        options=("--json", "--all-answers"),
     )
+
+    findings = json.loads(capsys.readouterr().out)["findings"]
+    assert {
+        (finding["answer"], finding["confidence"])
+        for finding in findings
+        if finding["unit_id"] == "app/greet.py"
+    } == {("Cannot Tell", None)}
+    assert summaries["files"][0]["summary"] not in judge.list_hypotheses()
+    assert summaries["packages"][0]["summary"] in judge.list_hypotheses()
 
 
 def test_a_file_and_a_commit_with_no_summary_are_findings(
