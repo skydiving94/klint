@@ -12,7 +12,7 @@ _LEAST_PREMISE_BUDGET = 200
 
 def join_premise_and_hypothesis(
     premise_lines: Sequence[str],
-    hypothesis: str,
+    hypothesis: str | None,
     character_budget: int,
     what_premise_describes: str,
 ) -> str:
@@ -23,8 +23,11 @@ def join_premise_and_hypothesis(
     of the end of the premise first, and its last line says how many lines
     of ``what_premise_describes`` were left out. A hypothesis too long to
     leave the premise room is shown alone, cut to fit, after a premise line
-    saying that it was left out.
+    saying that it was left out. Raises ValueError for a summary left out,
+    which the judge is never shown.
     """
+    if hypothesis is None:
+        raise ValueError("A summary that was left out is not shown to the judge")
     hypothesis_line = f"Hypothesis: {hypothesis}"
     premise_budget = character_budget - len(hypothesis_line) - 2
     if premise_budget < _LEAST_PREMISE_BUDGET:

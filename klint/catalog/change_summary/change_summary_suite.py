@@ -5,6 +5,9 @@ from injector import Binder, Module, ProviderOf, inject
 from klint.catalog.change_summary.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
+from klint.catalog.change_summary.change_summary_source import (
+    ChangeSummarySourceFactory,
+)
 from klint.catalog.change_summary.renderers import (
     FileSummaryRenderer,
     HunkSummaryRenderer,
@@ -19,10 +22,7 @@ from klint.catalog.change_summary.units import (
     AuditableHunkSummaryUnit,
     AuditablePackageSummaryUnit,
 )
-from klint.catalog.domain_neutral import (
-    JsonDocumentSourceFactory,
-    locate_built_in_catalog_file,
-)
+from klint.catalog.domain_neutral import locate_built_in_catalog_file
 from klint.core import UnitRegistry
 from klint.core.interfaces import AuditKind, BaseSuite, UnitSource
 from klint.core.models.audits import AuditInputKind, AuditOrder
@@ -38,8 +38,10 @@ class ChangeSummarySuite(BaseSuite):
     """Verifies an agent's summaries of a change, children first.
 
     A change-summary document is read from a JSON file or from JSON in
-    memory. Its summaries have no language, so every one is asked the
-    suite's checks, and the custom rules of a request merge over them.
+    memory. It holds the code of each hunk, or names a change that is read
+    from the git repository of the current directory. Its summaries have no
+    language, so every one is asked the suite's checks, and the custom rules
+    of a request merge over them.
     """
 
     @inject
@@ -59,7 +61,7 @@ class ChangeSummarySuite(BaseSuite):
                     {AuditInputKind.DISK_PATH, AuditInputKind.IN_MEMORY_BYTES}
                 ),
                 unit_source=UnitSource(
-                    JsonDocumentSourceFactory(), ChangeSummaryExtractor()
+                    ChangeSummarySourceFactory(), ChangeSummaryExtractor()
                 ),
                 rule_loader=RulePackLoader(
                     [summary_checks],

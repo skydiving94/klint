@@ -5,6 +5,10 @@ package's and the commit's against the checked summaries one level down.
 """
 
 from klint.catalog.change_summary.change_summary_extractor import ChangeSummaryExtractor
+from klint.catalog.change_summary.change_summary_source import (
+    ChangeSummaryInput,
+    ChangeSummarySourceFactory,
+)
 from klint.catalog.change_summary.change_summary_suite import (
     CHANGE_SUMMARY_KIND_ID,
     ChangeSummarySuite,
@@ -14,6 +18,8 @@ from klint.catalog.change_summary.change_summary_suite import (
 __all__ = [
     "CHANGE_SUMMARY_KIND_ID",
     "ChangeSummaryExtractor",
+    "ChangeSummaryInput",
+    "ChangeSummarySourceFactory",
     "ChangeSummarySuite",
     "ChangeSummarySuiteModule",
 ]
