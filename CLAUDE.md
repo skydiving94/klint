@@ -3,7 +3,7 @@
 ## Source of truth
 - Epic #67, "Agent-Ready Checks": goal, issue order and dependencies, decisions needed from the director, done-when.
 - Your assigned sub-issue: its decisions and names are settled. Do not reopen them.
-- `README.md` and `.github/CONTRIBUTING.md` are out of date until #62 rewrites them. Do not follow their layout notes or setting names. Edit them only where your issue asks.
+- `README.md` and `.github/CONTRIBUTING.md` are out of date until #62 rewrites them. Do not follow their layout notes or setting names. Edit them only where your issue asks; #70 updates the summary sections (features, limitations, roadmap) once the rest of the epic has merged.
 
 ## Project exceptions
 These override personal defaults for work under #67.
