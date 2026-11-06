@@ -2,6 +2,7 @@
 
 from klint.catalog.code.language_neutral.directory_renderer import (
     DirectoryRenderer,
+    describe_deepest_subdirectory,
     format_display_path,
     list_tree_lines,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "DirectoryRenderer",
     "FileMetadataRenderer",
     "ProjectDirectoryContext",
+    "describe_deepest_subdirectory",
     "format_display_path",
     "list_tree_lines",
 ]

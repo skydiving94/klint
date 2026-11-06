@@ -18,7 +18,7 @@
     },
     "excessive_nesting_depth": {
       "type": "choice",
-      "question": "Is the directory nesting depth shallow and reasonable (e.g. 3 levels or fewer) rather than excessively deep?",
+      "question": "Is the deepest subdirectory below this directory 3 levels down or fewer, counting the subdirectories directly in it as 1 level down, rather than nested more deeply?",
       "unit_types": ["project_directory"]
     },
     "inconsistent_naming_convention": {

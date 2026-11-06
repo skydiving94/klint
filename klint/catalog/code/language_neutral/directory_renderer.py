@@ -12,9 +12,10 @@ from klint.core.models.audits import RenderInput
 class DirectoryRenderer(BaseUnitRenderer):
     """Shows the judge a directory's tree, in a way that fits any language.
 
-    The tree lists each directory's subdirectories and a line per file of
-    what was read from it, the whole tree beneath the directory down, as far
-    as the character budget goes.
+    Before the tree, it names the deepest subdirectory below the directory
+    and how many levels down it is. The tree lists each directory's
+    subdirectories and a line per file of what was read from it, the whole
+    tree beneath the directory down, as far as the character budget goes.
     """
 
     def render_subject(self, render_input: RenderInput) -> str:
@@ -23,11 +24,43 @@ class DirectoryRenderer(BaseUnitRenderer):
             f"Target Directory Under Audit: {format_display_path(directory)}",
             f"Summary: {len(directory.files)} immediate files, "
             f"{len(directory.subdirectories)} immediate subdirectories",
+            describe_deepest_subdirectory(directory),
             *list_tree_lines(directory),
         ]
         return join_lines_within_budget(
             lines, render_input.character_budget, "the tree"
         )
+
+
+def describe_deepest_subdirectory(directory: AuditableDirectoryUnit) -> str:
+    """Return the line on how far down the deepest subdirectory of ``directory`` is.
+
+    The subdirectories directly in ``directory`` are 1 level down. Of two
+    equally deep, the first in the tree is named.
+    """
+    names = _list_names_down_to_deepest_subdirectory(directory)
+    if not names:
+        return "Deepest Subdirectory Below This Directory: none (0 levels down)"
+    level_word = "level" if len(names) == 1 else "levels"
+    return (
+        "Deepest Subdirectory Below This Directory: "
+        f"{'/'.join(names)} ({len(names)} {level_word} down)"
+    )
+
+
+def _list_names_down_to_deepest_subdirectory(
+    directory: AuditableDirectoryUnit,
+) -> list[str]:
+    """Return the names on the path from ``directory`` to its deepest subdirectory."""
+    deepest: list[str] = []
+    for subdirectory in directory.subdirectories:
+        names = [
+            subdirectory.directory_name,
+            *_list_names_down_to_deepest_subdirectory(subdirectory),
+        ]
+        if len(names) > len(deepest):
+            deepest = names
+    return deepest
 
 
 def format_display_path(directory: AuditableDirectoryUnit) -> str:

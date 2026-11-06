@@ -71,3 +71,26 @@ def test_flat_structure_states_its_limit_and_shows_the_module_count(
     assert (
         f"Python Modules Directly In It, Besides __init__.py: 16 [{module_names}]"
     ) in request.subject.splitlines()
+
+
+def test_nesting_depth_counts_from_the_directory_and_shows_the_deepest_level(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "pkg"
+    write_text(package / "__init__.py", "")
+    write_text(package / "shallow" / "a.py", "x = 1\n")
+    write_text(package / "data" / "catalog" / "code" / "rules.py", "x = 1\n")
+
+    judge = _audit_with_the_structure_rules(package)
+
+    root_request = _find_request_about(judge, package)
+    data_request = _find_request_about(judge, package / "data")
+    question = _find_question(root_request, "excessive_nesting_depth")
+    assert "3 levels down or fewer" in question
+    assert "below this directory" in question
+    assert (
+        "Deepest Subdirectory Below This Directory: data/catalog/code (3 levels down)"
+    ) in root_request.subject.splitlines()
+    assert (
+        "Deepest Subdirectory Below This Directory: catalog/code (2 levels down)"
+    ) in data_request.subject.splitlines()

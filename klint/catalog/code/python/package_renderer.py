@@ -2,6 +2,7 @@ from collections.abc import Iterator
 
 from klint.catalog.code.language_neutral import (
     AuditableDirectoryUnit,
+    describe_deepest_subdirectory,
     format_display_path,
     list_tree_lines,
 )
@@ -16,10 +17,11 @@ class PythonPackageRenderer(BaseUnitRenderer):
     """Shows the judge a directory as a Python package.
 
     Before the tree, it shows the number of Python modules directly in the
-    package, its public API, the imports in its tree split into the
-    project's own and external ones, and cycles between its subpackages. A
-    file in its tree that cannot be parsed is named, since what it holds is
-    unknown. The tree is shown as far as the character budget goes.
+    package, its deepest subdirectory, its public API, the imports in its
+    tree split into the project's own and external ones, and cycles between
+    its subpackages. A file in its tree that cannot be parsed is named,
+    since what it holds is unknown. The tree is shown as far as the
+    character budget goes.
     """
 
     def render_subject(self, render_input: RenderInput) -> str:
@@ -44,6 +46,7 @@ class PythonPackageRenderer(BaseUnitRenderer):
             f"{len(package.subdirectories)} immediate subdirectories",
             "Python Modules Directly In It, Besides __init__.py: "
             f"{len(python_modules)} [{', '.join(python_modules)}]",
+            describe_deepest_subdirectory(package),
             f"Package Public API Status: {_describe_public_api(package)}",
             "Internal Project Imports in Tree: "
             f"[{', '.join(project_imports) if project_imports else 'none'}]",
