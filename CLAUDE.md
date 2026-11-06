@@ -29,7 +29,8 @@ These override personal defaults for work under #67.
 3. Open a draft PR from the first commit. Title `Issue #N - <title>`, base `epic-67`.
 4. Report each step: summary of changes, verification, and the commit message.
 5. Commit messages start with the continuous form of the verb: "Adding", "Updating", "Removing".
-6. At every stop, comment on the issue: done, next, blockers.
+6. Before marking the PR ready, run Self-Audit on your branch (below), and fix or rebut each finding.
+7. At every stop, comment on the issue: done, next, blockers.
 
 ## Code rules
 - Type every parameter. Composed types (dicts, lists, tuples) become named classes; a pure lookup dict may stay, named `a_to_b`.
@@ -56,3 +57,15 @@ Run it before marking a PR ready if the change affects what the judge is asked o
 - One server can serve every session. If port 8009 is already serving, reuse it.
 - Point at another server with `KLINT_JUDGE_BASE_URL`.
 - Hosted Jev needs `KLINT_JUDGE_API_KEY`, which only the director sets in their own shell. Never ask for the key, and never write it to a file.
+
+## Self-Audit
+Run it on your issue branch before marking a PR ready, and on `epic-67` before it goes to `main`. GitHub runs it: it audits `klint/` on that branch with Jev, using the repository secret, so the key never reaches your session.
+1. Start it, then find the run and wait for it:
+   `gh workflow run klint.yml --repo skydiving94/klint --ref issue-N`
+   `gh run list --repo skydiving94/klint --workflow klint.yml --branch issue-N --limit 1`
+   `gh run watch <run-id> --repo skydiving94/klint`
+2. Read the findings of both audits, structure and file, in the log: `gh run view <run-id> --repo skydiving94/klint --log`.
+3. Check each finding against the code; the judge has false positives, so never change code only because it was flagged. Fix each valid finding. Rebut each one that is not valid in a comment on the PR, naming the rule, the package and the facts. A finding already rebutted on an earlier PR may cite that rebuttal.
+4. Record the run, and the link to the rebuttal comment, in the PR.
+- The run fails only when an audit cannot run; findings alone leave it green.
+- A branch cut from `epic-67` before e1cb0a6 cannot be started by hand: rebase it onto `epic-67` first.
