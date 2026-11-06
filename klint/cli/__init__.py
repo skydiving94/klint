@@ -4,6 +4,10 @@ from klint.cli.change_summary_audit import (
     CHANGE_SUMMARY_COMMAND,
     run_change_summary_audit,
 )
+from klint.cli.change_summary_stop_hook import (
+    ChangeSummaryStopHook,
+    run_change_summary_stop_hook,
+)
 from klint.cli.exit_code import ExitCode
 from klint.cli.file_audit import FILE_AUDIT_COMMAND, run_file_audit
 from klint.cli.klint_project_alias import run_klint_project_alias
@@ -22,10 +26,12 @@ __all__ = [
     "STRUCTURE_AUDIT_COMMAND",
     "AuditCommand",
     "AuditCommandApp",
+    "ChangeSummaryStopHook",
     "ExitCode",
     "create_command_injector",
     "parse_command_arguments",
     "run_change_summary_audit",
+    "run_change_summary_stop_hook",
     "run_command_from_shell",
     "run_file_audit",
     "run_klint_project_alias",
