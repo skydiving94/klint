@@ -10,7 +10,7 @@
     "packages": [
       {
         "path": "klint",
-        "summary": "Adds AppSettings.describe_judge, which names the judge the settings choose and where it runs without giving the API key, and makes each command print that description on stderr as \"[<command>] Judge: <description>\"."
+        "summary": "Adds a describe_judge method to the settings, which names the judge they choose and where it runs without giving the API key, and makes each command print that description on stderr as \"[<command>] Judge: <description>\"."
       },
       {
         "path": "tests/cli",
@@ -20,7 +20,7 @@
     "files": [
       {
         "path": "klint/app/settings.py",
-        "summary": "Adds AppSettings.describe_judge, which names the model and where it runs: in this process for the local mode, or at the base URL for the remote mode, with whether an API key is set but never the key. It imports assert_never for any other mode.",
+        "summary": "Adds a describe_judge method to the settings, which names the model and where it runs: in this process for the local mode, or at the base URL for the remote mode, with whether an API key is set but never the key. It imports assert_never for any other mode.",
         "hunks": [
           {
             "header": "@@ -5,0 +6 @@",
@@ -28,7 +28,7 @@
           },
           {
             "header": "@@ -241,0 +243,12 @@",
-            "summary": "Adds AppSettings.describe_judge, which says which judge the settings choose and where it runs: for the local mode, the model name and \"run in this process (local)\"; for the remote mode, the model name, the base URL, and whether an API key is set, never the key itself. Any other mode goes to assert_never."
+            "summary": "Adds a describe_judge method, which says which judge the settings choose and where it runs: for the local mode, the model name and \"run in this process (local)\"; for the remote mode, the model name, the base URL, and whether an API key is set, never the key itself. Any other mode goes to assert_never."
           }
         ]
       },
@@ -38,7 +38,7 @@
         "hunks": [
           {
             "header": "@@ -289,0 +290 @@",
-            "summary": "In run_command_from_shell, prints \"[<command name>] Judge: \" followed by the settings' description of the judge, on stderr."
+            "summary": "Prints \"[<command name>] Judge: \" followed by the settings' description of the judge, on stderr."
           }
         ]
       },
@@ -90,19 +90,19 @@
     {
       "summary_pointer": "#/files/0/hunks/1/summary",
       "mistake_kind": "false_statement",
-      "summary": "Adds AppSettings.describe_judge, which says which judge the settings choose and where it runs: for the local mode, the model name and \"run in this process (local)\"; for the remote mode, the model name, the base URL and the API key itself.",
+      "summary": "Adds a describe_judge method, which says which judge the settings choose and where it runs: for the local mode, the model name and \"run in this process (local)\"; for the remote mode, the model name, the base URL and the API key itself.",
       "why_wrong": "The remote description says only whether an API key is set; it never holds the key."
     },
     {
       "summary_pointer": "#/files/0/hunks/1/summary",
       "mistake_kind": "omission",
-      "summary": "Adds AppSettings.describe_judge, which, for the local mode, returns the model name and \"run in this process (local)\".",
+      "summary": "Adds a describe_judge method, which, for the local mode, returns the model name and \"run in this process (local)\".",
       "why_wrong": "It leaves out the remote mode's description and the assert_never branch."
     },
     {
       "summary_pointer": "#/files/1/hunks/0/summary",
       "mistake_kind": "unsupported_reason",
-      "summary": "In run_command_from_shell, prints \"[<command name>] Judge: \" followed by the settings' description of the judge, on stderr, so that a user can tell which judge billed them.",
+      "summary": "Prints \"[<command name>] Judge: \" followed by the settings' description of the judge, on stderr, so that a user can tell which judge billed them.",
       "why_wrong": "Nothing in the hunk says why the line is printed, let alone anything about billing."
     },
     {
@@ -126,7 +126,7 @@
     {
       "summary_pointer": "#/files/0/summary",
       "mistake_kind": "contradiction",
-      "summary": "Adds AppSettings.describe_judge, which names the model and where it runs: in this process for the local mode, or at the base URL for the remote mode, with whether an API key is set but never the key. It imports Never from typing for any other mode.",
+      "summary": "Adds a describe_judge method to the settings, which names the model and where it runs: in this process for the local mode, or at the base URL for the remote mode, with whether an API key is set but never the key. It imports Never from typing for any other mode.",
       "why_wrong": "Hunk 1 says assert_never is imported, not Never."
     },
     {
@@ -144,7 +144,7 @@
     {
       "summary_pointer": "#/packages/0/summary",
       "mistake_kind": "unsupported_reason",
-      "summary": "Adds AppSettings.describe_judge, which names the judge the settings choose and where it runs without giving the API key, and makes each command print that description on stderr as \"[<command>] Judge: <description>\", so that users of the hosted Jev can see they are not being charged for a local run.",
+      "summary": "Adds a describe_judge method to the settings, which names the judge they choose and where it runs without giving the API key, and makes each command print that description on stderr as \"[<command>] Judge: <description>\", so that users of the hosted Jev can see they are not being charged for a local run.",
       "why_wrong": "No summary below gives a reason, let alone one about charges."
     },
     {

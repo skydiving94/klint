@@ -50,6 +50,9 @@ report also lists the results at several thresholds.
   below does not state, and mentions every change the level below shows.
 - A planted summary makes one mistake of its kind and is otherwise the true
   summary.
+- A hunk summary says only what the hunk's lines show. The judge never sees
+  the lines around a hunk, so it cannot see the class or function the hunk
+  sits in.
 
 ## Scoring
 

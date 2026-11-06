@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from judge_accuracy.change_summary.scoring_command import ScoringExitCode
+from klint.core.models.judging import JudgeAnswer, JudgeRequest
 from tests.judge_accuracy.scoring import (
     FALSE_IMPORT_MISTAKE,
     FALSE_IMPORT_SUMMARY,
@@ -13,7 +14,11 @@ from tests.judge_accuracy.scoring import (
     run_scoring_command,
     write_case_file,
 )
-from tests.support.change_summary import HypothesisJudge, copy_greeting_document
+from tests.support.change_summary import (
+    HYPOTHESIS_PREFIX,
+    HypothesisJudge,
+    copy_greeting_document,
+)
 
 Capture = pytest.CaptureFixture[str]
 _FLAG_FALSE_IMPORT = {"import of sys": {"no_false_statement": "inaccurate"}}
@@ -184,3 +189,27 @@ def test_only_the_texts_a_planted_summary_changes_are_sent_again(
     run_scoring_command(HypothesisJudge(), tmp_path)
 
     assert "- Judge requests: 9 sent" in capsys.readouterr().out
+
+
+class _SilentJudge(HypothesisJudge):
+    """Answers no question about a hypothesis that holds ``silent_phrase``."""
+
+    def __init__(self, silent_phrase: str) -> None:
+        super().__init__()
+        self.silent_phrase = silent_phrase
+
+    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+        if self.silent_phrase in request.subject.rsplit(HYPOTHESIS_PREFIX, 1)[-1]:
+            return []
+        return await super().answer(request)
+
+
+def test_a_summary_the_judge_answers_nothing_about_is_a_refusal(
+    tmp_path: Path, capsys: Capture
+) -> None:
+    write_case_file(tmp_path, "greeting", FALSE_IMPORT_MISTAKE)
+
+    run_scoring_command(_SilentJudge(FALSE_IMPORT_SUMMARY), tmp_path)
+
+    report = capsys.readouterr().out
+    assert find_table_row(report, "False statement")[1:4] == ["1", "1", "-"]
