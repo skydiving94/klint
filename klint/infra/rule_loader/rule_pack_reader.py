@@ -17,7 +17,15 @@ from klint.core.models.rules import (
 )
 
 RULE_FIELD_NAMES = frozenset(
-    {"type", "question", "unit_types", "languages", "tags", "unit_tags"}
+    {
+        "type",
+        "question",
+        "unit_types",
+        "languages",
+        "tags",
+        "unit_tags",
+        "excluded_unit_tags",
+    }
 )
 # Each old rule field name, and the name that replaces it. An old name still
 # works, with a warning, for one release.
@@ -184,6 +192,9 @@ def _read_rule(
             languages=_read_string_list(raw_rule, "languages", rule_id, path),
             tags=_read_string_list(raw_rule, "tags", rule_id, path),
             unit_tags=_read_string_list(raw_rule, "unit_tags", rule_id, path),
+            excluded_unit_tags=_read_string_list(
+                raw_rule, "excluded_unit_tags", rule_id, path
+            ),
         )
     except ValueError as error:
         rule_problems.append(RuleProblem(RuleProblemSeverity.ERROR, str(error)))

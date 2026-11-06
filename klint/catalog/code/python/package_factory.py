@@ -14,9 +14,18 @@ from klint.catalog.code.python.package_unit import (
 from klint.catalog.code.python.project_module_names import list_project_module_names
 from klint.core.models.units import UnitTraits
 
+# The unit tag of a package with no Python module but __init__.py in its
+# tree, such as a folder of data files.
+DATA_PACKAGE_TAG = "data"
+_INIT_FILE_NAME = "__init__.py"
+
 
 class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
-    """Builds Python package units and tells each one what its whole tree shows."""
+    """Builds Python package units and tells each one what its whole tree shows.
+
+    A package with no Python module but __init__.py in its tree is tagged
+    DATA_PACKAGE_TAG.
+    """
 
     def build_directory_unit(
         self,
@@ -25,9 +34,13 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
         subdirectories: list[AuditableDirectoryUnit],
         language: str | None,
     ) -> AuditableDirectoryUnit:
+        is_data_package = not _does_hold_module_beneath(files, subdirectories, language)
         return AuditablePythonPackageUnit(
             unit_id=str(directory_path),
-            traits=UnitTraits(language=language),
+            traits=UnitTraits(
+                language=language,
+                tags=frozenset({DATA_PACKAGE_TAG}) if is_data_package else frozenset(),
+            ),
             directory_path=str(directory_path),
             files=files,
             subdirectories=subdirectories,
@@ -70,3 +83,18 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
             project_module_names=project_module_names,
             importers=package_path_to_importers.get(unit.directory_path),
         )
+
+
+def _does_hold_module_beneath(
+    files: list[AuditableFileMetadataUnit],
+    subdirectories: list[AuditableDirectoryUnit],
+    language: str | None,
+) -> bool:
+    """Return True when a file in ``language`` but __init__.py is in the tree."""
+    return any(
+        file_unit.language == language and file_unit.file_name != _INIT_FILE_NAME
+        for file_unit in files
+    ) or any(
+        _does_hold_module_beneath(sub.files, sub.subdirectories, language)
+        for sub in subdirectories
+    )

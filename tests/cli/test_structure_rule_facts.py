@@ -7,6 +7,8 @@ the measure it is checked against.
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from klint.app import AppSettings
 from klint.cli import STRUCTURE_AUDIT_COMMAND
 from klint.core.models.judging import JudgeRequest
@@ -181,3 +183,37 @@ def test_a_folder_holding_a_package_is_read_as_a_folder_on_the_import_path(
         "  Its subpackages: none",
         "  Its module files directly: by 1 module, as [shop.cart]",
     ]
+
+
+def test_a_folder_holding_no_module_is_not_asked_the_rules_about_modules(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "pkg"
+    write_text(package / "__init__.py", "")
+    write_text(package / "core" / "orders.py", "x = 1\n")
+    write_text(package / "resources" / "__init__.py", "")
+    write_text(package / "resources" / "catalog" / "rules.json", "{}\n")
+
+    judge = _audit_with_the_structure_rules(package)
+
+    module_rules = {"dead_code_module", "missing_package_public_api"}
+    rule_ids_by_directory = {
+        name: {q.question_id for q in _find_request_about(judge, path).questions}
+        for name, path in (
+            ("resources", package / "resources"),
+            ("core", package / "core"),
+        )
+    }
+    assert not module_rules & rule_ids_by_directory["resources"]
+    assert "flat_structure" in rule_ids_by_directory["resources"]
+    assert module_rules <= rule_ids_by_directory["core"]
+
+
+@pytest.mark.usefixtures("in_repo_root")
+def test_klint_resources_is_not_asked_the_rules_about_modules() -> None:
+    judge = _audit_with_the_structure_rules(Path("klint"))
+
+    request = _find_request_about(judge, Path("klint") / "resources")
+    rule_ids = {question.question_id for question in request.questions}
+    assert "dead_code_module" not in rule_ids
+    assert "missing_package_public_api" not in rule_ids

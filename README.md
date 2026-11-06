@@ -195,6 +195,7 @@ Because `klint` evaluates whether code **follows** a practice (`Pass`) or **viol
 | `unit_types` | The units the rule is asked about: `file`, and `class` and `function` in a Python file (`klint`); `project_directory` and `file_metadata`, a file's outline (`klint-structure`); `hunk_summary`, `file_summary` and `package_summary` (`klint-change-summary`). Default `["file"]`. |
 | `languages` | Limits the rule to files of these languages, for example `["python"]`. |
 | `unit_tags` | Limits the rule to files with one of these tags, `backend` or `frontend`. A file with no detected tag is asked every rule. |
+| `excluded_unit_tags` | Keeps the rule from units with one of these tags. `klint-structure` tags a Python package `data` when its tree holds no module but `__init__.py`, as a folder of data files does; the built-in `dead_code_module` and `missing_package_public_api` are not asked about it. |
 | `tags` | Labels for what the rule is about, such as `"security"`. |
 
 ### Python classes and functions

@@ -74,12 +74,14 @@
     "dead_code_module": {
       "type": "choice",
       "question": "Are the modules in this directory actively imported and used by other modules in the project rather than sitting as dead, unreferenced code?",
-      "unit_types": ["project_directory"]
+      "unit_types": ["project_directory"],
+      "excluded_unit_tags": ["data"]
     },
     "missing_package_public_api": {
       "type": "choice",
       "question": "Does this package expose a clean public interface (such as via __init__.py exports for multi-file internal modules) rather than requiring callers to import deep internal implementation files directly?",
-      "unit_types": ["project_directory"]
+      "unit_types": ["project_directory"],
+      "excluded_unit_tags": ["data"]
     },
     "scattered_feature_logic": {
       "type": "choice",

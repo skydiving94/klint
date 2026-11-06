@@ -47,8 +47,9 @@ class RuleSpec:
 
     unit_types is the default when the rule names none. languages
     are the rule's own, before its pack's header narrows them; empty when
-    it names none. unit_tags are the unit tags the rule is limited to;
-    empty when it names none.
+    it names none. unit_tags are the unit tags the rule is limited to, and
+    excluded_unit_tags those it is never asked about; each empty when it
+    names none.
     """
 
     rule_id: str
@@ -58,6 +59,7 @@ class RuleSpec:
     languages: tuple[str, ...]
     tags: tuple[str, ...]
     unit_tags: tuple[str, ...] = ()
+    excluded_unit_tags: tuple[str, ...] = ()
 
 
 class RuleProblemSeverity(Enum):

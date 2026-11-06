@@ -13,7 +13,10 @@ from klint.catalog.code.python.definition_units import (
 from klint.catalog.code.python.file_metadata_extractor import (
     PythonFileMetadataExtractor,
 )
-from klint.catalog.code.python.package_factory import PythonPackageUnitFactory
+from klint.catalog.code.python.package_factory import (
+    DATA_PACKAGE_TAG,
+    PythonPackageUnitFactory,
+)
 from klint.catalog.code.python.package_renderer import PythonPackageRenderer
 from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
 from klint.catalog.code.python.source_file_extractor import PythonSourceFileExtractor
@@ -23,6 +26,7 @@ from klint.catalog.code.python.source_file_unit import AuditablePythonFileUnit
 SUITE_LANGUAGE = "python"
 
 __all__ = [
+    "DATA_PACKAGE_TAG",
     "SUITE_LANGUAGE",
     "AuditablePythonClassUnit",
     "AuditablePythonDefinitionUnit",
