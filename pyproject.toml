@@ -43,13 +43,15 @@ klint-structure = "klint.cli:run_structure_audit"
 # The old name of klint-structure, kept for one release.
 klint-project = "klint.cli:run_klint_project_alias"
 klint-change-summary = "klint.cli:run_change_summary_audit"
+# The Claude Code Stop hook that checks an agent's change summaries.
+klint-change-summary-stop-hook = "klint.cli:run_change_summary_stop_hook"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["klint*"]
 
 [tool.setuptools.package-data]
-"klint.resources" = ["**/*.json"]
+"klint.resources" = ["**/*.json", "**/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
