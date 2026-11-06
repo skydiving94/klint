@@ -98,8 +98,8 @@ class ChangeSummaryStopHook:
     ) -> StopDecision:
         if not change.files:
             return StopDecision.allow()
+        _create_hook_folder()
         if not SUMMARIES_PATH.exists():
-            _create_hook_folder()
             return StopDecision.block(describe_missing_summaries(change))
         source = JsonDocumentSourceFactory().create_source(
             DiskPathInput(SUMMARIES_PATH)

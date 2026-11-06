@@ -84,12 +84,18 @@ def test_fixed_summaries_let_the_agent_stop_and_start_the_count_again(
     assert all(answer.is_block for answer in answers)
 
 
-def test_the_hooks_own_files_stay_out_of_the_change(greeter: Path) -> None:
+@pytest.mark.parametrize("is_first_stop_blocked", [True, False])
+def test_the_hooks_own_files_stay_out_of_the_change(
+    greeter: Path, is_first_stop_blocked: bool
+) -> None:
     status_before = run_git(greeter, "status", "--porcelain", "--untracked-files=all")
-    assert feed_stop_event(greeter, HypothesisJudge()).is_block
+    if is_first_stop_blocked:
+        assert feed_stop_event(greeter, HypothesisJudge()).is_block
     write_summaries(greeter)
 
-    answer = feed_stop_event(greeter, HypothesisJudge(), is_stop_hook_active=True)
+    answer = feed_stop_event(
+        greeter, HypothesisJudge(), is_stop_hook_active=is_first_stop_blocked
+    )
 
     assert answer.is_plain_stop()
     assert (greeter / SUMMARIES_PATH.parent / ".gitignore").exists()
