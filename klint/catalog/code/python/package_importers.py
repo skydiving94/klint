@@ -1,20 +1,24 @@
 """Who in an audited tree imports each Python package, and what of it.
 
 A module is named as Python imports it. When the audited directory holds an
-__init__.py, it is a package named after itself; otherwise it is a folder on
-the import path, and its subdirectories are top-level packages. A folder
-without an __init__.py that holds a package, outside any package, is taken
-as a folder on the import path too, as a src folder or a nested project is.
+__init__.py, or sits in a package on disk, it is a package named after
+itself and the packages it sits in; otherwise it is a folder on the import
+path, and its subdirectories are top-level packages. A folder without an
+__init__.py that holds a package, outside any package, is taken as a folder
+on the import path too, as a src folder or a nested project is.
 """
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 from klint.catalog.code.language_neutral import AuditableDirectoryUnit
-from klint.catalog.code.python.package_unit import ImportGroup, PackageImporters
-
-_INIT_FILE_NAME = "__init__.py"
+from klint.catalog.code.python.package_unit import (
+    INIT_FILE_NAME,
+    ImportGroup,
+    PackageImporters,
+    does_hold_init_file,
+)
 
 
 @dataclass(frozen=True)
@@ -85,7 +89,7 @@ class _TreeIndex:
             if file_unit.language != self.language:
                 continue
             path = PurePath(file_unit.file_path or file_unit.unit_id)
-            if file_unit.file_name == _INIT_FILE_NAME:
+            if file_unit.file_name == INIT_FILE_NAME:
                 names = own_names
             else:
                 names = tuple(_join(prefix, path.stem) for prefix in child_prefixes)
@@ -94,7 +98,7 @@ class _TreeIndex:
             self.files.append(
                 _FileImports(path, names, own_names, tuple(file_unit.imports))
             )
-        is_inside_package = is_inside_package or _has_init_file(directory)
+        is_inside_package = is_inside_package or does_hold_init_file(directory)
         for subdirectory in directory.subdirectories:
             self.add_directory(
                 subdirectory,
@@ -103,8 +107,10 @@ class _TreeIndex:
                     for prefix in child_prefixes
                 ),
                 is_import_root=not is_inside_package
-                and not _has_init_file(subdirectory)
-                and any(_has_init_file(sub) for sub in subdirectory.subdirectories),
+                and not does_hold_init_file(subdirectory)
+                and any(
+                    does_hold_init_file(sub) for sub in subdirectory.subdirectories
+                ),
                 is_inside_package=is_inside_package,
             )
 
@@ -166,12 +172,12 @@ def map_package_path_to_importers(
     left out, since everything that imports it is outside its tree.
     """
     index = _TreeIndex(language=root.language)
-    is_package = _has_init_file(root)
+    root_names = _find_root_names(root)
     index.add_directory(
         root,
-        (root.directory_name,) if is_package else (),
-        is_import_root=not is_package,
-        is_inside_package=False,
+        root_names,
+        is_import_root=not root_names,
+        is_inside_package=bool(root_names),
     )
     directory_paths = [d.directory_path for d in _list_directories_beneath(root)]
     path_to_imports = {PurePath(path): _PackageImports() for path in directory_paths}
@@ -203,6 +209,22 @@ def _build_group(imports: list[_TreeImport]) -> ImportGroup:
     )
 
 
+def _find_root_names(root: AuditableDirectoryUnit) -> tuple[str, ...]:
+    """Return the name ``root`` is imported by; none for a folder on the import path.
+
+    A directory in packages on disk is named after them too, as klint.core
+    is for an audited klint/core.
+    """
+    package_names: list[str] = []
+    parent = Path(root.directory_path).resolve().parent
+    while (parent / INIT_FILE_NAME).is_file():
+        package_names.insert(0, parent.name)
+        parent = parent.parent
+    if not package_names and not does_hold_init_file(root):
+        return ()
+    return (".".join([*package_names, root.directory_name]),)
+
+
 def _list_directories_beneath(
     directory: AuditableDirectoryUnit,
 ) -> list[AuditableDirectoryUnit]:
@@ -212,10 +234,6 @@ def _list_directories_beneath(
         directories.append(subdirectory)
         directories.extend(_list_directories_beneath(subdirectory))
     return directories
-
-
-def _has_init_file(directory: AuditableDirectoryUnit) -> bool:
-    return any(f.file_name == _INIT_FILE_NAME for f in directory.files)
 
 
 def _join(prefix: str, name: str) -> str:

@@ -7,6 +7,7 @@ from klint.catalog.code.language_neutral import (
     list_tree_lines,
 )
 from klint.catalog.code.python.package_unit import (
+    INIT_FILE_NAME,
     AuditablePythonPackageUnit,
     ImportGroup,
 )
@@ -43,7 +44,7 @@ class PythonPackageRenderer(BaseUnitRenderer):
         python_modules = [
             f.file_name
             for f in package.files
-            if f.language == package.language and f.file_name != "__init__.py"
+            if f.language == package.language and f.file_name != INIT_FILE_NAME
         ]
         lines = [
             f"Target Directory Under Audit: {format_display_path(package)} "
@@ -103,7 +104,7 @@ def _describe_public_api(package: AuditablePythonPackageUnit) -> str:
     py_files = [f for f in package.files if f.language == package.language]
     if not py_files:
         return "not applicable (no immediate .py files in this directory)"
-    init_file = next((f for f in py_files if f.file_name == "__init__.py"), None)
+    init_file = next((f for f in py_files if f.file_name == INIT_FILE_NAME), None)
     if init_file is None:
         return (
             "MISSING (__init__.py is absent; internal modules are exposed "

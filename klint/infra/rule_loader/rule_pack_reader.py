@@ -182,10 +182,7 @@ def _read_rule(
             )
         )
     try:
-        question_with_layers = _read_question_with_layers(
-            raw_rule, rule_id, path, rule_problems
-        )
-        return RuleSpec(
+        spec = RuleSpec(
             rule_id=rule_id,
             question_type=_read_question_type(raw_rule["type"], rule_id, path),
             question=_read_question(raw_rule["question"], rule_id, path),
@@ -200,11 +197,27 @@ def _read_rule(
             excluded_unit_tags=_read_string_list(
                 raw_rule, "excluded_unit_tags", rule_id, path
             ),
-            question_with_layers=question_with_layers,
+            question_with_layers=(
+                _read_question(raw_rule["question_with_layers"], rule_id, path)
+                if "question_with_layers" in raw_rule
+                else None
+            ),
         )
     except ValueError as error:
         rule_problems.append(RuleProblem(RuleProblemSeverity.ERROR, str(error)))
         return None
+    if (
+        spec.question_with_layers is not None
+        and LAYERS_PLACEHOLDER not in spec.question_with_layers
+    ):
+        rule_problems.append(
+            RuleProblem(
+                RuleProblemSeverity.WARNING,
+                f"Rule '{rule_id}' in '{path}' has a question_with_layers without "
+                f"{LAYERS_PLACEHOLDER}, so it does not show the project's layers",
+            )
+        )
+    return spec
 
 
 def _read_question(raw_question: object, rule_id: str, path: Path) -> str:
@@ -214,30 +227,6 @@ def _read_question(raw_question: object, rule_id: str, path: Path) -> str:
             f"'{path}'; expected a string"
         )
     return raw_question
-
-
-def _read_question_with_layers(
-    raw_rule: dict[object, object],
-    rule_id: str,
-    path: Path,
-    rule_problems: list[RuleProblem],
-) -> str | None:
-    """Return the rule's question for a project that lists its layers, if any.
-
-    One that does not show the layers is a WARNING problem.
-    """
-    if "question_with_layers" not in raw_rule:
-        return None
-    question = _read_question(raw_rule["question_with_layers"], rule_id, path)
-    if LAYERS_PLACEHOLDER not in question:
-        rule_problems.append(
-            RuleProblem(
-                RuleProblemSeverity.WARNING,
-                f"Rule '{rule_id}' in '{path}' has a question_with_layers without "
-                f"{LAYERS_PLACEHOLDER}, so it does not show the project's layers",
-            )
-        )
-    return question
 
 
 def _read_question_type(raw_type: object, rule_id: str, path: Path) -> QuestionType:

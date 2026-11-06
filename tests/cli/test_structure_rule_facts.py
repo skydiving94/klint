@@ -217,3 +217,22 @@ def test_klint_resources_is_not_asked_the_rules_about_modules() -> None:
     rule_ids = {question.question_id for question in request.questions}
     assert "dead_code_module" not in rule_ids
     assert "missing_package_public_api" not in rule_ids
+
+
+def test_an_audited_subpackage_is_named_after_the_packages_it_sits_in(
+    tmp_path: Path,
+) -> None:
+    store = tmp_path / "app" / "store"
+    write_text(tmp_path / "app" / "__init__.py", "")
+    write_text(store / "__init__.py", "")
+    write_text(store / "orders" / "__init__.py", "")
+    write_text(store / "orders" / "lines.py", "x = 1\n")
+    write_text(store / "web.py", "from app.store.orders import lines\n")
+
+    judge = _audit_with_the_structure_rules(store)
+
+    assert _list_importer_lines(_find_request_about(judge, store / "orders"))[1:] == [
+        "  The package itself: by 1 module [app.store.web]",
+        "  Its subpackages: none",
+        "  Its module files directly: by 1 module, as [app.store.orders.lines]",
+    ]

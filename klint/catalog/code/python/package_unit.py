@@ -2,6 +2,14 @@ from dataclasses import dataclass, field
 
 from klint.catalog.code.language_neutral import AuditableDirectoryUnit
 
+# The file that makes a directory a regular Python package.
+INIT_FILE_NAME = "__init__.py"
+
+
+def does_hold_init_file(directory: AuditableDirectoryUnit) -> bool:
+    """Return True when ``directory`` holds an __init__.py of its own."""
+    return any(f.file_name == INIT_FILE_NAME for f in directory.files)
+
 
 @dataclass(frozen=True)
 class ImportGroup:

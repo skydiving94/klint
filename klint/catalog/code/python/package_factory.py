@@ -8,6 +8,7 @@ from klint.catalog.code.language_neutral import (
 from klint.catalog.code.language_neutral.extraction import BaseDirectoryUnitFactory
 from klint.catalog.code.python.package_importers import map_package_path_to_importers
 from klint.catalog.code.python.package_unit import (
+    INIT_FILE_NAME,
     AuditablePythonPackageUnit,
     PackageImporters,
 )
@@ -17,7 +18,6 @@ from klint.core.models.units import UnitTraits
 # The unit tag of a package with no Python module but __init__.py in its
 # tree, such as a folder of data files.
 DATA_PACKAGE_TAG = "data"
-_INIT_FILE_NAME = "__init__.py"
 
 
 class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
@@ -92,7 +92,7 @@ def _does_hold_module_beneath(
 ) -> bool:
     """Return True when a file in ``language`` but __init__.py is in the tree."""
     return any(
-        file_unit.language == language and file_unit.file_name != _INIT_FILE_NAME
+        file_unit.language == language and file_unit.file_name != INIT_FILE_NAME
         for file_unit in files
     ) or any(
         _does_hold_module_beneath(sub.files, sub.subdirectories, language)
