@@ -15,11 +15,11 @@ from klint.core.models.audits import RenderInput
 class PythonPackageRenderer(BaseUnitRenderer):
     """Shows the judge a directory as a Python package.
 
-    Before the tree, it shows the package's public API, the imports in its
-    tree split into the project's own and external ones, and cycles between
-    its subpackages. A file in its tree that cannot be parsed is named,
-    since what it holds is unknown. The tree is shown as far as the
-    character budget goes.
+    Before the tree, it shows the number of Python modules directly in the
+    package, its public API, the imports in its tree split into the
+    project's own and external ones, and cycles between its subpackages. A
+    file in its tree that cannot be parsed is named, since what it holds is
+    unknown. The tree is shown as far as the character budget goes.
     """
 
     def render_subject(self, render_input: RenderInput) -> str:
@@ -32,15 +32,18 @@ class PythonPackageRenderer(BaseUnitRenderer):
         external_imports = sorted(
             imp for imp in imports if not _is_project_import(imp, project_module_names)
         )
-        non_init_files = [
-            f.file_name for f in package.files if f.file_name != "__init__.py"
+        python_modules = [
+            f.file_name
+            for f in package.files
+            if f.language == package.language and f.file_name != "__init__.py"
         ]
         lines = [
             f"Target Directory Under Audit: {format_display_path(package)} "
             f"(package name: '{package.directory_name}')",
-            f"Summary: {len(package.files)} immediate files "
-            f"({len(non_init_files)} non-init modules: {non_init_files}), "
+            f"Summary: {len(package.files)} immediate files, "
             f"{len(package.subdirectories)} immediate subdirectories",
+            "Python Modules Directly In It, Besides __init__.py: "
+            f"{len(python_modules)} [{', '.join(python_modules)}]",
             f"Package Public API Status: {_describe_public_api(package)}",
             "Internal Project Imports in Tree: "
             f"[{', '.join(project_imports) if project_imports else 'none'}]",

@@ -1,5 +1,6 @@
 Target Directory Under Audit: examples/mock_bad_project (package name: 'mock_bad_project')
-Summary: 0 immediate files (0 non-init modules: []), 3 immediate subdirectories
+Summary: 0 immediate files, 3 immediate subdirectories
+Python Modules Directly In It, Besides __init__.py: 0 []
 Package Public API Status: not applicable (no immediate .py files in this directory)
 Internal Project Imports in Tree: [.checkout_routes, .checkout_routes.handle_checkout_request, .order_entity, api, api.checkout_routes, domain.order_entity, utils, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]
 External / Third-Party / Stdlib Imports in Tree: [pathlib, sqlite3, traceback, urllib.request]
@@ -19,6 +20,4 @@ Directory: examples/mock_bad_project
     Files:
       - __init__.py (lines=3; exports=[OrderEntity]; imports=[.order_entity])
       - order_entity.py (lines=25; imports=[sqlite3, urllib.request, api, api.checkout_routes, utils, utils.misc_helpers]; classes=[OrderEntity])
-  Directory: examples/mock_bad_project/utils
-    Files:
-      - misc_helpers.py (lines=11; imports=[pathlib, domain.order_entity]; functions=[format_currency_and_temp_file])
+[... 3 more lines of the tree left out to stay within 2000 characters]

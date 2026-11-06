@@ -13,7 +13,7 @@
     },
     "flat_structure": {
       "type": "choice",
-      "question": "Are files organized into subpackages when appropriate rather than dumping an excessive number of files into one flat directory?",
+      "question": "Does this directory hold 15 or fewer Python modules directly in it, besides __init__.py, with further modules grouped into subpackages, rather than more than 15 modules in one flat directory?",
       "unit_types": ["project_directory"]
     },
     "excessive_nesting_depth": {
