@@ -163,6 +163,7 @@ A relative path set in `klint.json` is taken from the folder of the `klint.json`
 * `"rules"`: rules that merge over the built-in ones; a rule with the same ID replaces the built-in one. Rules may also sit at the top level of the file.
 * `"fallback_rule_packs"`: the rule packs asked about a file whose language `klint` cannot identify, in place of the built-in `backend.json` and `file_design.json`.
 * `"file_traits"`: corrections to the language or tags `klint` detects for some files, for example `[{"glob": "web/**", "tags": ["frontend"]}]`. The first entry whose glob matches a file decides.
+* `"layers"`: the project's layers, outermost first, for example `["myapp.cli", "myapp.services", "myapp.core"]`. `klint-structure` shows them to the judge when it asks `layering_violation` and `leaky_abstraction`, and takes the last as the core. Without them, both rules ask about layers in general terms.
 
 ~~~json
 {
@@ -192,6 +193,7 @@ Because `klint` evaluates whether code **follows** a practice (`Pass`) or **viol
 | :--- | :--- |
 | `type` | `"choice"`. |
 | `question` | The question the judge answers about each unit. |
+| `question_with_layers` | The question asked instead, when the project's `klint.json` lists its `layers`; `{layers}` marks where they go, joined by commas. |
 | `unit_types` | The units the rule is asked about: `file`, and `class` and `function` in a Python file (`klint`); `project_directory` and `file_metadata`, a file's outline (`klint-structure`); `hunk_summary`, `file_summary` and `package_summary` (`klint-change-summary`). Default `["file"]`. |
 | `languages` | Limits the rule to files of these languages, for example `["python"]`. |
 | `unit_tags` | Limits the rule to files with one of these tags, `backend` or `frontend`. A file with no detected tag is asked every rule. |

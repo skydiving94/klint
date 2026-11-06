@@ -49,6 +49,7 @@
     "layering_violation": {
       "type": "choice",
       "question": "Do imports in this directory flow inward toward core domain abstractions (e.g. cli/entrypoints -> infrastructure -> core/domain) rather than inner layers importing from outer layers?",
+      "question_with_layers": "This project's layers, outermost first, are: {layers}. Does each import in this directory go to the directory's own layer or to a layer further in, rather than from an inner layer out to an outer one?",
       "unit_types": ["project_directory"]
     },
     "god_file_or_class": {
@@ -64,6 +65,7 @@
     "leaky_abstraction": {
       "type": "choice",
       "question": "Are third-party frameworks, HTTP clients, and ML/ORM libraries confined to outer infrastructure or entrypoint layers rather than leaking into core domain models?",
+      "question_with_layers": "This project's layers, outermost first, are: {layers}; the last is its core. Are third-party frameworks, HTTP clients, and ML/ORM libraries kept out of the core and imported only in outer layers, rather than leaking into core domain code?",
       "unit_types": ["project_directory"]
     },
     "business_logic_in_presentation_layer": {

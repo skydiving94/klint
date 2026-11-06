@@ -31,8 +31,12 @@ _FALLBACK_RULE_PACKS_KEY = "fallback_rule_packs"
 # The key of a klint.json that overrides the detected traits of some files.
 _FILE_TRAITS_KEY = "file_traits"
 _FILE_TRAITS_ENTRY_FIELD_NAMES = frozenset({"glob", "language", "tags"})
+# The key of a klint.json that lists the project's layers, outermost first.
+_LAYERS_KEY = "layers"
 # The keys of a klint.json that hold settings rather than rules.
-_SETTING_KEYS = frozenset({_ENV_BLOCK_KEY, _FALLBACK_RULE_PACKS_KEY, _FILE_TRAITS_KEY})
+_SETTING_KEYS = frozenset(
+    {_ENV_BLOCK_KEY, _FALLBACK_RULE_PACKS_KEY, _FILE_TRAITS_KEY, _LAYERS_KEY}
+)
 
 
 @dataclass(frozen=True)
@@ -42,8 +46,9 @@ class ProjectConfig:
     setting_name_to_value holds what its "env" block sets. fallback_rule_packs
     are the packs it names in place of the built-in ones; None when it names
     none. file_traits_overrides are its "file_traits" entries, in file
-    order. does_hold_rules is True when it also holds rules, under "rules"
-    or at its top level.
+    order. layers are the project's layers as its "layers" list names them,
+    outermost first; empty when it lists none. does_hold_rules is True when
+    it also holds rules, under "rules" or at its top level.
     """
 
     path: Path
@@ -51,6 +56,7 @@ class ProjectConfig:
     fallback_rule_packs: tuple[Path, ...] | None
     does_hold_rules: bool
     file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
+    layers: tuple[str, ...] = ()
 
 
 def find_project_config(start_path: Path | None = None) -> Path | None:
@@ -80,6 +86,7 @@ def read_project_config(config_path: Path) -> ProjectConfig:
         fallback_rule_packs=_load_fallback_rule_packs(config, config_path),
         does_hold_rules=any(key not in _SETTING_KEYS for key in config),
         file_traits_overrides=_load_file_traits_overrides(config, config_path),
+        layers=_load_layers(config, config_path),
     )
 
 
@@ -176,6 +183,24 @@ def _load_fallback_rule_packs(
                 f"'{raw_path}', which is not a file; it is left out"
             )
     return tuple(fallback_rule_packs)
+
+
+def _load_layers(config: dict[object, object], config_path: Path) -> tuple[str, ...]:
+    """Return the layers the config file lists, outermost first; empty if none.
+
+    A value that is not a list of non-empty strings is ignored, with a
+    KlintWarning.
+    """
+    raw_layers = config.get(_LAYERS_KEY, [])
+    if not isinstance(raw_layers, list) or not all(
+        isinstance(layer, str) and layer for layer in raw_layers
+    ):
+        _warn(
+            f"The '{_LAYERS_KEY}' key in '{config_path}' is ignored: it must be a "
+            "list of layer names, outermost first"
+        )
+        return ()
+    return tuple(raw_layers)
 
 
 def _load_file_traits_overrides(
