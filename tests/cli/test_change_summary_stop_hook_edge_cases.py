@@ -189,3 +189,14 @@ def test_the_projects_klint_json_chooses_the_judge(greeter: Path) -> None:
     assert answer.warning is not None
     assert "KLINT_JUDGE_MODE 'bogus' set in" in answer.warning
     assert "klint.json" in answer.warning
+
+
+def test_a_session_id_that_cannot_name_a_file_lets_the_agent_stop(
+    greeter: Path, tmp_path: Path
+) -> None:
+    answer = feed_stop_event(greeter, HypothesisJudge(), session_id="../../escape")
+
+    assert not answer.is_block
+    assert answer.warning is not None
+    assert "The session ID '../../escape' is not one" in answer.warning
+    assert list(tmp_path.rglob("escape")) == []

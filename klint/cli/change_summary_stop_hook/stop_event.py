@@ -1,15 +1,12 @@
 """The Stop event Claude Code sends a Stop hook on stdin."""
 
 import json
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 # The environment variable Claude Code sets to the project's root directory.
 PROJECT_DIRECTORY_VARIABLE = "CLAUDE_PROJECT_DIR"
-# A session ID names a file, so it may hold only these characters.
-_SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,128}")
 
 
 @dataclass(frozen=True)
@@ -40,7 +37,7 @@ def read_stop_event(event_text: str, environment: Mapping[str, str]) -> StopEven
     if not isinstance(raw_event, dict):
         raise ValueError("The Stop event must be a JSON object")
     session_id = raw_event.get("session_id")
-    if not isinstance(session_id, str) or not _SESSION_ID_PATTERN.fullmatch(session_id):
+    if not isinstance(session_id, str):
         raise ValueError(
             f"The Stop event's session_id {session_id!r} is not a session ID"
         )

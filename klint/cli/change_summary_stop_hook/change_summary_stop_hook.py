@@ -20,7 +20,6 @@ from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
 from klint.catalog.change_summary.documents import read_summaries_of_git_change
 from klint.catalog.domain_neutral import JsonDocumentSourceFactory
 from klint.catalog.domain_neutral.git import GitChange, GitChangeSource
-from klint.cli.change_summary_stop_hook.block_count_store import BlockCountStore
 from klint.cli.change_summary_stop_hook.hook_console import (
     STOP_HOOK_COMMAND_NAME,
     parse_min_confidence,
@@ -36,6 +35,9 @@ from klint.cli.change_summary_stop_hook.hook_messages import (
     describe_uncovered_change,
     describe_unreadable_summaries,
     describe_unverified,
+)
+from klint.cli.change_summary_stop_hook.session_block_count import (
+    SessionBlockCount,
 )
 from klint.cli.change_summary_stop_hook.stop_decision import StopDecision, StopVerdict
 from klint.cli.change_summary_stop_hook.stop_event import StopEvent, read_stop_event
@@ -87,11 +89,11 @@ class ChangeSummaryStopHook:
         with contextlib.chdir(event.project_path):
             try:
                 change = await _read_change()
-                block_counts = BlockCountStore.open_for(Path.cwd())
+                block_count = SessionBlockCount.open_for(Path.cwd(), event.session_id)
             except ValueError as error:
                 return StopDecision.allow(describe_unverified(str(error), None))
             decision = await self._check_summaries(change, min_confidence)
-            return _cap_blocks_in_a_row(decision, event, block_counts)
+            return _cap_blocks_in_a_row(decision, event, block_count)
 
     async def _check_summaries(
         self, change: GitChange, min_confidence: float
@@ -208,24 +210,22 @@ def _create_hook_folder() -> None:
 
 
 def _cap_blocks_in_a_row(
-    decision: StopDecision, event: StopEvent, block_counts: BlockCountStore
+    decision: StopDecision, event: StopEvent, block_count: SessionBlockCount
 ) -> StopDecision:
     """Return ``decision``, or a stop with a warning once blocks reach the cap.
 
     A stop that does not follow a Stop hook's block starts the count again.
     """
     if decision.verdict is StopVerdict.ALLOW:
-        block_counts.clear_count(event.session_id)
+        block_count.clear()
         return decision
-    count = (
-        block_counts.read_count(event.session_id) if event.is_stop_hook_active else 0
-    )
+    count = block_count.read() if event.is_stop_hook_active else 0
     if count >= MAX_BLOCKS_IN_A_ROW:
-        block_counts.clear_count(event.session_id)
+        block_count.clear()
         return StopDecision.allow(
             describe_gave_up(MAX_BLOCKS_IN_A_ROW, decision.message or "")
         )
-    block_counts.write_count(event.session_id, count + 1)
+    block_count.write(count + 1)
     return decision
 
 
