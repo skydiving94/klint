@@ -169,3 +169,17 @@ def test_an_event_that_is_not_json_lets_the_agent_stop_with_a_warning() -> None:
         "ValueError: The Stop event is not valid JSON: Expecting value: line 1 "
         "column 1 (char 0)."
     )
+
+
+def test_the_projects_klint_json_chooses_the_judge(greeter: Path) -> None:
+    write_files(greeter, {"klint.json": '{"env": {"KLINT_JUDGE_MODE": "bogus"}}'})
+    run_git(greeter, "add", "klint.json")
+    run_git(greeter, "commit", "--quiet", "--message", "Choosing a judge")
+    write_summaries(greeter)
+
+    answer = feed_stop_event(greeter, HypothesisJudge())
+
+    assert not answer.is_block
+    assert answer.warning is not None
+    assert "KLINT_JUDGE_MODE 'bogus' set in" in answer.warning
+    assert "klint.json" in answer.warning

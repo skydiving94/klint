@@ -298,6 +298,49 @@ jobs:
 * **Job summary**: each run adds its report to the job summary.
 * **Settings**: the Action always sets the judge's mode, model and address, so a `klint.json` `"env"` block does not choose the judge in the Action.
 
+## Claude Code Stop Hook
+
+`klint-change-summary-stop-hook` keeps a Claude Code agent from stopping until `klint-change-summary` passes its summaries of the uncommitted change. Each time the agent is about to stop, the hook checks the summaries in `.klint/change-summary.json`. When they are missing, it asks the agent to write them, with instructions and the list of changed files and hunks. A flagged summary sends the agent back to fix it.
+
+### Setting it up
+1. **Install klint** (see [Install](#install)) so that `klint-change-summary-stop-hook` is on the `PATH` Claude Code starts with. Otherwise, give the command's full path in step 3, such as `/path/to/klint/.venv/bin/klint-change-summary-stop-hook`.
+2. **Choose the judge** for the project, as for any `klint` command (see [Judges](#judges)): in the environment Claude Code starts with, or in an `"env"` block of a `klint.json` at the project's root. For a `kev.serve` server on the default port:
+   ~~~json
+   {"env": {"KLINT_JUDGE_MODE": "remote"}}
+   ~~~
+   Keep a Jev API key in the shell's environment, not in `klint.json`.
+3. **Turn the hook on** in the project's `.claude/settings.json`:
+   ~~~json
+   {
+     "hooks": {
+       "Stop": [
+         {"hooks": [{"type": "command", "command": "klint-change-summary-stop-hook", "timeout": 300}]}
+       ]
+     }
+   }
+   ~~~
+   Checking takes a few seconds a summary, so a large change may need a longer `timeout`. To block only on failures with at least some confidence, add an option to the command, such as `klint-change-summary-stop-hook --min-confidence 0.5`.
+
+### What the hook does
+| When the agent is about to stop | The hook |
+| :--- | :--- |
+| The working tree has no change | Lets it stop. |
+| There is no `.klint/change-summary.json`, or it does not name exactly the change's files and hunks | Blocks: asks for summaries of the current change, listing the files and hunks to summarize. |
+| Every summary passes | Lets it stop. |
+| `klint` flags summaries | Blocks, listing each flagged summary and the checks it failed. |
+| The summaries file cannot be read, such as a JSON error or a field of the wrong kind | Blocks with `klint`'s error. |
+| `klint` cannot check the summaries for another reason, such as the judge being down | Lets it stop, with a warning to you. |
+| The hook has blocked 3 times in a row in this session | Lets it stop, with a warning to you and what it said last. |
+
+* **The change**: the uncommitted one against `HEAD`, as for `"git_change": {}`: staged and unstaged edits and untracked files, not ignored ones. A change the agent commits before it stops is not checked.
+* **The hook's own files**: the summaries go in `.klint/`, which the hook marks ignored with a `.klint/.gitignore`, so they are never part of the change, nor committed. The blocks in a row are counted per session in the repository's git directory, outside the working tree.
+* **Blocks in a row**: the count starts again whenever the agent may stop, and at a stop that does not follow a Stop hook's block, such as the first after your next prompt.
+* **Trying it by hand**: from the project, with a change in the working tree, feed the hook a Stop event:
+  ~~~bash
+  echo '{"session_id": "try-1", "cwd": "'"$PWD"'", "hook_event_name": "Stop", "stop_hook_active": false}' | klint-change-summary-stop-hook
+  ~~~
+  It prints a `"decision": "block"` with its reason, a `systemMessage` warning, or nothing when the agent may stop, and always exits 0.
+
 ## Renamed in This Release
 
 These names changed. Each old name still works until the next release and prints a warning naming its replacement.
