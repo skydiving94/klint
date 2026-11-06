@@ -15,7 +15,12 @@ CHANGE_SUMMARY_COMMAND = AuditCommand(
         "summaries below it"
     ),
     target_argument_name="summaries",
-    target_argument_help="Path to the change-summary JSON document to verify",
+    target_argument_help=(
+        "Path to the change-summary JSON document to verify: summaries with "
+        "each hunk's code, or summaries only, with a git_change field that "
+        "names the change to read from the git repository of the current "
+        "directory"
+    ),
     audit_kind_id=CHANGE_SUMMARY_KIND_ID,
     audited_units_json_key="examined_summaries",
     no_problems_message="Every summary passed its checks.",

@@ -4,7 +4,9 @@ The judge reads the checked summaries one level down as the premise and the
 level's own summary as the hypothesis; no code is shown at these levels.
 """
 
-from klint.catalog.change_summary.document_reader import ROOT_PACKAGE_PATH
+from collections.abc import Mapping, Sequence
+
+from klint.catalog.change_summary.documents import ROOT_PACKAGE_PATH
 from klint.catalog.change_summary.renderers.child_summary_lines import (
     ChildSummary,
     list_child_summary_lines,
@@ -13,6 +15,9 @@ from klint.catalog.change_summary.renderers.premise_and_hypothesis import (
     count_items,
     describe_file_change,
     join_premise_and_hypothesis,
+)
+from klint.catalog.change_summary.renderers.summary_known_answers import (
+    find_summary_known_answers,
 )
 from klint.catalog.change_summary.units import (
     AuditableFileSummaryUnit,
@@ -26,8 +31,18 @@ class FileSummaryRenderer(BaseUnitRenderer):
     """Shows the judge a file's hunk summaries, then the file's summary.
 
     Each hunk summary says what its own checks found; one that failed is
-    still shown, marked so.
+    still shown, marked so. A file whose summary was left out is not shown:
+    it fails the has_summary check. Nor is a file one of whose hunk
+    summaries was left out: the judge could not tell what that hunk does.
     """
+
+    def find_known_answers(
+        self, render_input: RenderInput, rule_ids: Sequence[str]
+    ) -> Mapping[str, str | None]:
+        unit = render_input.get_unit_as(AuditableFileSummaryUnit)
+        return find_summary_known_answers(
+            unit.summary, rule_ids, [hunk.hunk.summary for hunk in unit.hunks]
+        )
 
     def render_subject(self, render_input: RenderInput) -> str:
         unit = render_input.get_unit_as(AuditableFileSummaryUnit)
@@ -62,8 +77,21 @@ class PackageSummaryRenderer(BaseUnitRenderer):
 
     The root package's summary is the commit's. Each summary one level down
     says what its own checks found; one that failed is still shown, marked
-    so.
+    so. A package whose summary was left out is not shown: it fails the
+    has_summary check. Nor is a package one of whose summaries one level
+    down was left out: the judge could not tell what that one changes.
     """
+
+    def find_known_answers(
+        self, render_input: RenderInput, rule_ids: Sequence[str]
+    ) -> Mapping[str, str | None]:
+        unit = render_input.get_unit_as(AuditablePackageSummaryUnit)
+        return find_summary_known_answers(
+            unit.summary,
+            rule_ids,
+            [package.summary for package in unit.packages]
+            + [file.summary for file in unit.files],
+        )
 
     def render_subject(self, render_input: RenderInput) -> str:
         unit = render_input.get_unit_as(AuditablePackageSummaryUnit)

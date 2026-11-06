@@ -1,43 +1,46 @@
-"""A change-summary document: an agent's summaries of one change, level by level.
+"""A change and an agent's summaries of it, level by level.
 
-The code of each hunk comes from git; the summaries come from the agent.
+The code of each hunk comes from git; the summaries come from the agent. A
+summary the agent did not write is None.
 """
 
 from dataclasses import dataclass
-from enum import StrEnum
+
+from klint.catalog.domain_neutral.git import ChangeKind, HunkHeader
+
+__all__ = [
+    "ROOT_PACKAGE_PATH",
+    "SUPPORTED_SCHEMA_VERSION",
+    "ChangeKind",
+    "ChangeSummaryDocument",
+    "FileSummary",
+    "HunkSummary",
+    "PackageSummary",
+    "is_path_inside_package",
+]
 
 # The one version of the document's format there is.
 SUPPORTED_SCHEMA_VERSION = 1
-
-
-class ChangeKind(StrEnum):
-    """What a change does to a file."""
-
-    ADDED = "added"
-    MODIFIED = "modified"
-    DELETED = "deleted"
-    RENAMED = "renamed"
+# The path of the root package: the directory the change is in.
+ROOT_PACKAGE_PATH = "."
 
 
 @dataclass(frozen=True)
 class HunkSummary:
     """One hunk of a file's diff, as ``git diff -U0`` gives it, and its summary.
 
-    The hunk removes old_line_count lines from old_start in the file before
-    the change, and adds new_line_count lines from new_start in the file
-    after it. removed_lines and added_lines are those lines, without the
-    leading "-" or "+". pointer is where the hunk sits in the document.
+    header says which lines the hunk removes and adds. removed_lines and
+    added_lines are those lines, without the leading "-" or "+". pointer is
+    where the hunk sits in the document, and None when the document leaves
+    it out.
     """
 
     hunk_id: str
-    old_start: int
-    old_line_count: int
-    new_start: int
-    new_line_count: int
+    header: HunkHeader
     removed_lines: tuple[str, ...]
     added_lines: tuple[str, ...]
-    summary: str
-    pointer: str
+    summary: str | None
+    pointer: str | None
 
 
 @dataclass(frozen=True)
@@ -45,15 +48,16 @@ class FileSummary:
     """One changed file, the summaries of its hunks, and its own summary.
 
     old_path is the path before the change, for a renamed file only.
-    pointer is where the file sits in the document.
+    pointer is where the file sits in the document, and None when the
+    document leaves it out.
     """
 
     path: str
     old_path: str | None
     change_kind: ChangeKind
-    summary: str
+    summary: str | None
     hunks: tuple[HunkSummary, ...]
-    pointer: str
+    pointer: str | None
 
 
 @dataclass(frozen=True)
@@ -65,7 +69,7 @@ class PackageSummary:
     """
 
     path: str
-    summary: str
+    summary: str | None
     packages: tuple["PackageSummary", ...]
     files: tuple[FileSummary, ...]
     pointer: str
@@ -83,3 +87,10 @@ class ChangeSummaryDocument:
     schema_version: int
     diff_command: str
     root_package: PackageSummary
+
+
+def is_path_inside_package(path: str, package_path: str) -> bool:
+    """Return True when ``path`` is below the directory ``package_path``."""
+    if package_path == ROOT_PACKAGE_PATH:
+        return path != ROOT_PACKAGE_PATH and not path.startswith(("/", "../"))
+    return path.startswith(f"{package_path}/")

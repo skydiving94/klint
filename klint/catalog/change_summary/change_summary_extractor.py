@@ -1,9 +1,13 @@
 """Builds the tree of summary units of a change-summary document, in one pass."""
 
-from klint.catalog.change_summary.document import FileSummary, PackageSummary
-from klint.catalog.change_summary.document_reader import (
+from klint.catalog.change_summary.documents import (
     ROOT_PACKAGE_PATH,
+    ChangeSummaryDocument,
+    ChangeSummaryInput,
+    FileSummary,
+    PackageSummary,
     read_change_summary_document,
+    read_summaries_of_git_change,
 )
 from klint.catalog.change_summary.units import (
     AuditableFileSummaryUnit,
@@ -11,29 +15,34 @@ from klint.catalog.change_summary.units import (
     AuditablePackageSummaryUnit,
 )
 from klint.core.interfaces import BaseUnitExtractor
-from klint.core.models.reports import JsonValue
 from klint.core.models.units import AuditableUnit
 
 
-class ChangeSummaryExtractor(BaseUnitExtractor[JsonValue]):
+class ChangeSummaryExtractor(BaseUnitExtractor[ChangeSummaryInput]):
     """Reads a change-summary document into a unit per summary, at every level.
 
-    A hunk's unit ID is its hunk_id and a file's is its path. A package's is
-    its path with a slash after it, "./" for the root package, so that a
-    package never shares an ID with a file.
+    A document either holds each hunk's code, or holds summaries only and
+    comes with its change, read from git. In the second case, every hunk
+    and file of the change, and the root package, has a unit, whether the
+    document summarizes it or not.
+
+    A hunk's unit ID is its hunk_id, or "<file path>#<number>" for a hunk
+    read from git, numbered from 1 in the file. A file's is its path. A
+    package's is its path with a slash after it, "./" for the root package,
+    so that a package never shares an ID with a file.
     """
 
-    async def extract(self, audit_input: JsonValue) -> list[AuditableUnit]:
+    async def extract(self, audit_input: ChangeSummaryInput) -> list[AuditableUnit]:
         """Return the root package's unit, then every unit nested in it.
 
         Each unit comes before the units nested inside it, in document
         order: a package's packages, then its files. Raises ValueError when
         the document is not a change-summary document, its packages are
-        nested too deeply to read, or two of its summaries would have the
-        same unit ID.
+        nested too deeply to read, a summary is about something the change
+        does not hold, or two of its summaries would have the same unit ID.
         """
         try:
-            document = read_change_summary_document(audit_input)
+            document = _read_document(audit_input)
             units = _list_unit_and_nested(_build_package_unit(document.root_package))
         except RecursionError as error:
             raise ValueError(
@@ -42,6 +51,12 @@ class ChangeSummaryExtractor(BaseUnitExtractor[JsonValue]):
             ) from error
         _check_unit_ids_differ(units)
         return units
+
+
+def _read_document(audit_input: ChangeSummaryInput) -> ChangeSummaryDocument:
+    if audit_input.git_change is None:
+        return read_change_summary_document(audit_input.document)
+    return read_summaries_of_git_change(audit_input.document, audit_input.git_change)
 
 
 def _build_package_unit(package: PackageSummary) -> AuditablePackageSummaryUnit:

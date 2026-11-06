@@ -2,9 +2,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar
 
-from klint.catalog.change_summary.document import ChangeKind
+from klint.catalog.change_summary.documents import ChangeKind
 from klint.catalog.change_summary.units.hunk_summary_unit import (
     AuditableHunkSummaryUnit,
+    locate_summary,
 )
 from klint.catalog.change_summary.units.summary_context import (
     ChangeSummaryContext,
@@ -17,22 +18,23 @@ from klint.core.models.units import AuditableUnit, Location
 class AuditableFileSummaryUnit(AuditableUnit):
     """The summary of one changed file, judged against its hunks' summaries.
 
-    old_path is the path before the change, for a renamed file only.
-    pointer is where the file sits in the change-summary document.
+    summary is None when it was left out. old_path is the path before the
+    change, for a renamed file only. pointer is where the file sits in the
+    change-summary document, None when the document leaves it out.
     """
 
     unit_type: ClassVar[str] = "file_summary"
 
     path: str
-    summary: str
-    pointer: str
+    summary: str | None
+    pointer: str | None
     change_kind: ChangeKind = ChangeKind.MODIFIED
     old_path: str | None = None
     hunks: tuple[AuditableHunkSummaryUnit, ...] = ()
 
-    def get_location(self) -> Location:
-        """Return where the summary sits in the change-summary document."""
-        return Location(path=f"{self.pointer}/summary")
+    def get_location(self) -> Location | None:
+        """Return where the summary sits in the document; None if it is left out."""
+        return locate_summary(self.pointer)
 
     def get_context(self) -> ChangeSummaryContext:
         return ChangeSummaryContext(

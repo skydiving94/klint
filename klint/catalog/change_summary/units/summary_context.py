@@ -23,8 +23,9 @@ class ChangeSummaryContext(UnitContext):
     """The level a summary is at, the path it is about, and the summary itself.
 
     path is the path of the hunk's file, of the file, or of the package.
+    summary is None when it was left out.
     """
 
     level: SummaryLevel = SummaryLevel.HUNK
     path: str = ""
-    summary: str = ""
+    summary: str | None = None

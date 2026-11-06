@@ -26,12 +26,12 @@ By leveraging the **System One (`/v1/systemone`)** pointer-head specification, `
 
 * **File & Recursive Directory Auditing (`klint`)**: Scan individual source files or entire directory trees concurrently with live progress reporting and built-in concurrency throttling.
 * **Recursive Python Project Structure Auditing (`klint-structure`)**: Audit Python package and directory hierarchies layer-by-layer, combining AST-based file metadata extraction (`imports`, `exports`, `classes`, `functions`, `line_count`, `__init__.py` public API status) with recursive subpackage dependency rollups and mutual cycle detection.
-* **Change-Summary Checks (`klint-change-summary`)**: Check an AI agent's summary of its own change at every level: each hunk against its code, then each file, package and the commit against the checked summaries below it. False, unsupported or missing statements are flagged, false ones first.
+* **Change-Summary Checks (`klint-change-summary`)**: Check an AI agent's summary of its own change at every level: each hunk against its code, then each file, package and the commit against the checked summaries below it. False, unsupported or missing statements are flagged, false ones first. The agent can write the summaries alone and let `klint` read the change from git.
 * **4-Way Semantic Judgment & Confidence Sorting**: Classifies rules into `Pass`, `Fail`, `Irrelevant`, or `Lack of Evidence`, automatically sorting findings from highest confidence to lowest and supporting `--min-confidence` filtering.
 * **Built-In Backend, React & Architectural Rule Packs** (in `klint/resources/catalog/`):
   * **File rules**: `backend.json` (N+1 queries, hardcoded secrets, sync blocking I/O, missing input validation, tight coupling, and more, for back-end code in any language), `react.json` (prop drilling, improper state colocation, direct DOM manipulation, overusing `useEffect`, missing hook dependency arrays, for TypeScript and JavaScript) and `file_design.json` (god components).
   * **Structure rules (`package_structure.json`)**: Circular package dependencies, layering violations, god packages, junk-drawer modules, barrel-file sprawl, leaky abstractions, missing package public APIs, and business logic in presentation layers.
-  * **Change-summary checks (`summary_checks.json`)**: Accuracy (no false statement, no unsupported reason, no contradiction with the level below) and completeness.
+  * **Change-summary checks (`summary_checks.json`)**: Accuracy (no false statement, no unsupported reason, no contradiction with the level below), completeness, and a summary for every hunk, file and commit (`has_summary`, answered by `klint` itself).
 
 ## Installation & Quickstart
 
@@ -57,6 +57,9 @@ klint-structure examples/mock_bad_project/
 
 # Check an agent's summaries of a change
 klint-change-summary examples/change_summary/summaries.json
+
+# The same summaries alone, with the change read from git (commit d35fa76)
+klint-change-summary examples/change_summary/summaries_only.json
 ~~~
 
 ## Commands
@@ -65,7 +68,7 @@ klint-change-summary examples/change_summary/summaries.json
 | :--- | :--- | :--- |
 | `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory. |
 | `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory. |
-| `klint-change-summary` | An agent's summaries of a change: each hunk against its code, and each file, package and the commit against the checked summaries below it. | A change-summary JSON document; see [examples/change_summary/README.md](examples/change_summary/README.md). |
+| `klint-change-summary` | An agent's summaries of a change: each hunk against its code, and each file, package and the commit against the checked summaries below it. | A change-summary JSON document: summaries with each hunk's code, or summaries alone; see [Change-summary documents](#change-summary-documents). |
 
 Every command takes these options:
 
@@ -83,6 +86,42 @@ klint examples/ --all-answers
 klint examples/ --json
 klint-structure examples/mock_bad_project/ --min-confidence 0.25 --json
 ~~~
+
+### Change-summary documents
+`klint-change-summary` takes a JSON document in one of two forms. Both hold a summary for each hunk, each file, each package you choose to summarize, and the whole commit.
+
+| Form | What it holds | Where the code comes from |
+| :--- | :--- | :--- |
+| With the code | `diff_command`, and a nested `root_package` whose hunks hold their removed and added lines. | The document. |
+| Summaries only | `git_change`, the commit's `summary`, and flat `packages` and `files` lists. | git, in the repository of the current directory. |
+
+A summaries-only document, abridged from [examples/change_summary/summaries_only.json](examples/change_summary/summaries_only.json):
+~~~json
+{
+  "schema_version": 1,
+  "git_change": {"commit": "d35fa76"},
+  "summary": "Lists a binary file by name only in the project audit, and adds tests for it.",
+  "packages": [
+    {"path": "tests", "summary": "Adds two tests that a binary file is listed by name only."}
+  ],
+  "files": [
+    {
+      "path": "src/catalog/code/common/extractors/traits_based_extraction_delegator.py",
+      "summary": "Lists a likely binary file by name only.",
+      "hunks": [
+        {"header": "@@ -20,0 +21 @@", "summary": "Imports is_likely_binary."}
+      ]
+    }
+  ]
+}
+~~~
+* **The change**: `git_change.commit` names a commit as git does (`HEAD`, a hash), which is checked against its first parent. With no `commit`, as in `"git_change": {}`, the change is the uncommitted one against `HEAD`: staged and unstaged edits and untracked files, not ignored ones. The document's own file is never part of the change.
+* **The hunks**: each hunk is named by its header as `git diff -U0` writes it, for example in the output of `git diff -U0 HEAD` or `git show -U0 <commit>`. Text after the closing `@@` is ignored. An untracked file is one hunk, `@@ -0,0 +1,N @@`. A binary file, or a rename without edits, has no hunk: summarize it at the file level. A renamed file is listed by its new path. In the report, a hunk is `<path>#<n>`, numbered from 1 in its file.
+* **The packages**: optional directories you summarize. Each file and package sits in the deepest listed package that holds it, else directly in the commit.
+* **A missing summary**: a hunk or file of the change, a listed package or the commit with no summary fails `has_summary` (exit 1). `klint` answers that check itself, with no confidence (and no `location` for a summary the document does not list), and answers "Cannot Tell" for the summary just above it, since the judge would read an incomplete premise there.
+* **A summary that does not fit the change** stops the command (exit 2): a hunk, file or package the change does not hold, or a header that is not a hunk header. So do an unknown commit, a directory outside any git repository, and an empty change.
+
+See [examples/change_summary/README.md](examples/change_summary/README.md) for both forms of one real change.
 
 ### What a command prints
 * **The judge**: a line on stderr, before the audit, names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local)`.

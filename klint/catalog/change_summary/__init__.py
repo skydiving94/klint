@@ -10,10 +10,16 @@ from klint.catalog.change_summary.change_summary_suite import (
     ChangeSummarySuite,
     ChangeSummarySuiteModule,
 )
+from klint.catalog.change_summary.documents import (
+    ChangeSummaryInput,
+    ChangeSummarySourceFactory,
+)
 
 __all__ = [
     "CHANGE_SUMMARY_KIND_ID",
     "ChangeSummaryExtractor",
+    "ChangeSummaryInput",
+    "ChangeSummarySourceFactory",
     "ChangeSummarySuite",
     "ChangeSummarySuiteModule",
 ]
