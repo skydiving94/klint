@@ -94,3 +94,90 @@ def test_nesting_depth_counts_from_the_directory_and_shows_the_deepest_level(
     assert (
         "Deepest Subdirectory Below This Directory: catalog/code (2 levels down)"
     ) in data_request.subject.splitlines()
+
+
+def _list_importer_lines(request: JudgeRequest) -> list[str]:
+    """Return the lines on what the rest of the tree imports of the package."""
+    lines = request.subject.splitlines()
+    (start,) = [
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("Imported From Elsewhere in the Audited Tree")
+    ]
+    return lines[start : start + 4]
+
+
+def test_each_package_shows_what_the_rest_of_the_tree_imports_of_it(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    write_text(project / "shop" / "__init__.py", "from .cart import Cart\n")
+    write_text(project / "shop" / "cart.py", "class Cart:\n    pass\n")
+    write_text(project / "shop" / "pricing" / "__init__.py", "")
+    write_text(project / "shop" / "pricing" / "rules.py", "def discount(): ...\n")
+    write_text(project / "web" / "__init__.py", "")
+    write_text(
+        project / "web" / "views.py",
+        "from shop import Cart\nimport shop.cart\n"
+        "from shop.pricing.rules import discount\n",
+    )
+    write_text(project / "web" / "api.py", "from shop.pricing import rules\n")
+
+    judge = _audit_with_the_structure_rules(project)
+
+    # The package's own imports of its modules are not counted.
+    assert _list_importer_lines(_find_request_about(judge, project / "shop")) == [
+        "Imported From Elsewhere in the Audited Tree (callers outside the tree, "
+        "such as tests, entry points or other projects, are not counted):",
+        "  The package itself: by 1 module [web.views]",
+        "  Its subpackages: by 1 module, as [shop.pricing]",
+        "  Its module files directly: by 2 modules, as [shop.cart, shop.pricing.rules]",
+    ]
+    assert _list_importer_lines(_find_request_about(judge, project / "web"))[1:] == [
+        "  The package itself: none",
+        "  Its subpackages: none",
+        "  Its module files directly: none",
+    ]
+    # Every caller of the audited directory itself is outside the tree.
+    assert _list_importer_lines(_find_request_about(judge, project))[0] == (
+        "Imported From Elsewhere in the Audited Tree: not shown, since this is "
+        "the audited directory itself; all its callers, such as tests, entry "
+        "points or other projects, are outside the tree"
+    )
+
+
+def test_importers_are_named_from_an_audited_package_and_its_relative_imports(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "app"
+    write_text(package / "__init__.py", "")
+    write_text(package / "store" / "__init__.py", "")
+    write_text(package / "store" / "orders.py", "x = 1\n")
+    write_text(package / "web" / "__init__.py", "")
+    write_text(package / "web" / "routes.py", "from ..store import orders\n")
+
+    judge = _audit_with_the_structure_rules(package)
+
+    assert _list_importer_lines(_find_request_about(judge, package / "store"))[1:] == [
+        "  The package itself: by 1 module [app.web.routes]",
+        "  Its subpackages: none",
+        "  Its module files directly: by 1 module, as [app.store.orders]",
+    ]
+
+
+def test_a_folder_holding_a_package_is_read_as_a_folder_on_the_import_path(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    write_text(repo / "src" / "shop" / "__init__.py", "")
+    write_text(repo / "src" / "shop" / "cart.py", "x = 1\n")
+    write_text(repo / "tests" / "test_cart.py", "from shop.cart import x\n")
+
+    judge = _audit_with_the_structure_rules(repo)
+
+    request = _find_request_about(judge, repo / "src" / "shop")
+    assert _list_importer_lines(request)[1:] == [
+        "  The package itself: none",
+        "  Its subpackages: none",
+        "  Its module files directly: by 1 module, as [shop.cart]",
+    ]

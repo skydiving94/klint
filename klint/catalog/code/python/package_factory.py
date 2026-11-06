@@ -6,13 +6,17 @@ from klint.catalog.code.language_neutral import (
     AuditableFileMetadataUnit,
 )
 from klint.catalog.code.language_neutral.extraction import BaseDirectoryUnitFactory
-from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
+from klint.catalog.code.python.package_importers import map_package_path_to_importers
+from klint.catalog.code.python.package_unit import (
+    AuditablePythonPackageUnit,
+    PackageImporters,
+)
 from klint.catalog.code.python.project_module_names import list_project_module_names
 from klint.core.models.units import UnitTraits
 
 
 class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
-    """Builds Python package units and tells each one the project's module names."""
+    """Builds Python package units and tells each one what its whole tree shows."""
 
     def build_directory_unit(
         self,
@@ -32,20 +36,30 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
     def update_units_after_full_walk(
         self, root_unit: AuditableDirectoryUnit
     ) -> AuditableDirectoryUnit:
-        """Give every package in the tree the module names found anywhere in it.
+        """Tell every package in the tree what the whole tree shows of it.
 
-        Each package can then tell the project's own imports from external ones.
+        Each package is given the module names found anywhere in the tree, so
+        that it can tell the project's own imports from external ones, and
+        what the other modules of the tree import of it.
         """
         if not isinstance(root_unit, AuditablePythonPackageUnit):
             return root_unit
-        project_module_names = tuple(sorted(list_project_module_names(root_unit)))
-        return self._attach_project_modules(root_unit, project_module_names)
+        return self._attach_tree_facts(
+            root_unit,
+            tuple(sorted(list_project_module_names(root_unit))),
+            map_package_path_to_importers(root_unit),
+        )
 
-    def _attach_project_modules(
-        self, unit: AuditableDirectoryUnit, project_module_names: tuple[str, ...]
+    def _attach_tree_facts(
+        self,
+        unit: AuditableDirectoryUnit,
+        project_module_names: tuple[str, ...],
+        package_path_to_importers: dict[str, PackageImporters],
     ) -> AuditableDirectoryUnit:
         updated_subdirs = [
-            self._attach_project_modules(sub, project_module_names)
+            self._attach_tree_facts(
+                sub, project_module_names, package_path_to_importers
+            )
             for sub in unit.subdirectories
         ]
         if not isinstance(unit, AuditablePythonPackageUnit):
@@ -54,4 +68,5 @@ class PythonPackageUnitFactory(BaseDirectoryUnitFactory):
             unit,
             subdirectories=updated_subdirs,
             project_module_names=project_module_names,
+            importers=package_path_to_importers.get(unit.directory_path),
         )

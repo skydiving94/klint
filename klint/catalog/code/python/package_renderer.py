@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 
 from klint.catalog.code.language_neutral import (
     AuditableDirectoryUnit,
@@ -6,22 +6,28 @@ from klint.catalog.code.language_neutral import (
     format_display_path,
     list_tree_lines,
 )
-from klint.catalog.code.python.package_unit import AuditablePythonPackageUnit
+from klint.catalog.code.python.package_unit import (
+    AuditablePythonPackageUnit,
+    ImportGroup,
+)
 from klint.catalog.code.python.project_module_names import list_project_module_names
 from klint.catalog.domain_neutral import join_lines_within_budget
 from klint.core.interfaces import BaseUnitRenderer
 from klint.core.models.audits import RenderInput
+
+# The most names a line on a package's importers lists.
+_MAX_LISTED_NAMES = 6
 
 
 class PythonPackageRenderer(BaseUnitRenderer):
     """Shows the judge a directory as a Python package.
 
     Before the tree, it shows the number of Python modules directly in the
-    package, its deepest subdirectory, its public API, the imports in its
-    tree split into the project's own and external ones, and cycles between
-    its subpackages. A file in its tree that cannot be parsed is named,
-    since what it holds is unknown. The tree is shown as far as the
-    character budget goes.
+    package, its deepest subdirectory, its public API, what the rest of the
+    audited tree imports of it, the imports in its tree split into the
+    project's own and external ones, and cycles between its subpackages. A
+    file in its tree that cannot be parsed is named, since what it holds is
+    unknown. The tree is shown as far as the character budget goes.
     """
 
     def render_subject(self, render_input: RenderInput) -> str:
@@ -48,6 +54,9 @@ class PythonPackageRenderer(BaseUnitRenderer):
             f"{len(python_modules)} [{', '.join(python_modules)}]",
             describe_deepest_subdirectory(package),
             f"Package Public API Status: {_describe_public_api(package)}",
+            # Before the import lists, which can be long: what the budget
+            # cuts is at the end.
+            *_list_importer_lines(package),
             "Internal Project Imports in Tree: "
             f"[{', '.join(project_imports) if project_imports else 'none'}]",
             "External / Third-Party / Stdlib Imports in Tree: "
@@ -105,6 +114,52 @@ def _describe_public_api(package: AuditablePythonPackageUnit) -> str:
     if init_file.exports:
         return f"present (__init__.py exports: [{', '.join(init_file.exports)}])"
     return "minimal (__init__.py exists but declares no explicit exports or __all__)"
+
+
+def _list_importer_lines(package: AuditablePythonPackageUnit) -> list[str]:
+    """Return the lines on what the rest of the audited tree imports of the package.
+
+    The imports of the package itself are listed apart from those of its
+    subpackages and of its module files.
+    """
+    heading = "Imported From Elsewhere in the Audited Tree"
+    if package.importers is None:
+        return [
+            f"{heading}: not shown, since this is the audited directory itself; "
+            "all its callers, such as tests, entry points or other projects, "
+            "are outside the tree"
+        ]
+    importers = package.importers
+    return [
+        f"{heading} (callers outside the tree, such as tests, entry points or "
+        "other projects, are not counted):",
+        "  The package itself: "
+        + _describe_import_group(importers.of_package, is_listing_names=False),
+        "  Its subpackages: " + _describe_import_group(importers.of_subpackages),
+        "  Its module files directly: " + _describe_import_group(importers.of_modules),
+    ]
+
+
+def _describe_import_group(group: ImportGroup, is_listing_names: bool = True) -> str:
+    """Say how many modules import ``group``, then name the importers or the names.
+
+    The names imported are listed when ``is_listing_names``, the importers
+    otherwise; each list is cut after a few names.
+    """
+    if not group.importers:
+        return "none"
+    count = len(group.importers)
+    module_word = "module" if count == 1 else "modules"
+    if is_listing_names:
+        return f"by {count} {module_word}, as {_format_names(group.imported_names)}"
+    return f"by {count} {module_word} {_format_names(group.importers)}"
+
+
+def _format_names(names: Sequence[str]) -> str:
+    """Return ``names`` in brackets, the first few only, saying how many are left."""
+    listed = ", ".join(names[:_MAX_LISTED_NAMES])
+    left_out = len(names) - _MAX_LISTED_NAMES
+    return f"[{listed}, and {left_out} more]" if left_out > 0 else f"[{listed}]"
 
 
 def _list_dependency_roll_up_lines(
