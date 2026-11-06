@@ -19,6 +19,7 @@ from tests.support.change_summary import (
     HypothesisJudge,
     copy_greeting_document,
 )
+from tests.support.fakes import CountingJudge
 
 Capture = pytest.CaptureFixture[str]
 _FLAG_FALSE_IMPORT = {"import of sys": {"no_false_statement": "inaccurate"}}
@@ -213,3 +214,12 @@ def test_a_summary_the_judge_answers_nothing_about_is_a_refusal(
 
     report = capsys.readouterr().out
     assert find_table_row(report, "False statement")[1:4] == ["1", "1", "-"]
+
+
+def test_the_judge_is_sent_one_request_at_a_time(tmp_path: Path) -> None:
+    write_case_file(tmp_path, "greeting", FALSE_IMPORT_MISTAKE)
+    judge = CountingJudge()
+
+    run_scoring_command(judge, tmp_path)
+
+    assert judge.most_at_once == 1
