@@ -48,9 +48,10 @@ klint/
 ├── app/                     # What runs an audit: settings (environment, klint.json), the injector, the kinds of audit on offer
 │   └── pipeline/            # One audit run, in stages: acquisition, rule selection, auditing, roll-up
 ├── catalog/                 # The built-in suites
-│   ├── domain_neutral/      # What fits any content: whole files, JSON documents, file traits (extension, tags, a project's overrides)
+│   ├── domain_neutral/      # What fits any content: whole files, JSON documents, a change read from git, file traits (extension, tags, a project's overrides)
 │   │   ├── extraction/
-│   │   └── file_traits_identifiers/
+│   │   ├── file_traits_identifiers/
+│   │   └── git/             # A commit, or the uncommitted change, read hunk by hunk
 │   ├── code/                # The code suite: file contents (klint) and project structure (klint-structure)
 │   │   ├── language_neutral/  # Units, renderers and extractors shared by every programming language
 │   │   │   └── extraction/
@@ -101,7 +102,7 @@ examples/                    # Deliberately bad code, a mock project and change-
 4. Add the new package to the "language-neutral code does not import one language" contract in `pyproject.toml`.
 
 ### Adding a suite
-1. Create `klint/catalog/<suite>/` with its unit classes (subclasses of `AuditableUnit`, each with a `unit_type`), an extractor (`BaseUnitExtractor`), a renderer for each unit class (`BaseUnitRenderer`), and a `BaseSuite` whose `list_audit_kinds()` returns its `AuditKind`s and whose `register_unit_types()` registers its units.
+1. Create `klint/catalog/<suite>/` with its unit classes (subclasses of `AuditableUnit`, each with a `unit_type`), an extractor (`BaseUnitExtractor`), a renderer for each unit class (`BaseUnitRenderer`, whose `find_known_answers` may answer a rule without the judge), and a `BaseSuite` whose `list_audit_kinds()` returns its `AuditKind`s and whose `register_unit_types()` registers its units.
 2. Add an injector `Module` that multibinds the suite to `list[BaseSuite]`, and install it in `BuiltInSuitesModule` (`klint/catalog/built_in_suites.py`).
 3. Add the suite to the suite contracts in `pyproject.toml`.
 4. For a command of its own, add an `AuditCommand` in `klint/cli/` and a console script in `pyproject.toml`.
