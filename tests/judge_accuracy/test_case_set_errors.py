@@ -117,3 +117,20 @@ def test_a_true_document_klint_cannot_read_ends_with_exit_2(
         "[judge-accuracy] Error: greeting: Change-summary document: "
         "#/schema_version is 7; klint reads schema_version 1 only\n"
     )
+
+
+def test_a_contradiction_planted_in_a_hunk_summary_ends_with_exit_2(
+    tmp_path: Path, capsys: Capture
+) -> None:
+    write_case_file(
+        tmp_path,
+        "greeting",
+        FALSE_IMPORT_MISTAKE | {"mistake_kind": "contradiction"},
+    )
+
+    error = _run_and_read_error(tmp_path, capsys)
+
+    assert error.endswith(
+        f"[judge-accuracy] Error: greeting: {IMPORT_HUNK_POINTER}: a contradiction "
+        "is planted in a hunk summary, which has no summary one level down\n"
+    )
