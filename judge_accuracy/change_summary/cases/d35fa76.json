@@ -28,7 +28,7 @@
           },
           {
             "header": "@@ -31 +32,2 @@",
-            "summary": "Adds to the class docstring that a binary file is read by no extractor and is listed by name only."
+            "summary": "Adds to a docstring that a binary file is read by no extractor and is listed by name only."
           },
           {
             "header": "@@ -53 +55,6 @@",
@@ -46,7 +46,7 @@
         "hunks": [
           {
             "header": "@@ -12 +12 @@",
-            "summary": "Lets FileMetadataPayload.line_count be None, keeping 0 as its default."
+            "summary": "Lets a line_count field be None, keeping 0 as its default."
           },
           {
             "header": "@@ -21 +21,5 @@",
@@ -54,7 +54,7 @@
           },
           {
             "header": "@@ -27 +31 @@",
-            "summary": "Lets the unit's line_count be None, keeping 0 as its default."
+            "summary": "Lets a line_count field be None, keeping 0 as its default."
           },
           {
             "header": "@@ -33,0 +38,2 @@",
@@ -100,7 +100,7 @@
     {
       "summary_pointer": "#/files/1/hunks/0/summary",
       "mistake_kind": "false_statement",
-      "summary": "Lets FileMetadataPayload.line_count be None, and makes None its default instead of 0.",
+      "summary": "Lets a line_count field be None, and makes None its default instead of 0.",
       "why_wrong": "The default stays 0."
     },
     {

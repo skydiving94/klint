@@ -148,14 +148,14 @@ def _build_planted_mistake(
 
 def _check_mistakes_differ(mistakes: Sequence[PlantedMistake]) -> None:
     """Raise ValueError when two planted mistakes put the same summary in one place."""
-    seen: set[tuple[str, str]] = set()
+    pointer_to_summaries: dict[str, set[str]] = {}
     for mistake in mistakes:
-        key = (mistake.summary_pointer, mistake.summary)
-        if key in seen:
+        summaries = pointer_to_summaries.setdefault(mistake.summary_pointer, set())
+        if mistake.summary in summaries:
             raise ValueError(
                 f"{mistake.summary_pointer} is given the same planted summary twice"
             )
-        seen.add(key)
+        summaries.add(mistake.summary)
 
 
 def _require_mapping(value: JsonValue, what: str) -> Mapping[str, JsonValue]:

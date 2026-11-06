@@ -41,7 +41,7 @@ class JudgedSummary:
     is_over_cut tells that its evidence did not fit within the character
     budget, so the judge read only part of it. mistake_kind is None for a
     true summary. findings are the findings on its unit, None when the judge
-    refused to answer about it.
+    refused to answer about it; an answer to no check is a refusal too.
     """
 
     case_file_name: str
@@ -55,7 +55,7 @@ class JudgedSummary:
         return self.mistake_kind is None
 
     def is_refused(self) -> bool:
-        return self.findings is None
+        return not self.findings
 
     def is_flagged(
         self, min_confidence: float, checks: Set[SummaryCheck] | None = None

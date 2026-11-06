@@ -10,11 +10,11 @@
     "packages": [
       {
         "path": "src",
-        "summary": "Lets a rule be limited to languages and carry tags: AuditRule gains both lists and every auditable unit an optional language, a rule with languages applies only to units of one of them, and the JSON rule loader reads both lists, rejecting a value that is not a list of strings."
+        "summary": "Lets a rule be limited to languages and carry tags: a rule gains both lists and every auditable unit an optional language, a rule with languages applies only to units of one of them, and the JSON rule loader reads both lists, rejecting a value that is not a list of strings."
       },
       {
         "path": "src/core/models",
-        "summary": "Gives AuditRule a list of languages and a list of tags, and every auditable unit an optional, keyword-only language; a rule with languages applies only to units whose language is one of them, compared without regard to case."
+        "summary": "Gives a rule a list of languages and a list of tags, and every auditable unit an optional, keyword-only language; a rule with languages applies only to units whose language is one of them, compared without regard to case."
       },
       {
         "path": "tests",
@@ -24,11 +24,11 @@
     "files": [
       {
         "path": "src/core/models/rule.py",
-        "summary": "Gives AuditRule a list of languages and a list of tags, both empty by default, and limits a rule with languages to units whose language is one of them, compared without regard to case; a unit whose language is None does not match.",
+        "summary": "Gives a rule a list of languages and a list of tags, both empty by default, and limits a rule with languages to units whose language is one of them, compared without regard to case; a unit whose language is None does not match.",
         "hunks": [
           {
             "header": "@@ -13,0 +14,4 @@",
-            "summary": "Adds two fields to AuditRule, both empty lists by default: languages, the languages the rule is limited to, where empty means any language or none, and tags, labels for what the rule is about, such as \"security\"."
+            "summary": "Adds two fields to the rule, both empty lists by default: languages, the languages the rule is limited to, where empty means any language or none, and tags, labels for what the rule is about, such as \"security\"."
           },
           {
             "header": "@@ -16 +20,8 @@",
@@ -178,13 +178,13 @@
     {
       "summary_pointer": "#/files/0/summary",
       "mistake_kind": "false_statement",
-      "summary": "Gives AuditRule a list of languages and a list of tags, both empty by default, sorts the tags alphabetically, and limits a rule with languages to units whose language is one of them, compared without regard to case; a unit whose language is None does not match.",
+      "summary": "Gives a rule a list of languages and a list of tags, both empty by default, sorts the tags alphabetically, and limits a rule with languages to units whose language is one of them, compared without regard to case; a unit whose language is None does not match.",
       "why_wrong": "Neither hunk summary says anything about sorting tags."
     },
     {
       "summary_pointer": "#/packages/1/summary",
       "mistake_kind": "contradiction",
-      "summary": "Gives AuditRule a list of languages and a list of tags, and every auditable unit a required language; a rule with languages applies only to units whose language is one of them, compared without regard to case.",
+      "summary": "Gives a rule a list of languages and a list of tags, and every auditable unit a required language; a rule with languages applies only to units whose language is one of them, compared without regard to case.",
       "why_wrong": "The unit.py summary says the language is optional and None by default."
     },
     {

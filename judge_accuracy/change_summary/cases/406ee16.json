@@ -42,7 +42,7 @@
           },
           {
             "header": "@@ -48,2 +56,9 @@",
-            "summary": "Wraps the request to the endpoint in a try block, with the urlopen call split over several lines: an HTTPError whose status is 401 or 403 is raised again as JudgeAccessRefusedError, with the message _describe_refusal gives; any other HTTPError is raised again unchanged."
+            "summary": "Wraps the request to the endpoint in a try block, with the urlopen call split over several lines: an HTTPError whose status is in _ACCESS_REFUSED_STATUSES is raised again as JudgeAccessRefusedError, with the message _describe_refusal gives; any other HTTPError is raised again unchanged."
           },
           {
             "header": "@@ -50,0 +66,10 @@",
