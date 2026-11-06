@@ -141,6 +141,22 @@ class _TreeIndex:
         return None
 
 
+@dataclass
+class _PackageImports:
+    """The imports of one package from outside its tree, by what they import."""
+
+    of_package: list[_TreeImport] = field(default_factory=list)
+    of_subpackages: list[_TreeImport] = field(default_factory=list)
+    of_modules: list[_TreeImport] = field(default_factory=list)
+
+    def summarize(self) -> PackageImporters:
+        return PackageImporters(
+            of_package=_build_group(self.of_package),
+            of_subpackages=_build_group(self.of_subpackages),
+            of_modules=_build_group(self.of_modules),
+        )
+
+
 def map_package_path_to_importers(
     root: AuditableDirectoryUnit,
 ) -> dict[str, PackageImporters]:
@@ -157,34 +173,27 @@ def map_package_path_to_importers(
         is_import_root=not is_package,
         is_inside_package=False,
     )
-    imports = index.list_imports()
-    return {
-        directory.directory_path: _collect_package_importers(directory, imports)
-        for directory in _list_directories_beneath(root)
-    }
-
-
-def _collect_package_importers(
-    directory: AuditableDirectoryUnit, imports: list[_TreeImport]
-) -> PackageImporters:
-    """Return what the imports from outside the tree of ``directory`` take of it."""
-    directory_path = PurePath(directory.directory_path)
-    of_package: list[_TreeImport] = []
-    of_subpackages: list[_TreeImport] = []
-    of_modules: list[_TreeImport] = []
-    for tree_import in imports:
-        if directory_path in tree_import.importer_path.parents:
-            continue
+    directory_paths = [d.directory_path for d in _list_directories_beneath(root)]
+    path_to_imports = {PurePath(path): _PackageImports() for path in directory_paths}
+    for tree_import in index.list_imports():
         imported = tree_import.imported_module
-        if imported.path == directory_path:
-            of_package.append(tree_import)
-        elif directory_path in imported.path.parents:
-            (of_subpackages if imported.is_package else of_modules).append(tree_import)
-    return PackageImporters(
-        of_package=_build_group(of_package),
-        of_subpackages=_build_group(of_subpackages),
-        of_modules=_build_group(of_modules),
-    )
+        # The imported package's own directory, then each directory above
+        # the imported module, up to the first that holds the importer too.
+        for directory_path in (imported.path, *imported.path.parents):
+            if directory_path in tree_import.importer_path.parents:
+                break
+            package_imports = path_to_imports.get(directory_path)
+            if package_imports is None:
+                continue
+            if directory_path == imported.path:
+                package_imports.of_package.append(tree_import)
+            elif imported.is_package:
+                package_imports.of_subpackages.append(tree_import)
+            else:
+                package_imports.of_modules.append(tree_import)
+    return {
+        path: path_to_imports[PurePath(path)].summarize() for path in directory_paths
+    }
 
 
 def _build_group(imports: list[_TreeImport]) -> ImportGroup:
