@@ -1,0 +1,3 @@
+{
+  "layers": ["klint.cli", "klint.app", "klint.catalog", "klint.infra", "klint.core"]
+}

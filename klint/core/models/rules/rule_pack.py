@@ -6,6 +6,9 @@ from enum import Enum, auto
 
 from klint.core.models.judging import QuestionType
 
+# Where a rule's question_with_layers shows the project's layers.
+LAYERS_PLACEHOLDER = "{layers}"
+
 
 @dataclass(frozen=True)
 class PackScope:
@@ -47,8 +50,11 @@ class RuleSpec:
 
     unit_types is the default when the rule names none. languages
     are the rule's own, before its pack's header narrows them; empty when
-    it names none. unit_tags are the unit tags the rule is limited to;
-    empty when it names none.
+    it names none. unit_tags are the unit tags the rule is limited to, and
+    excluded_unit_tags those it is never asked about; each empty when it
+    names none. question_with_layers is asked instead of question when the
+    project lists its layers, with LAYERS_PLACEHOLDER where they go; None
+    when the rule has no such question.
     """
 
     rule_id: str
@@ -58,6 +64,8 @@ class RuleSpec:
     languages: tuple[str, ...]
     tags: tuple[str, ...]
     unit_tags: tuple[str, ...] = ()
+    excluded_unit_tags: tuple[str, ...] = ()
+    question_with_layers: str | None = None
 
 
 class RuleProblemSeverity(Enum):

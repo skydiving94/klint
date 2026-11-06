@@ -68,4 +68,5 @@ Run it on your issue branch before marking a PR ready, and on `epic-67` before i
 3. Check each finding against the code; the judge has false positives, so never change code only because it was flagged. Fix each valid finding. Rebut each one that is not valid in a comment on the PR, naming the rule, the package and the facts. A finding already rebutted on an earlier PR may cite that rebuttal.
 4. Record the run, and the link to the rebuttal comment, in the PR.
 - The run fails only when an audit cannot run; findings alone leave it green.
+- The self-audit triage at each epic's start and end (`klint-structure klint/` against Jev) uses `--min-confidence 0.50`, the floor of Self-Audit's structure audit. A finding below it needs no rebuttal.
 - A branch cut from `epic-67` before e1cb0a6 cannot be started by hand: rebase it onto `epic-67` first.

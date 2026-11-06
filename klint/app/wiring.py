@@ -140,6 +140,7 @@ class KlintModule(Module):
             registry,
             set(file_extension_to_language.values()),
             project_rule_sources=_create_rule_sources(settings.project_rule_packs),
+            project_layers=settings.layers,
         )
 
     @singleton
@@ -168,6 +169,7 @@ class KlintModule(Module):
                     project_rule_sources=_create_rule_sources(
                         settings.project_rule_packs
                     ),
+                    project_layers=settings.layers,
                 ),
             )
 

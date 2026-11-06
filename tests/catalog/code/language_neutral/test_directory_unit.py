@@ -31,6 +31,7 @@ def test_directory_is_described_without_assuming_a_language(tmp_path: Path) -> N
     assert subject.splitlines() == [
         f"Target Directory Under Audit: {docs}",
         "Summary: 1 immediate files, 0 immediate subdirectories",
+        "Deepest Subdirectory Below This Directory: none (0 levels down)",
         f"Directory: {docs}",
         "  Files:",
         "    - intro.md (lines=3)",

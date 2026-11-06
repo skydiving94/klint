@@ -5,6 +5,7 @@ from collections.abc import Collection, Iterator, Sequence
 from klint.core import KlintWarning, UnitRegistry
 from klint.core.interfaces import BaseRuleLoader, BaseRuleSource
 from klint.core.models.rules import (
+    LAYERS_PLACEHOLDER,
     AuditRule,
     RulePackSpec,
     RuleProblemSeverity,
@@ -30,6 +31,9 @@ class RulePackLoader(BaseRuleLoader):
     does a rule with a field of the wrong kind or an unknown unit type. Any
     other problem in one rule is reported as a KlintWarning and the load goes
     on. known_languages are the languages a unit can be identified as.
+    project_layers are the project's layers, outermost first: when there are
+    some, a rule with a question for them is asked that question, showing
+    them.
     """
 
     def __init__(
@@ -39,7 +43,9 @@ class RulePackLoader(BaseRuleLoader):
         unit_registry: UnitRegistry,
         known_languages: Collection[str],
         project_rule_sources: Sequence[BaseRuleSource] = (),
+        project_layers: Sequence[str] = (),
     ) -> None:
+        self._project_layers = tuple(project_layers)
         self._rule_sources = list(rule_sources)
         self._fallback_rule_sources = list(fallback_rule_sources)
         self._project_rule_sources = list(project_rule_sources)
@@ -132,11 +138,20 @@ class RulePackLoader(BaseRuleLoader):
         return AuditRule(
             rule_id=spec.rule_id,
             question_type=spec.question_type,
-            question=spec.question,
+            question=self._choose_question(spec),
             unit_types=list(spec.unit_types),
             languages=languages,
             tags=list(spec.tags),
             unit_tags=list(spec.unit_tags),
+            excluded_unit_tags=list(spec.excluded_unit_tags),
+        )
+
+    def _choose_question(self, spec: RuleSpec) -> str:
+        """Return the question to ask: the one for layers, when the project has some."""
+        if not self._project_layers or spec.question_with_layers is None:
+            return spec.question
+        return spec.question_with_layers.replace(
+            LAYERS_PLACEHOLDER, ", ".join(self._project_layers)
         )
 
     def _does_keep_languages_of_its_pack(

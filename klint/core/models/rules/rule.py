@@ -19,6 +19,8 @@ class AuditRule:
     tags: list[str] = field(default_factory=list)
     # Unit tags the rule is limited to, such as "backend"; empty means any.
     unit_tags: list[str] = field(default_factory=list)
+    # Unit tags the rule is never asked about, such as "data".
+    excluded_unit_tags: list[str] = field(default_factory=list)
 
     def is_applicable_to(self, unit: AuditableUnit) -> bool:
         """Return True when the rule is asked about ``unit``.
@@ -26,12 +28,15 @@ class AuditRule:
         The rule must target the unit's type, and the unit's language must be
         one of the rule's languages, when it names some. A rule limited to
         unit tags applies to a unit with any of them, and to a unit with no
-        tags at all, since nothing tells which side such a unit belongs to.
+        tags at all, since nothing tells which side such a unit belongs to. A
+        unit with one of the rule's excluded unit tags is never asked it.
         """
         if unit.unit_type not in self.unit_types:
             return False
-        return self._is_language_allowed(unit.traits.language) and (
-            self._are_tags_allowed(unit.traits.tags)
+        return (
+            self._is_language_allowed(unit.traits.language)
+            and self._are_tags_allowed(unit.traits.tags)
+            and not self._is_excluded_by_tags(unit.traits.tags)
         )
 
     def _is_language_allowed(self, language: str | None) -> bool:
@@ -41,6 +46,10 @@ class AuditRule:
             return False
         allowed = {rule_language.lower() for rule_language in self.languages}
         return language.lower() in allowed
+
+    def _is_excluded_by_tags(self, unit_tags: frozenset[str]) -> bool:
+        excluded = {excluded_tag.lower() for excluded_tag in self.excluded_unit_tags}
+        return bool(excluded & {unit_tag.lower() for unit_tag in unit_tags})
 
     def _are_tags_allowed(self, unit_tags: frozenset[str]) -> bool:
         if not self.unit_tags or not unit_tags:

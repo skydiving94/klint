@@ -2,6 +2,7 @@
 
 from klint.core.models.rules.rule import DEFAULT_UNIT_TYPES, AuditRule
 from klint.core.models.rules.rule_pack import (
+    LAYERS_PLACEHOLDER,
     PackScope,
     RulePackSpec,
     RuleProblem,
@@ -12,6 +13,7 @@ from klint.core.models.rules.rule_set import RuleSet
 
 __all__ = [
     "DEFAULT_UNIT_TYPES",
+    "LAYERS_PLACEHOLDER",
     "AuditRule",
     "PackScope",
     "RulePackSpec",

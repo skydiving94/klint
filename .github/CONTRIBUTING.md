@@ -78,7 +78,7 @@ examples/                    # Deliberately bad code, a mock project and change-
 ~~~
 
 `uv run lint-imports` checks the boundaries between packages:
-* **Layers**: `cli` > `app` > `catalog` > `infra` > `core`. A layer imports only from the layers below it.
+* **Layers**: `cli` > `app` > `catalog` > `infra` > `core`. A layer imports only from the layers below it. The repository's `klint.json` lists the same layers, so that `klint-structure` shows them to the judge; change the two together.
 * **Core**: `klint.core` imports the standard library only.
 * **Suites**: `app` and `core` import no named suite (`catalog.code`, `catalog.change_summary`); the caller chooses the suites an audit draws on. `catalog.domain_neutral` imports no named suite, and the named suites do not import one another: what two suites share belongs in `catalog.domain_neutral`.
 * **Languages**: `catalog.code.language_neutral` does not import `catalog.code.python`.

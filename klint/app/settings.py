@@ -164,6 +164,8 @@ class AppSettings:
     # What the project's klint.json says about some files, over what is
     # detected; the first entry whose glob matches a file decides.
     file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
+    # The project's layers as its klint.json lists them, outermost first.
+    layers: tuple[str, ...] = ()
 
     @classmethod
     def from_env(
@@ -242,6 +244,7 @@ class AppSettings:
             file_traits_overrides=(
                 () if config is None else config.file_traits_overrides
             ),
+            layers=() if config is None else config.layers,
         )
 
     def describe_judge(self) -> str:
