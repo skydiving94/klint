@@ -142,6 +142,22 @@ def test_a_file_and_a_commit_with_no_summary_are_findings(
     assert output["examined_summaries"] == GREETER_UNIT_IDS
 
 
+def test_a_listed_package_with_no_summary_is_a_finding(
+    greeter: Path, capsys: Capture
+) -> None:
+    summaries = copy_greeter_summaries()
+    del summaries["packages"][0]["summary"]
+
+    exit_code = verify_summaries(
+        greeter / "summaries.json", HypothesisJudge(), summaries
+    )
+
+    (finding,) = json.loads(capsys.readouterr().out)["findings"]
+    assert exit_code == ExitCode.PROBLEMS_FOUND
+    assert (finding["unit_id"], finding["rule_id"]) == ("app/", "has_summary")
+    assert finding["location"]["path"] == "#/packages/0/summary"
+
+
 def test_a_renamed_file_is_summarized_by_its_new_path(
     greeter: Path, capsys: Capture
 ) -> None:
