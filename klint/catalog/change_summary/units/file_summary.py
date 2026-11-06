@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar
 
-from klint.catalog.change_summary.document import ChangeKind
+from klint.catalog.change_summary.documents import ChangeKind
 from klint.catalog.change_summary.units.hunk_summary_unit import (
     AuditableHunkSummaryUnit,
     locate_summary,

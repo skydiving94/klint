@@ -10,19 +10,19 @@ the deepest listed package that holds it. A hunk is named by its header, as
 from collections.abc import Container, Mapping, Sequence
 from dataclasses import dataclass
 
-from klint.catalog.change_summary.document import (
+from klint.catalog.change_summary.documents.document import (
     ROOT_PACKAGE_PATH,
     SUPPORTED_SCHEMA_VERSION,
     ChangeSummaryDocument,
     is_path_inside_package,
 )
-from klint.catalog.change_summary.git_summary_tree import (
+from klint.catalog.change_summary.documents.git_summary_tree import (
     FileEntry,
     SummaryEntry,
     build_file_summary,
     build_package_summary,
 )
-from klint.catalog.change_summary.json_fields import (
+from klint.catalog.change_summary.documents.json_fields import (
     build_document_error,
     list_items,
     read_count,

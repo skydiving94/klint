@@ -5,7 +5,7 @@ from injector import Binder, Module, ProviderOf, inject
 from klint.catalog.change_summary.change_summary_extractor import (
     ChangeSummaryExtractor,
 )
-from klint.catalog.change_summary.change_summary_source import (
+from klint.catalog.change_summary.documents import (
     ChangeSummarySourceFactory,
 )
 from klint.catalog.change_summary.renderers import (

@@ -1,14 +1,12 @@
 """Builds the tree of summary units of a change-summary document, in one pass."""
 
-from klint.catalog.change_summary.change_summary_source import ChangeSummaryInput
-from klint.catalog.change_summary.document import (
+from klint.catalog.change_summary.documents import (
     ROOT_PACKAGE_PATH,
     ChangeSummaryDocument,
+    ChangeSummaryInput,
     FileSummary,
     PackageSummary,
-)
-from klint.catalog.change_summary.document_reader import read_change_summary_document
-from klint.catalog.change_summary.git_summaries_reader import (
+    read_change_summary_document,
     read_summaries_of_git_change,
 )
 from klint.catalog.change_summary.units import (

@@ -6,7 +6,7 @@ level's own summary as the hypothesis; no code is shown at these levels.
 
 from collections.abc import Mapping, Sequence
 
-from klint.catalog.change_summary.document import ROOT_PACKAGE_PATH
+from klint.catalog.change_summary.documents import ROOT_PACKAGE_PATH
 from klint.catalog.change_summary.renderers.child_summary_lines import (
     ChildSummary,
     list_child_summary_lines,

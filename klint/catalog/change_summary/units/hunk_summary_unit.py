@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from klint.catalog.change_summary.document import ChangeKind, HunkSummary
+from klint.catalog.change_summary.documents import ChangeKind, HunkSummary
 from klint.catalog.change_summary.units.summary_context import (
     ChangeSummaryContext,
     SummaryLevel,

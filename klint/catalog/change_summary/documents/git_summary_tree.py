@@ -7,7 +7,7 @@ deepest listed package that holds it, else inside the root package.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from klint.catalog.change_summary.document import (
+from klint.catalog.change_summary.documents.document import (
     ROOT_PACKAGE_PATH,
     FileSummary,
     HunkSummary,

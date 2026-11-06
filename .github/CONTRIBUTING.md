@@ -57,6 +57,7 @@ klint/
 │   │   │   └── extraction/
 │   │   └── python/          # Python file outlines, package units, and the class and function units of a file
 │   └── change_summary/      # The change-summary suite (klint-change-summary)
+│       ├── documents/       # The two forms of a change-summary document, and how they are read
 │       ├── units/           # One unit for each hunk, file and package summary
 │       └── renderers/       # What the judge reads about each summary
 ├── infra/                   # What the core is wired to

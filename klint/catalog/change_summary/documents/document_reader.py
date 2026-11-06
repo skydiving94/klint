@@ -7,7 +7,7 @@ fragment: "#/root_package/files/0/summary".
 from collections.abc import Mapping
 from typing import TypeGuard
 
-from klint.catalog.change_summary.document import (
+from klint.catalog.change_summary.documents.document import (
     ROOT_PACKAGE_PATH,
     SUPPORTED_SCHEMA_VERSION,
     ChangeKind,
@@ -17,7 +17,7 @@ from klint.catalog.change_summary.document import (
     PackageSummary,
     is_path_inside_package,
 )
-from klint.catalog.change_summary.json_fields import (
+from klint.catalog.change_summary.documents.json_fields import (
     build_document_error,
     list_items,
     read_count,

@@ -4,7 +4,7 @@ import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 
-from klint.catalog.change_summary.git_summaries_reader import (
+from klint.catalog.change_summary.documents.git_summaries_reader import (
     read_git_change_selection,
 )
 from klint.catalog.domain_neutral import JsonDocumentSourceFactory
