@@ -320,6 +320,7 @@ jobs:
    }
    ~~~
    Checking takes a few seconds a summary, so a large change may need a longer `timeout`. To block only on failures with at least some confidence, add an option to the command, such as `klint-change-summary-stop-hook --min-confidence 0.5`.
+4. **Commit** `.claude/settings.json` and any `klint.json` you added, or they are part of the change the agent is asked to summarize.
 
 ### What the hook does
 | When the agent is about to stop | The hook |
