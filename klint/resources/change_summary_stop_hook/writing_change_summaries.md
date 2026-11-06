@@ -32,4 +32,4 @@ What klint checks, one level at a time:
 - In each check, your summary is the "hypothesis" and its evidence is the "premise".
 - A summary may not state anything its evidence does not show, nor a reason, goal or benefit its evidence does not state. It may not contradict a summary one level down. It must mention every change its evidence shows.
 
-So describe what the code does, not why, unless the code or a summary one level down says why. Sum up the level below without adding to it.
+So describe what the code does, not why, unless the code or a summary one level down says why. Sum up the level below without adding to it: a file, package or commit summary may name only what the summaries one level down name. For a file summary that names the function a hunk changes, such as `greet()`, name that function in the hunk's summary too.
