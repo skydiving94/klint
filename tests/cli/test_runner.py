@@ -8,15 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli import file_audit, structure_audit
-from klint.cli.exit_code import ExitCode
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.cli.runner import (
+from klint.cli import (
+    FILE_AUDIT_COMMAND,
+    STRUCTURE_AUDIT_COMMAND,
     AuditCommand,
+    ExitCode,
     parse_command_arguments,
     run_command_from_shell,
+    run_file_audit,
+    run_structure_audit,
 )
-from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -141,8 +142,9 @@ def test_warning_raised_while_settings_load_is_printed_before_the_command_goes_o
 
     # The command went on past the warning, as far as the missing target.
     assert exit_code == ExitCode.RUN_ERROR
-    warning_line, error_line = capsys.readouterr().err.splitlines()
+    warning_line, judge_line, error_line = capsys.readouterr().err.splitlines()
     assert warning_line.startswith("[klint] Warning: ")
+    assert judge_line.startswith("[klint] Judge: ")
     assert "unknown keys ['KLINT_JUDGE_MODLE']" in warning_line
     assert error_line.startswith("[klint] Error: Audit target does not exist")
 
@@ -177,7 +179,7 @@ def test_exit_code_says_whether_a_failure_was_found(
     assert exit_code == expected_exit_code
 
 
-@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [run_file_audit, run_structure_audit])
 def test_command_that_cannot_run_exits_with_status_2(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -194,7 +196,7 @@ def test_command_that_cannot_run_exits_with_status_2(
     assert "does not exist" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [run_file_audit, run_structure_audit])
 def test_command_line_that_cannot_be_parsed_exits_with_status_2(
     monkeypatch: pytest.MonkeyPatch, cli_main: Callable[[], int]
 ) -> None:
@@ -206,7 +208,7 @@ def test_command_line_that_cannot_be_parsed_exits_with_status_2(
     assert stopped.value.code == ExitCode.RUN_ERROR
 
 
-@pytest.mark.parametrize("cli_main", [file_audit.cli_main, structure_audit.cli_main])
+@pytest.mark.parametrize("cli_main", [run_file_audit, run_structure_audit])
 def test_unknown_mode_stops_the_command_before_any_judge_is_built(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -263,8 +265,9 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    (warning_line,) = capsys.readouterr().err.splitlines()
+    warning_line, judge_line = capsys.readouterr().err.splitlines()
     assert warning_line.startswith(f"[klint] Warning: The 'env' key in '{rules_file}'")
+    assert judge_line.startswith("[klint] Judge: from-klint-json at ")
     # Settings come from klint.json only; the rules of both files are asked,
     # and those of --rules win by rule ID.
     (received,) = system_one_server.received

@@ -5,10 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit_traits import UnitTraits
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
-from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
+from klint.core.models.rules import AuditRule
+from klint.core.models.units import UnitTraits
+from klint.infra.rule_loader import JsonFileRuleSource, RulePackLoader
 from tests.support.builders import (
     FILE_RULE,
     UNIT_REGISTRY,

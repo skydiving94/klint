@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
+from klint.app.pipeline import AuditOutcome, AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.models.audit_input import DiskPathInput, InMemoryBytesInput
-from klint.core.models.scale import AnswerChoice
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
+from klint.core.interfaces import BaseAuditProgressListener
+from klint.core.models.audits import DiskPathInput, InMemoryBytesInput
+from klint.core.models.judging import AnswerChoice
+from klint.infra.rule_loader import JsonFileRuleSource
 from tests.support.builders import (
     FAIL,
     PASS,

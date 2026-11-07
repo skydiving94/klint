@@ -4,14 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
+from klint.catalog.domain_neutral.file_traits_identifiers import (
     ExtensionFileTraitsIdentifier,
-)
-from klint.catalog.domain_neutral.file_traits_identifiers.tag_detecting_identifier import (  # noqa: E501
     TagDetectingFileTraitsIdentifier,
 )
-from klint.core.models.tag_detection_table import TagDetectionTable
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.scanning import TagDetectionTable
+from klint.core.models.units import UnitTraits
 
 BACKEND = frozenset({"backend"})
 FRONTEND = frozenset({"frontend"})

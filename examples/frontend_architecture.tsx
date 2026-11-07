@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-// Antipattern: ignoring_composition (taking dozens of rigid layout/config props instead of `children` or slots)
 interface RigidCardProps {
   titleText: string;
   subtitleText: string;
@@ -34,7 +33,6 @@ function DeeplyNestedLeafBadge({
   );
 }
 
-// Antipattern: prop_drilling (intermediate components forwarding props they never use)
 function IntermediateCardSection({
   tooltipHoverText,
   setTooltipHoverText,
@@ -88,9 +86,6 @@ function RigidConfigurableCard(props: RigidCardProps) {
   );
 }
 
-// Antipattern: god_component & improper_state_colocation
-// Lifts `tooltipHoverText` to the top-level root when only `DeeplyNestedLeafBadge` uses it,
-// and combines auth state, billing forms, theme management, and layout rendering in one component.
 export function EnterpriseDashboardGodApp() {
   const [tooltipHoverText, setTooltipHoverText] = useState(
     'Default leaf tooltip',

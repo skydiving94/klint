@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "about": "Commit bf9fbb6, \"Issue #3 - Add language and tag scope to rules\", from the old src/ layout. The hunk of tests/test_rule.py is over the 2,000-character cut.",
+  "true_document": {
+    "schema_version": 1,
+    "git_change": {
+      "commit": "bf9fbb6"
+    },
+    "summary": "Adds languages and tags to rules: a rule with languages applies only to units of one of those languages, every auditable unit gets an optional language, and the JSON rule loader reads both lists; tests cover each part.",
+    "packages": [
+      {
+        "path": "src",
+        "summary": "Lets a rule be limited to languages and carry tags: a rule gains both lists and every auditable unit an optional language, a rule with languages applies only to units of one of them, and the JSON rule loader reads both lists, rejecting a value that is not a list of strings."
+      },
+      {
+        "path": "src/core/models",
+        "summary": "Gives a rule a list of languages and a list of tags, and every auditable unit an optional, keyword-only language; a rule with languages applies only to units whose language is one of them, compared without regard to case."
+      },
+      {
+        "path": "tests",
+        "summary": "Adds tests for rules limited to languages and for tags: which units a rule applies to, the audit service not asking a Python-only rule about a unit of unknown language, the loader reading and rejecting the lists, and the language field every unit shares."
+      }
+    ],
+    "files": [
+      {
+        "path": "src/core/models/rule.py",
+        "summary": "Gives a rule a list of languages and a list of tags, both empty by default, and limits a rule with languages to units whose language is one of them, compared without regard to case; a unit whose language is None does not match.",
+        "hunks": [
+          {
+            "header": "@@ -13,0 +14,4 @@",
+            "summary": "Adds two fields to the rule, both empty lists by default: languages, the languages the rule is limited to, where empty means any language or none, and tags, labels for what the rule is about, such as \"security\"."
+          },
+          {
+            "header": "@@ -16 +20,8 @@",
+            "summary": "Makes the check of whether the rule applies to a unit also look at the unit's language: a unit whose type is not a target still does not apply; a rule with no languages applies; otherwise a unit whose language is None does not, and any other applies when its language is one of the rule's languages, compared without regard to case."
+          }
+        ]
+      },
+      {
+        "path": "src/core/models/unit.py",
+        "summary": "Gives every auditable unit an optional, keyword-only language field, None by default, documented as the programming or natural language of the unit's content and None when unknown or when the content has no language; it imports field and Optional for it.",
+        "hunks": [
+          {
+            "header": "@@ -4,2 +4,2 @@",
+            "summary": "Also imports field from dataclasses and Optional from typing."
+          },
+          {
+            "header": "@@ -15,0 +16,4 @@",
+            "summary": "Adds to the unit's docstring that language is the language its content is written in, programming or natural, such as \"python\" or \"english\", and is None when unknown or when the content has no language, such as an image."
+          },
+          {
+            "header": "@@ -18,0 +23 @@",
+            "summary": "Adds a keyword-only field language, an optional string that defaults to None."
+          }
+        ]
+      },
+      {
+        "path": "src/infra/rule_loader/json_loader.py",
+        "summary": "Reads a rule's optional languages and tags from its JSON spec, and rejects a value that is not a list of strings with a ValueError naming the rule and the field.",
+        "hunks": [
+          {
+            "header": "@@ -82,0 +83,5 @@",
+            "summary": "Reads a rule's languages and tags, for each that its spec holds, through _validate_string_list."
+          },
+          {
+            "header": "@@ -95,0 +101,11 @@",
+            "summary": "Adds _validate_string_list, which returns a copy of a rule field's value when it is a list of strings, and otherwise raises a ValueError saying that the rule has an invalid value for that field and that a list of strings was expected."
+          }
+        ]
+      },
+      {
+        "path": "tests/test_audit_service.py",
+        "summary": "Adds a service test that a rule limited to Python is not asked about a unit of unknown language.",
+        "hunks": [
+          {
+            "header": "@@ -52,0 +53,20 @@",
+            "summary": "Adds a test that the audit service does not ask a Python-only rule about a unit whose language is unknown: given a rule for any language and a Python-only rule, the judge is asked only the first about a.py."
+          }
+        ]
+      },
+      {
+        "path": "tests/test_rule.py",
+        "summary": "Adds tests that a rule applies by unit type first, then by language, compared without regard to case; that a rule without languages applies to a unit of any language or none; and that tags do not change which units a rule applies to.",
+        "hunks": [
+          {
+            "header": "@@ -0,0 +1,70 @@",
+            "summary": "Adds tests of which units a rule applies to: a new rule has no languages or tags; a rule without languages applies whatever the unit's language; one with languages applies only to units of those languages, and not to a unit of unknown language; language names are compared without regard to case; the unit type is checked before the language, so a Python rule does not apply to a directory unit; and tags do not change which units a rule applies to."
+          }
+        ]
+      },
+      {
+        "path": "tests/test_rule_loader.py",
+        "summary": "Adds loader tests that a rule's languages and tags are read, that malformed values are rejected, and that no built-in rule sets either; it imports DEFAULT_PROJECT_RULES for the last.",
+        "hunks": [
+          {
+            "header": "@@ -14 +14,7 @@",
+            "summary": "Also imports DEFAULT_PROJECT_RULES from tests.helpers, splitting the import over several lines."
+          },
+          {
+            "header": "@@ -159,0 +166,37 @@",
+            "summary": "Adds three loader tests: a rule's languages and tags are read, and are empty lists when absent or empty; a languages or tags value that is not a list of strings is rejected with a ValueError naming the rule and the field; and the 34 rules of the built-in packs restrict no language and set no tag."
+          }
+        ]
+      },
+      {
+        "path": "tests/test_units.py",
+        "summary": "Adds tests that every auditable unit's language is None by default, can be set, is keyword-only, survives a copy, and stays out of the unit's metadata.",
+        "hunks": [
+          {
+            "header": "@@ -0,0 +1,40 @@",
+            "summary": "Adds tests of what every auditable unit shares: for the file, file metadata and project directory units, language is None by default and can be set; language is keyword-only, so a second positional argument still sets the unit's own field; and language survives a dataclasses.replace copy and is not in the unit's metadata."
+          }
+        ]
+      }
+    ]
+  },
+  "planted_mistakes": [
+    {
+      "summary_pointer": "#/files/0/hunks/1/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Makes the check of whether the rule applies to a unit also look at the unit's language: a unit whose type is not a target still does not apply; a rule with no languages applies; otherwise a unit whose language is None does not, and any other applies when its language is one of the rule's languages, compared exactly, so case matters.",
+      "why_wrong": "Both sides are lowered before they are compared."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/1/summary",
+      "mistake_kind": "omission",
+      "summary": "Makes the check of whether the rule applies to a unit return False when the unit's type is not one of the rule's target unit types.",
+      "why_wrong": "It leaves out the whole language check, the main change."
+    },
+    {
+      "summary_pointer": "#/files/1/hunks/2/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a positional field language, a required string.",
+      "why_wrong": "The field is keyword-only, Optional and defaults to None."
+    },
+    {
+      "summary_pointer": "#/files/2/hunks/1/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds _validate_string_list, which returns a copy of a rule field's value when it is a list of strings, and otherwise raises a ValueError saying that the rule has an invalid value for that field and that a list of strings was expected, so that a typo in a rule pack is reported before the model is loaded.",
+      "why_wrong": "Nothing in the hunk says when the model is loaded, or why the check is made."
+    },
+    {
+      "summary_pointer": "#/files/3/hunks/0/summary",
+      "mistake_kind": "omission",
+      "summary": "Adds a test that the audit service asks a rule for any language about a.py.",
+      "why_wrong": "It leaves out the point of the test: the Python-only rule is not asked about a unit of unknown language."
+    },
+    {
+      "summary_pointer": "#/files/4/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds tests of which units a rule applies to: a new rule has the languages python and english by default; a rule without languages applies whatever the unit's language; one with languages applies only to units of those languages, and not to a unit of unknown language; language names are compared without regard to case; the unit type is checked before the language, so a Python rule does not apply to a directory unit; and tags do not change which units a rule applies to.",
+      "why_wrong": "test_new_rule_has_no_languages_or_tags checks that both lists are empty."
+    },
+    {
+      "summary_pointer": "#/files/4/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds tests of which units a rule applies to: a new rule has no languages or tags; a rule without languages applies whatever the unit's language; one with languages applies only to units of those languages, and not to a unit of unknown language; language names are compared without regard to case; the language is checked before the unit type, so a Python rule applies to a Python directory unit; and tags do not change which units a rule applies to.",
+      "why_wrong": "Near the end of the hunk, beyond the 2,000-character cut, test_unit_type_is_checked_before_language checks that a Python rule does not apply to a Python directory unit."
+    },
+    {
+      "summary_pointer": "#/files/2/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Reads a rule's optional languages and tags from its JSON spec, accepting any value for them without a check.",
+      "why_wrong": "Hunks 1 and 2 say each value goes through _validate_string_list, which raises a ValueError for one that is not a list of strings."
+    },
+    {
+      "summary_pointer": "#/files/1/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Gives every auditable unit an optional, keyword-only language field, None by default, so that reports can be written in the language of the unit's content; it imports field and Optional for it.",
+      "why_wrong": "Nothing below says why the field is added, and nothing mentions reports."
+    },
+    {
+      "summary_pointer": "#/files/5/summary",
+      "mistake_kind": "omission",
+      "summary": "Adds a loader test that a rule's languages and tags are read.",
+      "why_wrong": "It leaves out the tests of malformed values and of the built-in packs, and the new import."
+    },
+    {
+      "summary_pointer": "#/files/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Gives a rule a list of languages and a list of tags, both empty by default, sorts the tags alphabetically, and limits a rule with languages to units whose language is one of them, compared without regard to case; a unit whose language is None does not match.",
+      "why_wrong": "Neither hunk summary says anything about sorting tags."
+    },
+    {
+      "summary_pointer": "#/packages/1/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Gives a rule a list of languages and a list of tags, and every auditable unit a required language; a rule with languages applies only to units whose language is one of them, compared without regard to case.",
+      "why_wrong": "The unit.py summary says the language is optional and None by default."
+    },
+    {
+      "summary_pointer": "#/packages/2/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds tests for rules limited to languages and for tags, which the previous release lacked and so let a bug through: which units a rule applies to, the audit service not asking a Python-only rule about a unit of unknown language, the loader reading and rejecting the lists, and the language field every unit shares.",
+      "why_wrong": "No summary below mentions the previous release or a bug."
+    },
+    {
+      "summary_pointer": "#/packages/0/summary",
+      "mistake_kind": "omission",
+      "summary": "Lets a rule carry tags.",
+      "why_wrong": "It leaves out the languages of rules and units, the applicability change and the loader."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Adds languages and tags to rules: a rule with languages still applies to every unit whatever its language, every auditable unit gets an optional language, and the JSON rule loader reads both lists; tests cover each part.",
+      "why_wrong": "The package src says a rule with languages applies only to units of one of them."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds languages and tags to rules, as a first step toward rule packs for TypeScript: a rule with languages applies only to units of one of those languages, every auditable unit gets an optional language, and the JSON rule loader reads both lists; tests cover each part.",
+      "why_wrong": "No summary below names a goal, or TypeScript."
+    }
+  ]
+}

@@ -2,11 +2,11 @@
 
 import pytest
 
-from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
-from klint.catalog.domain_neutral.units.file import AuditableFileUnit
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit_traits import UnitTraits
+from klint.catalog.code.python import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral import AuditableFileUnit
+from klint.core.models.judging import QuestionType
+from klint.core.models.rules import AuditRule
+from klint.core.models.units import UnitTraits
 
 
 def _build_rule(

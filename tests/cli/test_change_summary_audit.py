@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.change_summary_audit import CHANGE_SUMMARY_COMMAND
-from klint.cli.exit_code import ExitCode
+from klint.cli import CHANGE_SUMMARY_COMMAND, ExitCode
 from tests.support.builders import build_audit_command_app, write_text
 from tests.support.change_summary import (
     GREETING_DOCUMENT,

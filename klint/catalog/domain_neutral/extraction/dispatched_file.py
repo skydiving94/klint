@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.models.units import UnitTraits
 
 
 @dataclass(frozen=True)

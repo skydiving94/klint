@@ -1,7 +1,6 @@
 """What the klint commands share: arguments, running the audit, printing the result."""
 
 import argparse
-import asyncio
 import json
 import sys
 import warnings
@@ -11,19 +10,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
-from klint.app.settings import AppSettings
+from klint.app.pipeline import AuditPipeline, AuditRequest
 from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
     TerminalScanProgressListener,
+    format_applied_rule_exclusions,
     format_audit_report,
 )
-from klint.cli.wiring import create_command_injector
-from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.klint_warning import KlintWarning, warn_about_deprecated_name
-from klint.core.models.audit_input import DiskPathInput
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
+from klint.core import KlintWarning, warn_about_deprecated_name
+from klint.core.interfaces import BaseAuditProgressListener
+from klint.core.models.audits import DiskPathInput
+from klint.infra.rule_loader import JsonFileRuleSource
 
 
 @dataclass(frozen=True)
@@ -94,7 +92,7 @@ def print_warning_line(command: AuditCommand, message: str) -> None:
 
 
 @contextmanager
-def _print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]:
+def print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]:
     """Print each KlintWarning raised inside the block as one line, as it is raised.
 
     Any other warning raised inside is shown as it would be outside the block.
@@ -194,7 +192,7 @@ class AuditCommandApp:
 
     async def run(self, argv: Sequence[str] | None = None) -> ExitCode:
         """Parse ``argv`` and run the command; return the exit code."""
-        with _print_klint_warnings_raised_inside(self._command):
+        with print_klint_warnings_raised_inside(self._command):
             arguments = parse_command_arguments(self._command, argv)
         return await self.run_with_arguments(arguments)
 
@@ -220,7 +218,7 @@ class AuditCommandApp:
             audit_progress_listener=_ProgressListener(progress, command.name),
         )
         try:
-            with _print_klint_warnings_raised_inside(command):
+            with print_klint_warnings_raised_inside(command):
                 outcome = await self._audit_pipeline.run_audit(request)
         except (OSError, ValueError) as exc:
             # The audit cannot run, for example the target or a rules file
@@ -243,21 +241,24 @@ class AuditCommandApp:
             min_confidence=arguments.min_confidence,
         )
         if arguments.should_print_json:
-            print(
-                json.dumps(
-                    {
-                        command.audited_units_json_key: report.list_audited_unit_ids(),
-                        "unit_id_to_roll_up_status": {
-                            unit_id: status.value
-                            for unit_id, status in (
-                                report.map_unit_id_to_roll_up_status().items()
-                            )
-                        },
-                        "findings": [finding.convert_to_dict() for finding in findings],
-                    },
-                    indent=2,
-                )
-            )
+            json_report: dict[str, object] = {
+                command.audited_units_json_key: report.list_audited_unit_ids(),
+                "unit_id_to_roll_up_status": {
+                    unit_id: status.value
+                    for unit_id, status in (
+                        report.map_unit_id_to_roll_up_status().items()
+                    )
+                },
+                "findings": [finding.convert_to_dict() for finding in findings],
+            }
+            # Present only when the project's klint.json turned a rule off, so
+            # a project without exclusions gets the same JSON as before.
+            if outcome.applied_rule_exclusions:
+                json_report["applied_rule_exclusions"] = [
+                    applied.convert_to_dict()
+                    for applied in outcome.applied_rule_exclusions
+                ]
+            print(json.dumps(json_report, indent=2))
         else:
             print(
                 format_audit_report(
@@ -268,24 +269,7 @@ class AuditCommandApp:
                     unit_id_to_roll_up_status=report.map_unit_id_to_roll_up_status(),
                 )
             )
+            if outcome.applied_rule_exclusions:
+                print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
         failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS
-
-
-async def run_command_from_shell(command: AuditCommand) -> ExitCode:
-    """Run ``command`` with the arguments the shell passed; return the exit code."""
-    try:
-        with _print_klint_warnings_raised_inside(command):
-            arguments = parse_command_arguments(command, sys.argv[1:])
-            settings = await asyncio.to_thread(
-                AppSettings.from_env, arguments.target, arguments.custom_rules_path
-            )
-            injector = create_command_injector(settings)
-            audit_pipeline = injector.get(AuditPipeline)
-    except (OSError, ValueError) as error:
-        # The command cannot be set up, for example a config or data file is
-        # not valid.
-        print_error_line(command, error)
-        return ExitCode.RUN_ERROR
-    app = AuditCommandApp(command, audit_pipeline)
-    return await app.run_with_arguments(arguments)

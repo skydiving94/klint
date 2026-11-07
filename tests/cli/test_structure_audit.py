@@ -9,22 +9,19 @@ from typing import Any
 import pytest
 from injector import Binder
 
-from klint.app.settings import AppSettings
-from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
-    BaseFileMetadataExtractor,
+from klint.app import AppSettings
+from klint.catalog.code.language_neutral import AuditableFileMetadataUnit
+from klint.catalog.code.language_neutral.extraction import BaseFileMetadataExtractor
+from klint.catalog.code.python import PythonFileMetadataExtractor
+from klint.catalog.domain_neutral.extraction import DispatchedFile
+from klint.cli import (
+    STRUCTURE_AUDIT_COMMAND,
+    AuditCommandApp,
+    ExitCode,
+    run_command_from_shell,
+    run_klint_project_alias,
 )
-from klint.catalog.code.language_neutral.units.file_metadata_unit import (
-    AuditableFileMetadataUnit,
-)
-from klint.catalog.code.python.extraction.file_metadata_extractor import (
-    PythonFileMetadataExtractor,
-)
-from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.cli import klint_project_alias
-from klint.cli.exit_code import ExitCode
-from klint.cli.runner import AuditCommandApp, run_command_from_shell
-from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
-from klint.core.interfaces.judge import BaseJudge
+from klint.core.interfaces import BaseJudge
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
@@ -429,13 +426,15 @@ def test_old_command_name_runs_the_structure_audit_with_a_warning(
     shell_env["KLINT_JUDGE_BASE_URL"] = system_one_server.base_url
     monkeypatch.setattr(sys, "argv", ["klint-project", str(package), "--json"])
 
-    exit_code = klint_project_alias.cli_main()
+    exit_code = run_klint_project_alias()
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert captured.err.splitlines() == [
         "[klint-structure] Warning: 'klint-project' is deprecated and stops "
-        "working in the next release; use 'klint-structure' instead"
+        "working in the next release; use 'klint-structure' instead",
+        "[klint-structure] Judge: jaredpalmer/kev-4b at "
+        f"{system_one_server.base_url} (remote, no API key)",
     ]
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
     assert len(system_one_server.received) == 1

@@ -6,7 +6,7 @@ from enum import Enum
 
 from klint.catalog.change_summary.summary_accuracy_scale import CANNOT_TELL
 from klint.catalog.change_summary.summary_check_tag import SummaryCheckTag
-from klint.core.models.report import AuditFinding
+from klint.core.models.reports import AuditFinding
 
 
 class ChildSummaryVerdict(Enum):
@@ -37,11 +37,14 @@ _VERDICT_TO_NOTE = {
 
 @dataclass(frozen=True)
 class ChildSummary:
-    """A summary one level down: what to call it, its ID and its text."""
+    """A summary one level down: what to call it, its ID and its text.
+
+    summary is None when it was left out.
+    """
 
     name: str
     unit_id: str
-    summary: str
+    summary: str | None
 
 
 def find_child_verdict(findings: Sequence[AuditFinding]) -> ChildSummaryVerdict:
@@ -72,9 +75,15 @@ def find_child_verdict(findings: Sequence[AuditFinding]) -> ChildSummaryVerdict:
 def list_child_summary_lines(
     children: Sequence[ChildSummary], child_findings: Sequence[AuditFinding]
 ) -> list[str]:
-    """Return a line per child: its name, what its checks found, and its summary."""
+    """Return a line per child: its name, what its checks found, and its summary.
+
+    A child whose summary was left out is said to have none.
+    """
     lines: list[str] = []
     for child in children:
+        if child.summary is None:
+            lines.append(f"- {child.name}: no summary was written")
+            continue
         verdict = find_child_verdict(
             [finding for finding in child_findings if finding.unit_id == child.unit_id]
         )

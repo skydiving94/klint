@@ -5,10 +5,11 @@ import warnings
 from pathlib import Path
 from typing import TypeGuard
 
-from klint.core.klint_warning import KlintWarning, describe_deprecated_name
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import DEFAULT_UNIT_TYPES
-from klint.core.models.rule_pack import (
+from klint.core import KlintWarning, describe_deprecated_name
+from klint.core.models.judging import QuestionType
+from klint.core.models.rules import (
+    DEFAULT_UNIT_TYPES,
+    LAYERS_PLACEHOLDER,
     PackScope,
     RulePackSpec,
     RuleProblem,
@@ -17,7 +18,16 @@ from klint.core.models.rule_pack import (
 )
 
 RULE_FIELD_NAMES = frozenset(
-    {"type", "question", "unit_types", "languages", "tags", "unit_tags"}
+    {
+        "type",
+        "question",
+        "unit_types",
+        "languages",
+        "tags",
+        "unit_tags",
+        "excluded_unit_tags",
+        "question_with_layers",
+    }
 )
 # Each old rule field name, and the name that replaces it. An old name still
 # works, with a warning, for one release.
@@ -172,7 +182,7 @@ def _read_rule(
             )
         )
     try:
-        return RuleSpec(
+        spec = RuleSpec(
             rule_id=rule_id,
             question_type=_read_question_type(raw_rule["type"], rule_id, path),
             question=_read_question(raw_rule["question"], rule_id, path),
@@ -184,10 +194,30 @@ def _read_rule(
             languages=_read_string_list(raw_rule, "languages", rule_id, path),
             tags=_read_string_list(raw_rule, "tags", rule_id, path),
             unit_tags=_read_string_list(raw_rule, "unit_tags", rule_id, path),
+            excluded_unit_tags=_read_string_list(
+                raw_rule, "excluded_unit_tags", rule_id, path
+            ),
+            question_with_layers=(
+                _read_question(raw_rule["question_with_layers"], rule_id, path)
+                if "question_with_layers" in raw_rule
+                else None
+            ),
         )
     except ValueError as error:
         rule_problems.append(RuleProblem(RuleProblemSeverity.ERROR, str(error)))
         return None
+    if (
+        spec.question_with_layers is not None
+        and LAYERS_PLACEHOLDER not in spec.question_with_layers
+    ):
+        rule_problems.append(
+            RuleProblem(
+                RuleProblemSeverity.WARNING,
+                f"Rule '{rule_id}' in '{path}' has a question_with_layers without "
+                f"{LAYERS_PLACEHOLDER}, so it does not show the project's layers",
+            )
+        )
+    return spec
 
 
 def _read_question(raw_question: object, rule_id: str, path: Path) -> str:

@@ -9,11 +9,14 @@ from klint.app.pipeline.audit_preparer import AuditPreparer
 from klint.app.pipeline.auditing import UnitAuditing
 from klint.app.pipeline.ranking import FindingRanking
 from klint.app.pipeline.roll_up import FindingRollUp
-from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
-from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
-from klint.core.models.audit_input import AuditInput
-from klint.core.models.report import AuditReport
+from klint.core.interfaces import (
+    BaseAuditProgressListener,
+    BaseRuleSource,
+    BaseScanProgressListener,
+)
+from klint.core.models.audits import AuditInput
+from klint.core.models.reports import AuditReport
+from klint.core.models.rules import AppliedRuleExclusion
 
 
 @dataclass(frozen=True)
@@ -47,12 +50,14 @@ class AuditOutcome:
     scanned_file_count is the number of files read.
     selected_unit_ids lists, in audit order, every unit at least one rule
     applies to; a unit listed here and missing from the report is one whose
-    audit failed.
+    audit failed. applied_rule_exclusions are the project's exclusions that
+    kept a rule from at least one unit.
     """
 
     report: AuditReport
     scanned_file_count: int
     selected_unit_ids: tuple[str, ...]
+    applied_rule_exclusions: tuple[AppliedRuleExclusion, ...] = ()
 
 
 class AuditPipeline:
@@ -103,4 +108,5 @@ class AuditPipeline:
             report=self._finding_ranking.rank_findings(report, audit_kind),
             scanned_file_count=portfolio.scanned_file_count,
             selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
+            applied_rule_exclusions=portfolio.rule_set.list_applied_rule_exclusions(),
         )

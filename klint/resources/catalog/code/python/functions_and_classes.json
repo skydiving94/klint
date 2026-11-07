@@ -1,0 +1,40 @@
+{
+  "applies_to": { "languages": ["python"] },
+  "rules": {
+    "god_component": {
+      "type": "choice",
+      "question": "Is each class, function, or component focused on a single clear responsibility rather than acting as a 'god component' that mixes unrelated concerns?",
+      "unit_types": ["class", "function"]
+    },
+    "n_plus_1_query": {
+      "type": "choice",
+      "question": "Are database queries batched or fetched together rather than executing separate queries inside a loop for each item (N+1 query)?",
+      "unit_types": ["function"],
+      "unit_tags": ["backend"]
+    },
+    "improper_error_handling": {
+      "type": "choice",
+      "question": "Are exceptions handled safely with clean error responses rather than exposing sensitive internal details or raw stack traces?",
+      "unit_types": ["function"],
+      "unit_tags": ["backend"]
+    },
+    "sync_blocking_io": {
+      "type": "choice",
+      "question": "Do async functions perform file and network I/O asynchronously (or offload blocking calls via asyncio.to_thread) rather than blocking the event loop synchronously?",
+      "unit_types": ["function"],
+      "unit_tags": ["backend"]
+    },
+    "missing_input_validation": {
+      "type": "choice",
+      "question": "Is external user input properly validated, sanitized, or parameterized rather than used directly in queries or operations?",
+      "unit_types": ["function"],
+      "unit_tags": ["backend"]
+    },
+    "over_fetching_data": {
+      "type": "choice",
+      "question": "Do database queries select only the specific columns needed rather than over-fetching entire rows (e.g. SELECT *)?",
+      "unit_types": ["function"],
+      "unit_tags": ["backend"]
+    }
+  }
+}

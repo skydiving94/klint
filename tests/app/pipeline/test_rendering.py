@@ -9,14 +9,13 @@ from pathlib import Path
 import pytest
 from injector import Binder
 
-from klint.app.audit_kind_registry import AuditKindRegistry
-from klint.app.pipeline.audit_pipeline import AuditRequest
+from klint.app import AuditKindRegistry
+from klint.app.pipeline import AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.cli.wiring import create_command_injector
-from klint.core.interfaces.suite import BaseSuite
-from klint.core.models.audit_input import InMemoryBytesInput
-from klint.core.models.audit_kind import AuditKind
-from klint.core.models.json_value import JsonValue
+from klint.cli import create_command_injector
+from klint.core.interfaces import AuditKind, BaseSuite
+from klint.core.models.audits import InMemoryBytesInput
+from klint.core.models.reports import JsonValue
 from tests.support.builders import (
     build_audit_pipeline,
     list_judge_subjects,

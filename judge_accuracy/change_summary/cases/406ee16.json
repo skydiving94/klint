@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "about": "Commit 406ee16, \"Issue #61 - Use the hosted Jev API as klint's judge\". The README hunk and the test module are near or over the 2,000-character cut.",
+  "true_document": {
+    "schema_version": 1,
+    "git_change": {
+      "commit": "406ee16"
+    },
+    "summary": "Documents TypeSafe's hosted Jev as a judge in the README, makes the HTTP judge raise JudgeAccessRefusedError, with a message that never shows the key, when the endpoint refuses its API key, and adds a command test of those refusals.",
+    "packages": [
+      {
+        "path": "klint",
+        "summary": "Makes the HTTP judge raise JudgeAccessRefusedError when the endpoint answers 401 or 403, with a message saying, without the key, whether an API key was missing or not accepted; any other HTTP error is raised as before."
+      }
+    ],
+    "files": [
+      {
+        "path": "README.md",
+        "summary": "Documents using TypeSafe's hosted Jev as the judge: setting the API key in the shell, the settings for Jev, what is sent to TypeSafe, the judge line, how a refused key is reported, and the KLINT_JUDGE_* setting names.",
+        "hunks": [
+          {
+            "header": "@@ -150,0 +151,15 @@",
+            "summary": "Adds a README section on using TypeSafe's hosted Jev as the judge, which needs an API key (see docs.typesafe.ai). It shows how to read the key into KLINT_JUDGE_API_KEY in the shell rather than in klint.json, and the settings for Jev: remote mode, base URL https://api.typesafe.ai, model jev-latest. It then notes that the code of each audited unit and the questions are sent to TypeSafe, that each command names its judge in its first line, that klint reads KLINT_JUDGE_API_KEY and not TYPESAFE_API_KEY, that a refused key makes klint skip each unit and exit with code 2 when none could be audited, and that the KLINT_JUDGE_* names replace the KEV_* names, which still work for one release."
+          }
+        ]
+      },
+      {
+        "path": "klint/infra/system_one/http_judge.py",
+        "summary": "Raises JudgeAccessRefusedError, a PermissionError, when the endpoint answers 401 or 403, with a message saying, without the key, that an API key is needed and none was given or that the given key was not accepted; any other HTTP error is raised as before.",
+        "hunks": [
+          {
+            "header": "@@ -2,0 +3 @@",
+            "summary": "Imports urllib.error."
+          },
+          {
+            "header": "@@ -3,0 +5 @@",
+            "summary": "Imports HTTPStatus from http."
+          },
+          {
+            "header": "@@ -11,0 +14,6 @@",
+            "summary": "Adds _ACCESS_REFUSED_STATUSES, the HTTP statuses 401 Unauthorized and 403 Forbidden, and JudgeAccessRefusedError, a PermissionError for an endpoint that refuses the request because its API key is missing or wrong."
+          },
+          {
+            "header": "@@ -48,2 +56,9 @@",
+            "summary": "Wraps the request to the endpoint in a try block, with the urlopen call split over several lines: an HTTPError whose status is in _ACCESS_REFUSED_STATUSES is raised again as JudgeAccessRefusedError, with the message _describe_refusal gives; any other HTTPError is raised again unchanged."
+          },
+          {
+            "header": "@@ -50,0 +66,10 @@",
+            "summary": "Adds _describe_refusal, which says why the endpoint refused the request, with the HTTP status and reason and without the key: when no API key was given, that the judge at the endpoint needs one and none was given; otherwise, that it did not accept the API key."
+          }
+        ]
+      },
+      {
+        "path": "tests/cli/test_judge_access.py",
+        "summary": "Adds a command test that klint names a refused API key, without showing it, skips the file and stops with exit code 2.",
+        "hunks": [
+          {
+            "header": "@@ -0,0 +1,51 @@",
+            "summary": "Adds a command test for a judge endpoint that refuses its API key. Run with no key and status 403, and with a key and status 401 or 403, it checks that klint prints nothing on stdout; that stderr says it skips the file because the judge at the endpoint needs an API key and none was given, or did not accept the API key, with the HTTP status, and then that none of the 1 unit(s) could be audited; that it exits with code 2; and that the key appears nowhere on stderr."
+          }
+        ]
+      }
+    ]
+  },
+  "planted_mistakes": [
+    {
+      "summary_pointer": "#/files/1/hunks/2/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds _ACCESS_REFUSED_STATUSES, the HTTP statuses 401 Unauthorized and 429 Too Many Requests, and JudgeAccessRefusedError, a PermissionError for an endpoint that refuses the request because its API key is missing or wrong.",
+      "why_wrong": "The statuses are UNAUTHORIZED and FORBIDDEN, 401 and 403."
+    },
+    {
+      "summary_pointer": "#/files/1/hunks/3/summary",
+      "mistake_kind": "omission",
+      "summary": "Raises JudgeAccessRefusedError when the endpoint answers with a status in _ACCESS_REFUSED_STATUSES.",
+      "why_wrong": "It leaves out that any other HTTPError is raised again, that the message comes from _describe_refusal, and the reformatted urlopen call."
+    },
+    {
+      "summary_pointer": "#/files/1/hunks/4/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds _describe_refusal, which says why the endpoint refused the request, with the HTTP status and reason and without the key, so that the key never ends up in CI logs: when no API key was given, that the judge at the endpoint needs one and none was given; otherwise, that it did not accept the API key.",
+      "why_wrong": "The hunk says the message leaves out the key, but not why, and nothing mentions CI logs."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a README section on using TypeSafe's hosted Jev as the judge, which needs an API key (see docs.typesafe.ai). It shows how to put the key in klint.json, and the settings for Jev: remote mode, base URL https://api.typesafe.ai, model jev-latest. It then notes that the code of each audited unit and the questions are sent to TypeSafe, that each command names its judge in its first line, that klint reads KLINT_JUDGE_API_KEY and not TYPESAFE_API_KEY, that a refused key makes klint skip each unit and exit with code 2 when none could be audited, and that the KLINT_JUDGE_* names replace the KEV_* names, which still work for one release.",
+      "why_wrong": "The section says to set the key in the shell, not in klint.json, which is usually committed."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a README section on using TypeSafe's hosted Jev as the judge, which needs an API key (see docs.typesafe.ai). It shows how to read the key into KLINT_JUDGE_API_KEY in the shell rather than in klint.json, and the settings for Jev: remote mode, base URL https://api.typesafe.ai, model jev-latest. It then notes that the code of each audited unit and the questions are sent to TypeSafe, that each command names its judge in its first line, that klint reads KLINT_JUDGE_API_KEY and not TYPESAFE_API_KEY, that a refused key makes klint skip each unit and exit with code 2 when none could be audited, and that the KLINT_JUDGE_* names replace the KEV_* names, which no longer work.",
+      "why_wrong": "The last added line, beyond the 2,000-character cut, says the KEV_* names still work for one release."
+    },
+    {
+      "summary_pointer": "#/files/2/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a command test for a judge endpoint that refuses its API key. Run with no key and status 403, and with a key and status 401 or 403, it checks that klint prints its findings on stdout; that stderr says it skips the file because the judge at the endpoint needs an API key and none was given, or did not accept the API key, with the HTTP status, and then that none of the 1 unit(s) could be audited; that it exits with code 2; and that the key appears nowhere on stderr.",
+      "why_wrong": "Near the end of the hunk, beyond the 2,000-character cut, the test checks that stdout is empty (\"captured.out == ''\")."
+    },
+    {
+      "summary_pointer": "#/files/1/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Raises JudgeAccessRefusedError, a PermissionError, when the endpoint answers 401 or 403, with a message that includes the API key so that it can be checked; any other HTTP error is raised as before.",
+      "why_wrong": "Hunk 5 says the message is given without the key."
+    },
+    {
+      "summary_pointer": "#/files/0/summary",
+      "mistake_kind": "omission",
+      "summary": "Documents setting the API key for Jev in the shell.",
+      "why_wrong": "It leaves out the Jev settings, what is sent to TypeSafe, the judge line, refused keys and the setting names."
+    },
+    {
+      "summary_pointer": "#/files/2/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds a command test that klint names a refused API key, without showing it, skips the file and stops with exit code 2, because users had reported a crash on an expired key.",
+      "why_wrong": "Nothing below mentions user reports, a crash or an expired key."
+    },
+    {
+      "summary_pointer": "#/packages/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Makes the HTTP judge raise JudgeAccessRefusedError when the endpoint answers 401 or 403, with a message saying, without the key, whether an API key was missing or not accepted, after retrying the request once without the key.",
+      "why_wrong": "The file summary says nothing about retrying."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Documents TypeSafe's hosted Jev as a judge in the README, makes the HTTP judge raise JudgeAccessRefusedError, with a message that shows the key, when the endpoint refuses its API key, and adds a command test of those refusals.",
+      "why_wrong": "The package klint and the test file both say the message never shows the key."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Documents TypeSafe's hosted Jev as a judge in the README, so that CI no longer needs a GPU, makes the HTTP judge raise JudgeAccessRefusedError, with a message that never shows the key, when the endpoint refuses its API key, and adds a command test of those refusals.",
+      "why_wrong": "No summary below says anything about CI or GPUs."
+    }
+  ]
+}

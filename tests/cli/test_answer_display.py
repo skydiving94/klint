@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.exit_code import ExitCode
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.cli.runner import AuditCommandApp
+from klint.cli import FILE_AUDIT_COMMAND, AuditCommandApp, ExitCode
 from tests.support.builders import (
     FILE_RULE,
     build_audit_command_app,
