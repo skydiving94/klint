@@ -8,13 +8,11 @@ from typing import Any
 
 import pytest
 
-from klint.core.klint_warning import KlintWarning
-from klint.core.models.question_type import QuestionType
-from klint.core.models.rule import AuditRule
-from klint.core.models.unit_traits import UnitTraits
-from klint.core.registry import UnitRegistry
-from klint.infra.rule_loader.json_file_rule_source import JsonFileRuleSource
-from klint.infra.rule_loader.rule_pack_loader import RulePackLoader
+from klint.core import KlintWarning, UnitRegistry
+from klint.core.models.judging import QuestionType
+from klint.core.models.rules import AuditRule
+from klint.core.models.units import UnitTraits
+from klint.infra.rule_loader import JsonFileRuleSource, RulePackLoader
 from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,

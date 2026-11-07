@@ -4,11 +4,11 @@ import asyncio
 import json
 from dataclasses import asdict
 
-from klint.app.pipeline.audit_pipeline import AuditRequest
+from klint.app.pipeline import AuditRequest
 from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
-from klint.core.models.audit_input import InMemoryBytesInput
-from klint.core.models.location import Location
-from klint.core.models.roll_up_status import RollUpStatus
+from klint.core.models.audits import InMemoryBytesInput
+from klint.core.models.reports import RollUpStatus
+from klint.core.models.units import Location
 from tests.support.builders import build_audit_pipeline, build_rule_pack
 from tests.support.change_summary import (
     GREET_FILE_POINTER,

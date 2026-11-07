@@ -4,9 +4,9 @@ from pathlib import Path
 from klint.catalog.domain_neutral.file_traits_identifiers.path_glob import (
     does_path_match_glob,
 )
-from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
-from klint.core.models.file_traits_override import FileTraitsOverride
-from klint.core.models.unit_traits import UnitTraits
+from klint.core.interfaces import BaseFileTraitsIdentifier
+from klint.core.models.scanning import FileTraitsOverride
+from klint.core.models.units import UnitTraits
 
 
 class OverridingFileTraitsIdentifier(BaseFileTraitsIdentifier):

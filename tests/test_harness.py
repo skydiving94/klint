@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from klint.core.models.judge_exchange import JudgeAnswer
+from klint.core.models.judging import JudgeAnswer
 from tests.support.builders import build_judge_request
 from tests.support.fakes import FakeJudge
 from tests.support.paths import BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS

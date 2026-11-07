@@ -2,14 +2,14 @@
 
 import asyncio
 
-from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
+from klint.catalog.domain_neutral.extraction import (
+    DispatchedFile,
     TraitsBasedExtractionDelegator,
 )
-from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.klint_warning import leave_out_file_on_failure
-from klint.core.models.scanned_tree import ScannedFile, ScannedTarget
-from klint.core.models.unit import AuditableUnit
+from klint.core import leave_out_file_on_failure
+from klint.core.interfaces import BaseUnitExtractor
+from klint.core.models.scanning import ScannedFile, ScannedTarget
+from klint.core.models.units import AuditableUnit
 
 
 class FileContentsExtractor(BaseUnitExtractor[ScannedTarget]):

@@ -1,7 +1,13 @@
 {
-  "about": "The checks of an agent's change summaries. The judge reads each summary as the hypothesis and its evidence as the premise: the hunk's code for a hunk summary, and the checked summaries one level down for a file or package summary.",
+  "about": "The checks of an agent's change summaries. The judge reads each summary as the hypothesis and its evidence as the premise: the hunk's code for a hunk summary, and the checked summaries one level down for a file or package summary. klint answers has_summary itself, without the judge: it fails for a summary that a summaries-only document leaves out, and gives no answer for a summary that is there. A summary one level above a missing one is not shown to the judge either: klint answers its other checks 'cannot tell'.",
   "applies_to": {},
   "rules": {
+    "has_summary": {
+      "type": "choice",
+      "question": "Is there a summary?",
+      "unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "tags": ["completeness"]
+    },
     "no_false_statement": {
       "type": "choice",
       "question": "How does the hypothesis relate to the premise?",

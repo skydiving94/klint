@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "about": "Commit 2bcc79a, \"Showing which judge each command asks\". The hunk of tests/cli/test_judge_line.py is over the 2,000-character cut.",
+  "true_document": {
+    "schema_version": 1,
+    "git_change": {
+      "commit": "2bcc79a"
+    },
+    "summary": "Makes each klint command print on stderr which judge it asks and where, never giving the API key, and adds and updates command tests for that line.",
+    "packages": [
+      {
+        "path": "klint",
+        "summary": "Adds a describe_judge method to the settings, which names the judge they choose and where it runs without giving the API key, and makes each command print that description on stderr as \"[<command>] Judge: <description>\"."
+      },
+      {
+        "path": "tests/cli",
+        "summary": "Adds tests that each command prints the judge line on stderr, without the API key and before an error line, and updates three existing command tests to expect that line."
+      }
+    ],
+    "files": [
+      {
+        "path": "klint/app/settings.py",
+        "summary": "Adds a describe_judge method to the settings, which names the model and where it runs: in this process for the local mode, or at the base URL for the remote mode, with whether an API key is set but never the key. It imports assert_never for any other mode.",
+        "hunks": [
+          {
+            "header": "@@ -5,0 +6 @@",
+            "summary": "Imports assert_never from typing."
+          },
+          {
+            "header": "@@ -241,0 +243,12 @@",
+            "summary": "Adds a describe_judge method, which says which judge the settings choose and where it runs: for the local mode, the model name and \"run in this process (local)\"; for the remote mode, the model name, the base URL, and whether an API key is set, never the key itself. Any other mode goes to assert_never."
+          }
+        ]
+      },
+      {
+        "path": "klint/cli/runner.py",
+        "summary": "Makes each command print on stderr which judge the settings choose, as \"[<command>] Judge: <description>\".",
+        "hunks": [
+          {
+            "header": "@@ -289,0 +290 @@",
+            "summary": "Prints \"[<command name>] Judge: \" followed by the settings' description of the judge, on stderr."
+          }
+        ]
+      },
+      {
+        "path": "tests/cli/test_judge_line.py",
+        "summary": "Adds tests of the judge line: with a remote judge, it names the model, the address and whether an API key is set, never the key, and the JSON on stdout is unchanged; and it comes before the error line when the audit cannot run.",
+        "hunks": [
+          {
+            "header": "@@ -0,0 +1,71 @@",
+            "summary": "Adds a test module for the line each command prints to name its judge. One test, run with and without an API key, runs klint with a remote judge at a stub server and checks that stderr holds only \"[klint] Judge: jev-latest at <server URL> (remote, API key set)\" or \"(remote, no API key)\", never the key, and that the JSON on stdout is unchanged. Another runs klint-change-summary on a document that does not exist and checks that the judge line, naming jaredpalmer/kev-4b at http://127.0.0.1:8009, comes before the error line, with exit code 2."
+          }
+        ]
+      },
+      {
+        "path": "tests/cli/test_runner.py",
+        "summary": "Updates two runner tests for the judge line: each now expects it on stderr after the warning line, and checks how it starts.",
+        "hunks": [
+          {
+            "header": "@@ -144 +144 @@",
+            "summary": "Expects three lines on stderr instead of two: the warning, the judge line, then the error."
+          },
+          {
+            "header": "@@ -145,0 +146 @@",
+            "summary": "Checks that the judge line starts with \"[klint] Judge: \"."
+          },
+          {
+            "header": "@@ -266 +267 @@",
+            "summary": "Expects two lines on stderr instead of one: the warning, then the judge line."
+          },
+          {
+            "header": "@@ -267,0 +269 @@",
+            "summary": "Checks that the judge line starts with \"[klint] Judge: from-klint-json at \"."
+          }
+        ]
+      },
+      {
+        "path": "tests/cli/test_structure_audit.py",
+        "summary": "Updates the test of the old command name to expect the judge line after the warning that the old name stops working.",
+        "hunks": [
+          {
+            "header": "@@ -438 +438,3 @@",
+            "summary": "Adds to the expected stderr lines, after the warning that the old command name stops working, the line \"[klint-structure] Judge: jaredpalmer/kev-4b at <server URL> (remote, no API key)\"."
+          }
+        ]
+      }
+    ]
+  },
+  "planted_mistakes": [
+    {
+      "summary_pointer": "#/files/0/hunks/1/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a describe_judge method, which says which judge the settings choose and where it runs: for the local mode, the model name and \"run in this process (local)\"; for the remote mode, the model name, the base URL and the API key itself.",
+      "why_wrong": "The remote description says only whether an API key is set; it never holds the key."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/1/summary",
+      "mistake_kind": "omission",
+      "summary": "Adds a describe_judge method, which, for the local mode, returns the model name and \"run in this process (local)\".",
+      "why_wrong": "It leaves out the remote mode's description and the assert_never branch."
+    },
+    {
+      "summary_pointer": "#/files/1/hunks/0/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Prints \"[<command name>] Judge: \" followed by the settings' description of the judge, on stderr, so that a user can tell which judge billed them.",
+      "why_wrong": "Nothing in the hunk says why the line is printed, let alone anything about billing."
+    },
+    {
+      "summary_pointer": "#/files/2/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a test module for the line each command prints to name its judge. One test, run with three different API keys, runs klint with a remote judge at a stub server and checks that stderr holds only \"[klint] Judge: jev-latest at <server URL> (remote, API key set)\", never the key, and that the JSON on stdout is unchanged. Another runs klint-change-summary on a document that does not exist and checks that the judge line, naming jaredpalmer/kev-4b at http://127.0.0.1:8009, comes before the error line, with exit code 2.",
+      "why_wrong": "The first test is parametrized with a key and with no key, two cases, near the top of the hunk."
+    },
+    {
+      "summary_pointer": "#/files/2/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds a test module for the line each command prints to name its judge. One test, run with and without an API key, runs klint with a remote judge at a stub server and checks that stderr holds only \"[klint] Judge: jev-latest at <server URL> (remote, API key set)\" or \"(remote, no API key)\", never the key, and that the JSON on stdout is unchanged. Another runs klint-change-summary on a document that does not exist and checks that the judge line, naming jaredpalmer/kev-4b at http://127.0.0.1:8009, comes after the error line, with exit code 1.",
+      "why_wrong": "The second test, at the end of the hunk and beyond the 2,000-character cut, expects the judge line before the error line and exit code 2 (RUN_ERROR)."
+    },
+    {
+      "summary_pointer": "#/files/3/hunks/2/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Expects two lines on stderr instead of one, the warning and then the judge line, because the old single-line check was flaky.",
+      "why_wrong": "Nothing says the old check was flaky."
+    },
+    {
+      "summary_pointer": "#/files/0/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Adds a describe_judge method to the settings, which names the model and where it runs: in this process for the local mode, or at the base URL for the remote mode, with whether an API key is set but never the key. It imports Never from typing for any other mode.",
+      "why_wrong": "Hunk 1 says assert_never is imported, not Never."
+    },
+    {
+      "summary_pointer": "#/files/1/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Makes each command print on stderr which judge the settings choose, as \"[<command>] Judge: <description>\", and exit with code 2 when no judge is set.",
+      "why_wrong": "The hunk only prints the line; nothing about exiting when no judge is set."
+    },
+    {
+      "summary_pointer": "#/files/3/summary",
+      "mistake_kind": "omission",
+      "summary": "Updates a runner test to expect the judge line on stderr after the warning line.",
+      "why_wrong": "Two tests are updated, and both also check how the judge line starts."
+    },
+    {
+      "summary_pointer": "#/packages/0/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds a describe_judge method to the settings, which names the judge they choose and where it runs without giving the API key, and makes each command print that description on stderr as \"[<command>] Judge: <description>\", so that users of the hosted Jev can see they are not being charged for a local run.",
+      "why_wrong": "No summary below gives a reason, let alone one about charges."
+    },
+    {
+      "summary_pointer": "#/packages/1/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Adds tests that each command prints the judge line on stdout, without the API key and before an error line, and updates three existing command tests to expect that line.",
+      "why_wrong": "The test file summary says the line goes to stderr and the JSON on stdout is unchanged."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "omission",
+      "summary": "Makes each klint command print on stderr which judge it asks and where.",
+      "why_wrong": "It leaves out the tests the package tests/cli adds and updates, and that the API key is never shown."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Makes each klint command print on stderr which judge it asks and where, never giving the API key, adds a --quiet option that hides the line, and adds and updates command tests for that line.",
+      "why_wrong": "No summary below mentions a --quiet option."
+    }
+  ]
+}

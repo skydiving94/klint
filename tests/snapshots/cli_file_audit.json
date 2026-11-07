@@ -19,7 +19,7 @@
       "location": {
         "path": "examples/backend_data_and_security.py",
         "start_line": 1,
-        "end_line": 43
+        "end_line": 36
       },
       "evidence_location": null,
       "context": {}
@@ -37,7 +37,7 @@
       "location": {
         "path": "examples/backend_data_and_security.py",
         "start_line": 1,
-        "end_line": 43
+        "end_line": 36
       },
       "evidence_location": null,
       "context": {}

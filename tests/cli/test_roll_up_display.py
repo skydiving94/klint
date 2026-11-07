@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.exit_code import ExitCode
+from klint.cli import ExitCode
 from tests.support.builders import build_audit_command_app, write_text
 from tests.support.fakes import SubjectJudge
 from tests.support.outline_suite import (

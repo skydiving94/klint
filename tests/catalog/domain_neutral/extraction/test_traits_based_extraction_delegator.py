@@ -7,12 +7,14 @@ import pytest
 from injector import Binder
 
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.domain_neutral.extraction import traits_based_extraction_delegator
-from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
-from klint.catalog.domain_neutral.extraction.file_start import read_file_start
-from klint.cli.file_audit import FILE_AUDIT_COMMAND
-from klint.core.interfaces.extractor import BaseUnitExtractor
-from klint.core.models.unit import AuditableUnit
+from klint.catalog.domain_neutral.extraction import (
+    DispatchedFile,
+    read_file_start,
+    traits_based_extraction_delegator,
+)
+from klint.cli import FILE_AUDIT_COMMAND
+from klint.core.interfaces import BaseUnitExtractor
+from klint.core.models.units import AuditableUnit
 from tests.support.builders import (
     build_audit_command_app,
     list_judge_subjects,

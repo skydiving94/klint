@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-from klint.core.models.unit import AuditableUnit
+from klint.core.models.units import AuditableUnit
 
 # What an extractor reads units from: a scanned file, a scanned target or a
 # parsed document, for example.
