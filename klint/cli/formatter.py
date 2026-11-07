@@ -6,6 +6,7 @@ from pathlib import Path
 from klint.core.interfaces import BaseScanProgressListener
 from klint.core.models.judging import AnswerChoice
 from klint.core.models.reports import AuditFinding, RollUpStatus
+from klint.core.models.rules import AppliedRuleExclusion
 from klint.core.models.units import Location
 
 
@@ -239,3 +240,22 @@ def format_audit_report(
         f"{len(findings)} total finding(s) displayed\n"
     )
     return "\n".join(lines)
+
+
+def format_applied_rule_exclusions(
+    applied_rule_exclusions: Sequence[AppliedRuleExclusion],
+) -> str:
+    """Write the project's exclusions that kept a rule from some units.
+
+    Each line names the rule, the globs, how many units it was not asked
+    about, and the reason the project gives.
+    """
+    lines = [f"{_ANSI.BOLD}Rules excluded by the project's klint.json:{_ANSI.RESET}"]
+    for applied in applied_rule_exclusions:
+        exclusion = applied.exclusion
+        lines.append(
+            f"  {_ANSI.DIM}-{_ANSI.RESET} {_ANSI.BOLD}{exclusion.rule_id}{_ANSI.RESET} "
+            f"on {', '.join(exclusion.paths)} ({len(applied.unit_ids)} unit(s)): "
+            f"{exclusion.reason}"
+        )
+    return "\n".join(lines) + "\n"

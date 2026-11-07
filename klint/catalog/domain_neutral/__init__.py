@@ -9,6 +9,9 @@ from klint.catalog.domain_neutral.domain_neutral_suite import (
     DomainNeutralSuite,
     DomainNeutralSuiteModule,
 )
+from klint.catalog.domain_neutral.file_traits_identifiers.path_glob import (
+    does_path_match_glob,
+)
 from klint.catalog.domain_neutral.file_unit import AuditableFileUnit
 from klint.catalog.domain_neutral.json_document_source import JsonDocumentSourceFactory
 from klint.catalog.domain_neutral.target_scanner import TargetScanner
@@ -22,6 +25,7 @@ __all__ = [
     "JsonDocumentSourceFactory",
     "TargetScanner",
     "WholeFileRenderer",
+    "does_path_match_glob",
     "join_lines_within_budget",
     "locate_built_in_catalog_file",
 ]
