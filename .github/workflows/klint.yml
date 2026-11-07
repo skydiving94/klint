@@ -1,22 +1,42 @@
 name: klint Self-Audit
-run-name: klint Self-Audit on ${{ github.ref_name }} by @${{ github.actor }}
+run-name: ${{ (github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit') && format('Jev run of {0} {1} on {2} by @{3}', inputs.command, inputs.target, github.ref_name, github.actor) || format('klint Self-Audit on {0} by @{1}', github.ref_name, github.actor) }}
 
 # klint audits its own code and lists what it finds in the job summary. The
 # job reports and does not block: it fails only when an audit cannot run.
 # Before a pull request into main merges, each finding is fixed, or rebutted
 # in a comment on the pull request.
+#
+# Started by hand, it can instead run one command against Jev on the chosen
+# branch, with the repository's key, so the key never has to leave GitHub.
+# GitHub starts by hand only workflows whose file is on the default branch,
+# which is why this run lives here rather than in a workflow of its own.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      command:
+        description: "What to run against Jev: the Self-Audit, or one command"
+        type: choice
+        options: [self-audit, klint, klint-structure, klint-change-summary, judge-accuracy]
+        default: self-audit
+      target:
+        description: "A path in the repository; empty for the command's example (judge-accuracy: a case folder, or empty for the built-in set)"
+        type: string
+        default: ""
+      min_confidence:
+        description: "Least confidence a failure needs to be reported, 0.0 to 1.0"
+        type: string
+        default: "0.0"
 
 permissions:
   contents: read
 
 jobs:
   audit:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.command == 'self-audit' }}
     runs-on: ubuntu-latest
     steps:
       # A run without the repository's secrets, such as one for a pull
@@ -66,3 +86,93 @@ jobs:
           judge_base_url: "https://api.typesafe.ai"
           judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
           fail_on_problems: "false"
+
+  jev_run:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check for the judge's API key
+        id: key
+        shell: bash
+        env:
+          KLINT_JUDGE_API_KEY: ${{ secrets.KLINT_JUDGE_API_KEY }}
+        run: |
+          if [ -n "$KLINT_JUDGE_API_KEY" ]; then
+            echo "is_set=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_set=false" >> "$GITHUB_OUTPUT"
+            message="The KLINT_JUDGE_API_KEY secret is not available to this run, so nothing is run against Jev."
+            echo "::notice title=Jev run::$message"
+            echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Checkout repository
+        if: steps.key.outputs.is_set == 'true'
+        uses: actions/checkout@v4
+        with:
+          # klint-change-summary reads commits from git.
+          fetch-depth: 0
+
+      - name: Set up Python
+        if: steps.key.outputs.is_set == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install klint
+        if: steps.key.outputs.is_set == 'true'
+        shell: bash
+        run: pip install --quiet -e .
+
+      # Each input reaches the script through an environment variable, never
+      # written into the script, so that no input value can run as code.
+      - name: Run the command against Jev
+        if: steps.key.outputs.is_set == 'true'
+        shell: bash
+        env:
+          COMMAND: ${{ inputs.command }}
+          TARGET: ${{ inputs.target }}
+          MIN_CONFIDENCE: ${{ inputs.min_confidence }}
+          KLINT_JUDGE_MODE: remote
+          KLINT_JUDGE_MODEL: jev-latest
+          KLINT_JUDGE_BASE_URL: https://api.typesafe.ai
+          KLINT_JUDGE_API_KEY: ${{ secrets.KLINT_JUDGE_API_KEY }}
+        run: |
+          fail() { echo "::error title=Jev run::$1"; exit 2; }
+          if ! [[ "$MIN_CONFIDENCE" =~ ^(0(\.[0-9]+)?|1(\.0+)?)$ ]]; then
+            fail "min_confidence must be a number from 0.0 to 1.0, not '$MIN_CONFIDENCE'"
+          fi
+          case "$TARGET" in
+            -*|/*|..|../*|*/..|*/../*) fail "target must be a path inside the repository, not '$TARGET'" ;;
+          esac
+          case "$COMMAND" in
+            klint) command=(klint "${TARGET:-examples/}") ;;
+            klint-structure) command=(klint-structure "${TARGET:-examples/mock_bad_project/}") ;;
+            klint-change-summary) command=(klint-change-summary "${TARGET:-examples/change_summary/summaries.json}") ;;
+            judge-accuracy)
+              command=(python -m judge_accuracy.change_summary)
+              if [ -n "$TARGET" ]; then command+=("$TARGET"); fi
+              ;;
+            *) fail "command must be one of the listed choices, not '$COMMAND'" ;;
+          esac
+          if [ "${#command[@]}" -gt 1 ] && [ "${command[0]}" != python ] && [ ! -e "${command[1]}" ]; then
+            fail "target '${command[1]}' does not exist on this branch"
+          fi
+          if [ "$COMMAND" = judge-accuracy ] && [ -n "$TARGET" ] && [ ! -d "$TARGET" ]; then
+            fail "target '$TARGET' is not a folder on this branch"
+          fi
+          command+=(--min-confidence "$MIN_CONFIDENCE")
+          set +e
+          "${command[@]}" > report.txt 2>&1
+          exit_code=$?
+          set -e
+          cat report.txt
+          {
+            echo "### Jev run: \`${command[*]}\` (exit $exit_code)"
+            echo '~~~text'
+            sed -E 's/\x1b\[[0-9;]*m//g' report.txt
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Problems found (exit 1) are the result, not a failed run.
+          if [ "$exit_code" -gt 1 ]; then exit "$exit_code"; fi

@@ -56,7 +56,12 @@ Run it before marking a PR ready if the change affects what the judge is asked o
 3. Record the results in the PR.
 - One server can serve every session. If port 8009 is already serving, reuse it.
 - Point at another server with `KLINT_JUDGE_BASE_URL`.
-- Hosted Jev needs `KLINT_JUDGE_API_KEY`, which only the director sets in their own shell. Never ask for the key, and never write it to a file.
+- Hosted Jev needs `KLINT_JUDGE_API_KEY`. It lives only in the repository secret and the director's own shell. Never ask for the key, and never write it to a file.
+- To ask Jev yourself, have GitHub run one command on your pushed branch with the secret:
+  `gh workflow run klint.yml --repo skydiving94/klint --ref issue-N -f command=klint-change-summary -f target=examples/change_summary/summaries.json -f min_confidence=0.8`
+  - `command` is one of `klint`, `klint-structure`, `klint-change-summary` and `judge-accuracy`. `target` is a path in the repository; leave it empty for the command's example, or for `judge-accuracy`'s built-in set.
+  - Find the run and read its report as for Self-Audit (below): `gh run list`, `gh run watch`, `gh run view --log`. The report is also in the job summary.
+  - Exit 1 (problems found) leaves the run green; it fails only when the command cannot run.
 
 ## Self-Audit
 Run it on your issue branch before marking a PR ready, and on `epic-67` before it goes to `main`. GitHub runs it: it audits `klint/` on that branch with Jev, using the repository secret, so the key never reaches your session.
