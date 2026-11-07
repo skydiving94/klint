@@ -9,7 +9,9 @@ from klint.app.deprecated_setting_names import (
     DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
     translate_deprecated_setting_names,
 )
+from klint.app.rule_exclusion_config import RULE_EXCLUSIONS_KEY, load_rule_exclusions
 from klint.core import KlintWarning
+from klint.core.models.rules import RuleExclusion
 from klint.core.models.scanning import FileTraitsOverride
 
 CONFIG_FILENAMES = ("klint.json", ".klintrc.json", ".klintrc")
@@ -35,7 +37,13 @@ _FILE_TRAITS_ENTRY_FIELD_NAMES = frozenset({"glob", "language", "tags"})
 _LAYERS_KEY = "layers"
 # The keys of a klint.json that hold settings rather than rules.
 _SETTING_KEYS = frozenset(
-    {_ENV_BLOCK_KEY, _FALLBACK_RULE_PACKS_KEY, _FILE_TRAITS_KEY, _LAYERS_KEY}
+    {
+        _ENV_BLOCK_KEY,
+        _FALLBACK_RULE_PACKS_KEY,
+        _FILE_TRAITS_KEY,
+        _LAYERS_KEY,
+        RULE_EXCLUSIONS_KEY,
+    }
 )
 
 
@@ -47,7 +55,8 @@ class ProjectConfig:
     are the packs it names in place of the built-in ones; None when it names
     none. file_traits_overrides are its "file_traits" entries, in file
     order. layers are the project's layers as its "layers" list names them,
-    outermost first; empty when it lists none. does_hold_rules is True when
+    outermost first; empty when it lists none. rule_exclusions are its
+    "rule_exclusions" entries, in file order. does_hold_rules is True when
     it also holds rules, under "rules" or at its top level.
     """
 
@@ -57,6 +66,7 @@ class ProjectConfig:
     does_hold_rules: bool
     file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
     layers: tuple[str, ...] = ()
+    rule_exclusions: tuple[RuleExclusion, ...] = ()
 
 
 def find_project_config(start_path: Path | None = None) -> Path | None:
@@ -87,6 +97,7 @@ def read_project_config(config_path: Path) -> ProjectConfig:
         does_hold_rules=any(key not in _SETTING_KEYS for key in config),
         file_traits_overrides=_load_file_traits_overrides(config, config_path),
         layers=_load_layers(config, config_path),
+        rule_exclusions=load_rule_exclusions(config, config_path),
     )
 
 

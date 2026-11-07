@@ -18,6 +18,7 @@ from injector import Binder, Injector, Module, provider, singleton
 
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.judge_mode import JudgeMode
+from klint.app.pipeline.rule_selection import RuleSelection
 from klint.app.settings import AppSettings
 from klint.catalog.domain_neutral.file_traits_identifiers import (
     ExtensionFileTraitsIdentifier,
@@ -124,6 +125,10 @@ class KlintModule(Module):
             ),
             settings.file_traits_overrides,
         )
+
+    @provider
+    def provide_rule_selection(self, settings: AppSettings) -> RuleSelection:
+        return RuleSelection(settings.rule_exclusions)
 
     @singleton
     @provider

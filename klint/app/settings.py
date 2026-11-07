@@ -16,6 +16,7 @@ from klint.app.project_config import (
     read_project_config,
     warn_about_settings_in_rules_file,
 )
+from klint.core.models.rules import RuleExclusion
 from klint.core.models.scanning import FileTraitsOverride
 
 # The model and the server address the judge uses unless a setting names others.
@@ -166,6 +167,8 @@ class AppSettings:
     file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
     # The project's layers as its klint.json lists them, outermost first.
     layers: tuple[str, ...] = ()
+    # The rules the project's klint.json turns off for some of its paths.
+    rule_exclusions: tuple[RuleExclusion, ...] = ()
 
     @classmethod
     def from_env(
@@ -245,6 +248,7 @@ class AppSettings:
                 () if config is None else config.file_traits_overrides
             ),
             layers=() if config is None else config.layers,
+            rule_exclusions=() if config is None else config.rule_exclusions,
         )
 
     def describe_judge(self) -> str:
