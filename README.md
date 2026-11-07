@@ -26,7 +26,12 @@ By leveraging the **System One (`/v1/systemone`)** pointer-head specification, `
 
 * **File & Recursive Directory Auditing (`klint`)**: Scan individual source files or entire directory trees concurrently with live progress reporting and built-in concurrency throttling.
 * **Recursive Python Project Structure Auditing (`klint-structure`)**: Audit Python package and directory hierarchies layer-by-layer, combining AST-based file metadata extraction (`imports`, `exports`, `classes`, `functions`, `line_count`, `__init__.py` public API status) with recursive subpackage dependency rollups and mutual cycle detection.
-* **Change-Summary Checks (`klint-change-summary`)**: Check an AI agent's summary of its own change at every level: each hunk against its code, then each file, package and the commit against the checked summaries below it. False, unsupported or missing statements are flagged, false ones first. The agent can write the summaries alone and let `klint` read the change from git.
+* **Change-Summary Checks (`klint-change-summary`)**: Check an AI agent's summary of its own change at every level: each hunk against its code, then each file, package and the commit against the checked summaries below it. False, unsupported or missing statements are flagged, false ones first.
+* **[Python Classes & Functions as Units](#python-classes-and-functions)**: `klint` also judges each class and function of a Python file on its own, so a rule reads a short piece of code and a finding points to the exact method, with its lines.
+* **[Change Summaries Read from Git](#change-summary-documents)**: An agent writes only its summaries, and `klint-change-summary` reads the change itself from git: a commit, or the uncommitted change.
+* **[Claude Code Stop Hook](#claude-code-stop-hook)**: `klint-change-summary-stop-hook` keeps a Claude Code agent from stopping until its summaries of its change pass, and sends it back to fix the ones flagged.
+* **[Local Kev or Hosted Jev](#judges)**: Run the judge on your machine, on a `kev.serve` server, or ask TypeSafe's hosted Jev with an API key. Each command's first line names the judge it asks.
+* **[Project Layers for Structure Checks](#what-a-klintjson-holds)**: List a project's layers in `klint.json`, and `klint-structure` judges layering and leaking libraries against them. Its structure rules state their limits, such as the 15 modules a flat package may hold.
 * **4-Way Semantic Judgment & Confidence Sorting**: Classifies rules into `Pass`, `Fail`, `Irrelevant`, or `Lack of Evidence`, automatically sorting findings from highest confidence to lowest and supporting `--min-confidence` filtering.
 * **Built-In Backend, React & Architectural Rule Packs** (in `klint/resources/catalog/`):
   * **File rules**: `backend.json` (N+1 queries, hardcoded secrets, sync blocking I/O, missing input validation, tight coupling, and more, for back-end code in any language), `react.json` (prop drilling, improper state colocation, direct DOM manipulation, overusing `useEffect`, missing hook dependency arrays, for TypeScript and JavaScript) and `file_design.json` (god components).
@@ -69,8 +74,9 @@ klint-change-summary examples/change_summary/summaries_only.json
 | `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory. |
 | `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory. |
 | `klint-change-summary` | An agent's summaries of a change: each hunk against its code, and each file, package and the commit against the checked summaries below it. | A change-summary JSON document: summaries with each hunk's code, or summaries alone; see [Change-summary documents](#change-summary-documents). |
+| `klint-change-summary-stop-hook` | Run by Claude Code before its agent stops: the agent's summaries of the uncommitted change, in `.klint/change-summary.json`; see [Claude Code Stop Hook](#claude-code-stop-hook). | None: it reads the Stop event on stdin. It takes only `--min-confidence`. |
 
-Every command takes these options:
+The first three commands take these options:
 
 | Option | What it does |
 | :--- | :--- |
@@ -260,6 +266,19 @@ klint examples/
 * **Which judge**: each command's first line names the judge it asks, for example `[klint] Judge: jev-latest at https://api.typesafe.ai (remote, API key set)`. `klint` reads `KLINT_JUDGE_API_KEY`, not the `TYPESAFE_API_KEY` that TypeSafe's SDK reads.
 * **A refused key**: `klint` skips each unit with "did not accept the API key" (or "needs an API key, and none was given") and exits with code 2 when no unit could be audited.
 
+### Choosing a judge and a threshold
+The defaults stay as they are: the local `jaredpalmer/kev-4b`, and `--min-confidence 0.0`. For `klint-change-summary`, a test set of 126 labelled summaries from 5 commits of this repository (73 true, 53 with a planted mistake) gave:
+
+| Judge | Mistakes caught (0.0) | Omissions caught (0.0) | True summaries flagged (0.0) | Caught / flagged at the recommended threshold |
+| :--- | ---: | ---: | ---: | :--- |
+| `jev-latest` (hosted) | 50/53 | 12/12 | 19/73 | 42 / 6 at `0.8` |
+| `jaredpalmer/kev-9b` (local, about 22 GB) | 44/53 | 5/12 | 6/73 | 30 / 1 at `0.5` |
+| `jaredpalmer/kev-4b` (local, the default) | 38/53 | 0/12 | 8/73 | 25 / 0 at `0.5` |
+
+* **With an API key**: Jev at `--min-confidence 0.8`. It is the only judge here that reliably catches an omission. Its false flags all come from `covers_every_change` above the hunk level.
+* **Without one, or for code that must stay on your machine**: the default Kev-4B at `--min-confidence 0.5`. It flags no true summary, but catches about half the mistakes and no omissions.
+* The set is small and labelled by one person, so a difference of two or three cases is noise. To score a judge yourself, see [CONTRIBUTING.md](.github/CONTRIBUTING.md#scoring-a-judge).
+
 ## GitHub Action
 
 The repository is also a GitHub Action that runs `klint` or `klint-structure` in a workflow:
@@ -364,22 +383,28 @@ The source moved from `src/` to the `klint/` package, with no alias for code tha
 
 ## Current Limitations (v0.1) & Performance Tips
 
-* **Raw-Text File Audit (`klint`) vs. Python-Only Structure Audit (`klint-structure`)**:
-  * `klint` (`WholeFileExtractor`) reads raw source text without an AST parser, so it evaluates any text-based source file (the built-in packs ship with rules for back-end code and for **React/TypeScript**; other languages can be targeted via custom rules in `klint.json`).
-  * `klint-structure` (`PythonFileMetadataExtractor`) relies on Python's `ast` module to extract `imports`, `exports`, `classes`, and `functions`, so deep structural extraction currently supports **Python (`.py`)** files only (other files fall back to file names and line counts until multi-language AST extractors land).
-* **Whole-File Context Window (`klint`)**: Because `klint` currently passes entire files as a single unit (`lines 1-N`) and small System One models (`kev-0.8b`, `kev-4b`) achieve peak accuracy on compact contexts (`<512` tokens), large files (`>300–500` lines) can experience lower confidence scores until AST component slicing (Roadmap #1) is enabled.
+* **Python Is the Only Language Parsed**:
+  * `klint` reads any text-based source file. It also splits a **Python (`.py`)** file into its classes and functions; a file in any other language is judged whole (the built-in packs ship with rules for back-end code and for **React/TypeScript**; other languages can be targeted via custom rules in `klint.json`).
+  * `klint-structure` relies on Python's `ast` module to extract `imports`, `exports`, `classes`, and `functions`, so deep structural extraction supports **Python** files only (other files fall back to file names and line counts until multi-language extractors land).
+* **Long Units**: Small System One models (`kev-0.8b`, `kev-4b`) are most accurate on compact text (`<512` tokens). A unit over the 2,000-character budget is shown only as far as the budget goes, so a large non-Python file, or a long Python function, can get lower confidence scores.
+* **Change Summaries**:
+  * A hunk over the 2,000-character budget is shown only in part. The local Kevs flag such hunks' summaries whether they are true or not, and no judge sees a mistake that sits past the cut.
+  * Jev flags some true summaries of a file, package or commit on `covers_every_change`, reading "every change" as every detail. See [Choosing a judge and a threshold](#choosing-a-judge-and-a-threshold).
+  * The Stop hook checks the uncommitted change only: a change the agent commits before it stops is not checked.
 * **Eliminating Local CLI Cold-Start (`KLINT_JUDGE_MODE=local` vs. `kev.serve`)**: In `KLINT_JUDGE_MODE=local`, `klint` loads the open-weight checkpoint into memory once per CLI invocation (~3–5s startup for `kev-4b` on Apple Silicon). For instant startup across frequent runs, either use `jaredpalmer/kev-0.8b` or keep a persistent `kev.serve` process running in the background with `KLINT_JUDGE_MODE=remote`.
 * **Directory Summary Confidence Calibration**: Because `klint-structure` evaluates compact AST metadata summaries rather than full source code bodies, `[FAIL]` confidence scores on directory rules are naturally more conservative (`20%–50%`) than file-level code rules (`70%–99%`).
 
 ## Roadmap & Upcoming Features
 
-1. **Recursive Code Component Analysis & Context-Window Slicing**: Extracting granular AST units (`AuditablePythonClassUnit`, `AuditablePythonFunctionUnit`) so every unit stays inside `kev`'s high-accuracy `<512` token sweet spot while reporting exact method-level line numbers.
-2. **Git Diff Mode (`--diff`)**: Sub-second pre-commit and PR auditing targeting only modified files and diff hunks.
-3. **Claude Code Hooks & MCP Server Integration**: Exposing `klint` as a deterministic agent supervision hook and local MCP server so AI coding assistants (Claude Code, Cursor, Codex) can audit code in real time.
-4. **Multi-Language AST Metadata Extractors**: Extending `BaseFileMetadataExtractor` to support TypeScript/JavaScript (`.ts`, `.tsx`) and Go for `klint-structure`.
-5. **Inline GitHub PR Review Annotations**: Extending the GitHub Action with inline pull-request review comments on flagged line ranges.
-6. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings and batching multiple small units per inference pass.
-7. **Multi Media Auditing**: Supporting parsing and analyzing text files, latex etc. as writing assistant.
+Shipped in this release: Python class and function units, change summaries read from git, the Claude Code Stop hook, and the hosted Jev judge.
+
+1. **Git Diff Mode (`--diff`)**: Sub-second pre-commit and PR auditing targeting only modified files and diff hunks.
+2. **MCP Server**: Exposing `klint` as a local MCP server so AI coding assistants (Claude Code, Cursor, Codex) can audit code in real time, and hooks for agents other than Claude Code.
+3. **Multi-Language Extractors**: Class and function units, and `klint-structure` outlines, for TypeScript/JavaScript (`.ts`, `.tsx`) and Go.
+4. **Inline GitHub PR Review Annotations**: Extending the GitHub Action with inline pull-request review comments on flagged line ranges.
+5. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings and batching multiple small units per inference pass.
+6. **Non-Code Files**: Auditing text documents, LaTeX and other writing.
+7. **More Accurate Local Judges**: A hosted Kev-27B and a Kev-4B fine-tuned on labelled change summaries, scored on the same test set.
 
 ## Contributing
 
