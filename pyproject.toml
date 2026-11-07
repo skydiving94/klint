@@ -91,7 +91,7 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-files = ["klint", "tests"]
+files = ["klint", "judge_accuracy", "tests"]
 # klint/ and tests/ are both held to everything `mypy --strict` turns on.
 strict = true
 warn_unused_configs = true
