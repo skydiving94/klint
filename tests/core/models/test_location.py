@@ -1,6 +1,6 @@
 """Where a unit sits in its source."""
 
-from klint.core.models.units import Location
+from klint.core.models.location import Location
 
 
 def test_location_line_range_needs_both_lines() -> None:

@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from klint.app import AppSettings
-from klint.cli import FILE_AUDIT_COMMAND
-from klint.core import KlintWarning
+from klint.app.settings import AppSettings
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
+from klint.core.klint_warning import KlintWarning
 from tests.support.builders import (
     FILE_RULE,
     build_audit_command_app,

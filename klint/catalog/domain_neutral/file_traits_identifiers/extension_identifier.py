@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from pathlib import Path
 
-from klint.core.interfaces import BaseFileTraitsIdentifier
-from klint.core.models.units import UnitTraits
+from klint.core.interfaces.file_traits_identifier import BaseFileTraitsIdentifier
+from klint.core.models.unit_traits import UnitTraits
 
 
 class ExtensionFileTraitsIdentifier(BaseFileTraitsIdentifier):

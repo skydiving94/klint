@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.app import AppSettings, JudgeMode
-from klint.core import KlintWarning
+from klint.app.judge_mode import JudgeMode
+from klint.app.settings import AppSettings
+from klint.core.klint_warning import KlintWarning
 from tests.support.builders import write_json, write_text
 from tests.support.paths import (
     BUILT_IN_RULE_PACKS,

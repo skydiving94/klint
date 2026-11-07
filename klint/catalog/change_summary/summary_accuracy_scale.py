@@ -4,7 +4,7 @@ The judge reads the evidence as the premise and the summary as the
 hypothesis, as in natural language inference.
 """
 
-from klint.core.models.judging import AnswerChoice, AnswerScale
+from klint.core.models.scale import AnswerChoice, AnswerScale
 
 ACCURATE = AnswerChoice(
     key="accurate",

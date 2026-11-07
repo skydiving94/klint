@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from klint.catalog.code.language_neutral import PRACTICE_SCALE
-from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeAnswer
 from tests.support.builders import build_judge_request
 
 IN_PROCESS_JUDGE_MODULE = "klint.infra.system_one.in_process_judge"

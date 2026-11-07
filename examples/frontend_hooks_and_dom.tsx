@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
+// Antipattern: large_bundle_sizes (importing entire heavy libraries instead of specific utilities)
 import _ from 'lodash';
 import * as moment from 'moment';
 
@@ -23,6 +24,8 @@ export function ProductSearchList({
   >([]);
   const [lastUpdated, setLastUpdated] = useState('');
 
+  // Antipattern: overusing_use_effect (using useEffect to derive state that can be computed during render)
+  // Antipattern: missing_dependency_arrays (omitting the dependency array causes execution on every render)
   useEffect(() => {
     const matches = _.filter(products, (p) =>
       p.name.toLowerCase().includes(query.toLowerCase()),
@@ -31,11 +34,13 @@ export function ProductSearchList({
     setLastUpdated(moment.now().toString());
   });
 
+  // Antipattern: missing_dependency_arrays (missing `query` in useCallback dependency array -> stale closure)
   const logSearchAnalytics = useCallback(() => {
     console.log('Searched query:', query);
   }, []);
 
   const handleHighlightInput = () => {
+    // Antipattern: direct_dom_manipulation (using document.getElementById instead of React's useRef)
     const inputElement = document.getElementById(
       'product-search-input',
     );
@@ -50,6 +55,7 @@ export function ProductSearchList({
       <input
         id='product-search-input'
         value={query}
+        // Antipattern: inline_functions (defining anonymous functions inline inside JSX props)
         onChange={(e) => {
           setQuery(e.target.value);
           logSearchAnalytics();

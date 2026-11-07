@@ -4,8 +4,7 @@ import asyncio
 import sys
 
 from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
-from klint.cli.runner import AuditCommand
-from klint.cli.shell_invocation import run_command_from_shell
+from klint.cli.runner import AuditCommand, run_command_from_shell
 
 CHANGE_SUMMARY_COMMAND = AuditCommand(
     name="klint-change-summary",
@@ -15,21 +14,16 @@ CHANGE_SUMMARY_COMMAND = AuditCommand(
         "summaries below it"
     ),
     target_argument_name="summaries",
-    target_argument_help=(
-        "Path to the change-summary JSON document to verify: summaries with "
-        "each hunk's code, or summaries only, with a git_change field that "
-        "names the change to read from the git repository of the current "
-        "directory"
-    ),
+    target_argument_help="Path to the change-summary JSON document to verify",
     audit_kind_id=CHANGE_SUMMARY_KIND_ID,
     audited_units_json_key="examined_summaries",
     no_problems_message="Every summary passed its checks.",
 )
 
 
-def run_change_summary_audit() -> int:
+def cli_main() -> int:
     return asyncio.run(run_command_from_shell(CHANGE_SUMMARY_COMMAND))
 
 
 if __name__ == "__main__":
-    sys.exit(run_change_summary_audit())
+    sys.exit(cli_main())

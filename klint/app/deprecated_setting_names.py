@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 
-from klint.core import warn_about_deprecated_name
+from klint.core.klint_warning import warn_about_deprecated_name
 
 # Each old setting name, and the name that replaces it.
 DEPRECATED_SETTING_NAME_TO_SETTING_NAME = {

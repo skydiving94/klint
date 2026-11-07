@@ -2,23 +2,21 @@ import asyncio
 from collections import defaultdict
 from collections.abc import Sequence
 
-from klint.core.interfaces import (
-    AuditKind,
-    BaseAuditProgressListener,
-    BaseJudge,
-    BaseUnitRenderer,
-)
-from klint.core.models.audits import AuditOrder, RenderInput
-from klint.core.models.judging import (
-    AnswerScale,
-    JudgeAnswer,
-    JudgeQuestion,
-    JudgeRequest,
-)
-from klint.core.models.reports import AuditFinding, AuditReport
-from klint.core.models.rules import AuditRule, RuleSet
-from klint.core.models.units import (
-    AuditableUnit,
+from injector import inject
+
+from klint.core.interfaces.audit_progress_listener import BaseAuditProgressListener
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.renderer import BaseUnitRenderer
+from klint.core.models.audit_kind import AuditKind
+from klint.core.models.audit_order import AuditOrder
+from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
+from klint.core.models.render_input import RenderInput
+from klint.core.models.report import AuditFinding, AuditReport
+from klint.core.models.rule import AuditRule
+from klint.core.models.rule_set import RuleSet
+from klint.core.models.scale import AnswerScale
+from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit_tree import (
     list_ancestor_unit_ids,
     map_unit_id_to_parent_unit_id,
 )
@@ -32,11 +30,11 @@ class Auditor:
 
     Asks the judge the rules a rule set chooses for each unit, about the
     text the unit's renderer writes, a limited number of units at a time,
-    in the order the audit asks for, and turns the answers into findings.
-    A rule whose answer the renderer knows is not asked. A unit whose audit
-    fails is left out and the others go on.
+    in the order the audit asks for, and turns the answers into findings. A
+    unit whose audit fails is left out and the others go on.
     """
 
+    @inject
     def __init__(self, judge: BaseJudge) -> None:
         self._judge = judge
 
@@ -130,32 +128,15 @@ class Auditor:
         rules: Sequence[AuditRule],
         answer_scale: AnswerScale,
     ) -> list[AuditFinding]:
-        """Answer ``rules`` about one unit.
-
-        The renderer's known answers come first, with no confidence: the
-        judge did not give them. The judge is asked the other rules, and is
-        not called when none is left.
-        """
+        """Ask the judge ``rules`` about one unit; none means no call."""
         if not rules:
             return []
         unit = render_input.unit
-        rule_id_to_known_choice_key = renderer.find_known_answers(
-            render_input, [rule.rule_id for rule in rules]
+        request = _build_request(
+            renderer.render_subject(render_input), rules, answer_scale
         )
-        question_id_to_answer = {
-            rule_id: JudgeAnswer(question_id=rule_id, choice_key=choice_key)
-            for rule_id, choice_key in rule_id_to_known_choice_key.items()
-            if choice_key is not None
-        }
-        asked_rules = [
-            rule for rule in rules if rule.rule_id not in rule_id_to_known_choice_key
-        ]
-        if asked_rules:
-            request = _build_request(
-                renderer.render_subject(render_input), asked_rules, answer_scale
-            )
-            for judge_answer in await self._judge.answer(request):
-                question_id_to_answer.setdefault(judge_answer.question_id, judge_answer)
+        answers = await self._judge.answer(request)
+        question_id_to_answer = {answer.question_id: answer for answer in answers}
         findings: list[AuditFinding] = []
         for rule in rules:
             answer = question_id_to_answer.get(rule.rule_id)

@@ -2,9 +2,10 @@
 
 from collections.abc import Sequence
 
-from klint.core.models.reports import AuditReport, RollUpStatus
-from klint.core.models.units import (
-    AuditableUnit,
+from klint.core.models.report import AuditReport
+from klint.core.models.roll_up_status import RollUpStatus
+from klint.core.models.unit import AuditableUnit
+from klint.core.models.unit_tree import (
     list_ancestor_unit_ids,
     map_unit_id_to_parent_unit_id,
 )

@@ -6,24 +6,36 @@ from pathlib import Path
 import pytest
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.catalog.code.language_neutral import (
-    AuditableDirectoryUnit,
-    AuditableFileMetadataUnit,
-)
-from klint.catalog.code.language_neutral.extraction import (
+from klint.catalog.code.language_neutral.extraction.directory_factory import (
     BaseDirectoryUnitFactory,
-    BaseFileMetadataExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
     DirectoryTreeExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.file_metadata_base import (
+    BaseFileMetadataExtractor,
+)
+from klint.catalog.code.language_neutral.extraction.language_neutral_directory_factory import (  # noqa: E501
     LanguageNeutralDirectoryUnitFactory,
+)
+from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.catalog.code.python import (
-    AuditablePythonPackageUnit,
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    AuditableDirectoryUnit,
+)
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
+    AuditableFileMetadataUnit,
+)
+from klint.catalog.code.python.extraction.file_metadata_extractor import (
     PythonFileMetadataExtractor,
+)
+from klint.catalog.code.python.extraction.package_factory import (
     PythonPackageUnitFactory,
 )
-from klint.catalog.domain_neutral.extraction import (
-    DispatchedFile,
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.catalog.domain_neutral.extraction.traits_based_extraction_delegator import (
     TraitsBasedExtractionDelegator,
 )
 from tests.support.builders import (

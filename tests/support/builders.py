@@ -6,27 +6,34 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from klint.app import AppSettings, BindingOverride, JudgeMode
-from klint.app.pipeline import AuditPipeline, AuditRequest
-from klint.catalog.code.language_neutral import (
-    CODE_IGNORED_NAMES,
-    PRACTICE_SCALE,
+from klint.app.judge_mode import JudgeMode
+from klint.app.pipeline.audit_pipeline import AuditPipeline, AuditRequest
+from klint.app.settings import AppSettings
+from klint.app.wiring import BindingOverride
+from klint.catalog.code.language_neutral.extraction.directory_tree_extractor import (
+    DirectoryTreeExtractor,
+)
+from klint.catalog.code.language_neutral.ignored_names import CODE_IGNORED_NAMES
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.code.language_neutral.units.directory_unit import (
     AuditableDirectoryUnit,
 )
-from klint.catalog.code.language_neutral.extraction import DirectoryTreeExtractor
-from klint.catalog.code.python import AuditablePythonPackageUnit
-from klint.catalog.domain_neutral import TargetScanner
-from klint.catalog.domain_neutral.file_traits_identifiers import (
+from klint.catalog.code.python.units.package_unit import AuditablePythonPackageUnit
+from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.cli import AuditCommand, AuditCommandApp, create_command_injector
-from klint.core import UnitRegistry
-from klint.core.interfaces import BaseJudge
-from klint.core.models.audits import DiskPathInput
-from klint.core.models.judging import JudgeQuestion, JudgeRequest, QuestionType
-from klint.core.models.rules import PackScope, RulePackSpec
-from klint.core.models.rules import RuleSpec as PackRuleSpec
-from klint.infra.table_loader import load_file_extension_to_language
+from klint.catalog.domain_neutral.scanners.target_scanner import TargetScanner
+from klint.cli.runner import AuditCommand, AuditCommandApp
+from klint.cli.wiring import create_command_injector
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.models import rule_pack
+from klint.core.models.audit_input import DiskPathInput
+from klint.core.models.judge_exchange import JudgeQuestion, JudgeRequest
+from klint.core.models.question_type import QuestionType
+from klint.core.registry import UnitRegistry
+from klint.infra.language_to_file_extensions_loader.language_table_loader import (
+    load_file_extension_to_language,
+)
 from tests.support.fakes import FakeJudge, JudgeBindingOverride
 from tests.support.paths import (
     DEFAULT_LANGUAGE_TO_FILE_EXTENSIONS,
@@ -200,17 +207,17 @@ def build_rule_pack(
     *rule_ids: str,
     languages: tuple[str, ...] | None = None,
     unit_types: tuple[str, ...] = ("file",),
-) -> RulePackSpec:
+) -> rule_pack.RulePackSpec:
     """Return a pack of choice rules asking "Is <rule_id> kept?", with no file.
 
     The pack is limited to ``languages`` when given, and each rule targets
     ``unit_types``.
     """
-    return RulePackSpec(
+    return rule_pack.RulePackSpec(
         origin=origin,
-        scope=PackScope(languages=languages),
+        scope=rule_pack.PackScope(languages=languages),
         rules=tuple(
-            PackRuleSpec(
+            rule_pack.RuleSpec(
                 rule_id=rule_id,
                 question_type=QuestionType.CHOICE,
                 question=f"Is {rule_id} kept?",

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from klint.catalog.code.language_neutral.directory_unit import (
+from klint.catalog.code.language_neutral.units.directory_unit import (
     AuditableDirectoryUnit,
 )
-from klint.catalog.code.language_neutral.file_metadata_unit import (
+from klint.catalog.code.language_neutral.units.file_metadata_unit import (
     AuditableFileMetadataUnit,
 )
 

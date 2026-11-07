@@ -12,29 +12,25 @@ from typing import ClassVar
 
 from injector import Binder
 
-from klint.app.pipeline import AuditOutcome, AuditRequest
-from klint.catalog.code.language_neutral import PRACTICE_SCALE
-from klint.catalog.domain_neutral import JsonDocumentSourceFactory
-from klint.cli import AuditCommand
-from klint.core import UnitRegistry
-from klint.core.interfaces import (
-    AuditKind,
-    BaseJudge,
-    BaseSuite,
-    BaseUnitExtractor,
-    BaseUnitRenderer,
-    UnitSource,
+from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
+from klint.catalog.code.language_neutral.practice_scale import PRACTICE_SCALE
+from klint.catalog.domain_neutral.sources.json_document_source import (
+    JsonDocumentSourceFactory,
 )
-from klint.core.models.audits import (
-    AuditInputKind,
-    AuditOrder,
-    InMemoryBytesInput,
-    RenderInput,
-)
-from klint.core.models.judging import QuestionType
-from klint.core.models.reports import JsonValue
-from klint.core.models.rules import AuditRule
-from klint.core.models.units import AuditableUnit
+from klint.cli.runner import AuditCommand
+from klint.core.interfaces.extractor import BaseUnitExtractor
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.interfaces.renderer import BaseUnitRenderer
+from klint.core.interfaces.suite import BaseSuite
+from klint.core.models.audit_input import AuditInputKind, InMemoryBytesInput
+from klint.core.models.audit_kind import AuditKind, UnitSource
+from klint.core.models.audit_order import AuditOrder
+from klint.core.models.json_value import JsonValue
+from klint.core.models.question_type import QuestionType
+from klint.core.models.render_input import RenderInput
+from klint.core.models.rule import AuditRule
+from klint.core.models.unit import AuditableUnit
+from klint.core.registry import UnitRegistry
 from tests.support.builders import build_audit_pipeline
 from tests.support.notes_suite import FixedRuleLoader
 

@@ -13,12 +13,12 @@
     },
     "flat_structure": {
       "type": "choice",
-      "question": "Does this directory hold 15 or fewer Python modules directly in it, besides __init__.py, with further modules grouped into subpackages, rather than more than 15 modules in one flat directory?",
+      "question": "Are files organized into subpackages when appropriate rather than dumping an excessive number of files into one flat directory?",
       "unit_types": ["project_directory"]
     },
     "excessive_nesting_depth": {
       "type": "choice",
-      "question": "Is the deepest subdirectory below this directory 3 levels down or fewer, counting the subdirectories directly in it as 1 level down, rather than nested more deeply?",
+      "question": "Is the directory nesting depth shallow and reasonable (e.g. 3 levels or fewer) rather than excessively deep?",
       "unit_types": ["project_directory"]
     },
     "inconsistent_naming_convention": {
@@ -49,7 +49,6 @@
     "layering_violation": {
       "type": "choice",
       "question": "Do imports in this directory flow inward toward core domain abstractions (e.g. cli/entrypoints -> infrastructure -> core/domain) rather than inner layers importing from outer layers?",
-      "question_with_layers": "This project's layers, outermost first, are: {layers}. Does each import in this directory go to the directory's own layer or to a layer further in, rather than from an inner layer out to an outer one?",
       "unit_types": ["project_directory"]
     },
     "god_file_or_class": {
@@ -65,7 +64,6 @@
     "leaky_abstraction": {
       "type": "choice",
       "question": "Are third-party frameworks, HTTP clients, and ML/ORM libraries confined to outer infrastructure or entrypoint layers rather than leaking into core domain models?",
-      "question_with_layers": "This project's layers, outermost first, are: {layers}; the last is its core. Are third-party frameworks, HTTP clients, and ML/ORM libraries kept out of the core and imported only in outer layers, rather than leaking into core domain code?",
       "unit_types": ["project_directory"]
     },
     "business_logic_in_presentation_layer": {
@@ -76,14 +74,12 @@
     "dead_code_module": {
       "type": "choice",
       "question": "Are the modules in this directory actively imported and used by other modules in the project rather than sitting as dead, unreferenced code?",
-      "unit_types": ["project_directory"],
-      "excluded_unit_tags": ["data"]
+      "unit_types": ["project_directory"]
     },
     "missing_package_public_api": {
       "type": "choice",
       "question": "Does this package expose a clean public interface (such as via __init__.py exports for multi-file internal modules) rather than requiring callers to import deep internal implementation files directly?",
-      "unit_types": ["project_directory"],
-      "excluded_unit_tags": ["data"]
+      "unit_types": ["project_directory"]
     },
     "scattered_feature_logic": {
       "type": "choice",

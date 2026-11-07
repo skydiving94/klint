@@ -2,6 +2,7 @@ import sqlite3
 import traceback
 import urllib.request
 
+# Circular dependency with domain & junk-drawer utils import
 from domain.order_entity import OrderEntity
 from utils.misc_helpers import format_currency_and_temp_file
 

@@ -3,7 +3,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
-from typing import assert_never
 
 from klint.app.deprecated_setting_names import (
     DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
@@ -16,22 +15,18 @@ from klint.app.project_config import (
     read_project_config,
     warn_about_settings_in_rules_file,
 )
-from klint.core.models.rules import RuleExclusion
-from klint.core.models.scanning import FileTraitsOverride
+from klint.core.models.file_traits_override import FileTraitsOverride
 
 # The model and the server address the judge uses unless a setting names others.
 _DEFAULT_MODEL_NAME = "jaredpalmer/kev-4b"
 _DEFAULT_BASE_URL = "http://127.0.0.1:8009"
 # Built-in rule packs, relative to klint/resources/catalog/ and merged in this
-# order. Each pack states in its header the files it loads for. A rule of a
-# later pack replaces the rule of the same ID in an earlier one, for the files
-# the later pack loads for.
+# order. Each pack states in its header the files it loads for.
 _BUILT_IN_RULE_PACKS = (
     "code/language_neutral/backend.json",
     "code/typescript/react.json",
     "code/language_neutral/file_design.json",
     "code/python/package_structure.json",
-    "code/python/functions_and_classes.json",
 )
 # The packs a file whose language is not identified is asked, unless the
 # config file names its own.
@@ -165,10 +160,6 @@ class AppSettings:
     # What the project's klint.json says about some files, over what is
     # detected; the first entry whose glob matches a file decides.
     file_traits_overrides: tuple[FileTraitsOverride, ...] = ()
-    # The project's layers as its klint.json lists them, outermost first.
-    layers: tuple[str, ...] = ()
-    # The rules the project's klint.json turns off for some of its paths.
-    rule_exclusions: tuple[RuleExclusion, ...] = ()
 
     @classmethod
     def from_env(
@@ -247,18 +238,4 @@ class AppSettings:
             file_traits_overrides=(
                 () if config is None else config.file_traits_overrides
             ),
-            layers=() if config is None else config.layers,
-            rule_exclusions=() if config is None else config.rule_exclusions,
         )
-
-    def describe_judge(self) -> str:
-        """Say which judge these settings choose and where it runs, never the key."""
-        match self.judge_mode:
-            case JudgeMode.LOCAL:
-                return f"{self.model_name}, run in this process (local)"
-            case JudgeMode.REMOTE:
-                key_note = "API key set" if self.judge_api_key else "no API key"
-                where = f"at {self.judge_base_url}"
-                return f"{self.model_name} {where} (remote, {key_note})"
-            case _:
-                assert_never(self.judge_mode)

@@ -1,6 +1,6 @@
 """The unit types an audit knows about."""
 
-from klint.core.models.units import AuditableUnit
+from klint.core.models.unit import AuditableUnit
 
 
 class UnitRegistry:

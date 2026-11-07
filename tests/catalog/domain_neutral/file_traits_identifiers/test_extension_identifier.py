@@ -4,10 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from klint.catalog.domain_neutral.file_traits_identifiers import (
+from klint.catalog.domain_neutral.file_traits_identifiers.extension_identifier import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.infra.table_loader import load_file_extension_to_language
+from klint.infra.language_to_file_extensions_loader.language_table_loader import (
+    load_file_extension_to_language,
+)
 from tests.support.builders import write_json
 
 IDENTIFIER = ExtensionFileTraitsIdentifier({".py": "python", ".tsx": "typescript"})

@@ -9,7 +9,8 @@ from pathlib import Path
 
 from injector import Injector
 
-from klint.app import AppSettings, BindingOverride, create_injector
+from klint.app.settings import AppSettings
+from klint.app.wiring import BindingOverride, create_injector
 from klint.catalog import BuiltInSuitesModule
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 

@@ -3,15 +3,14 @@
 import asyncio
 import sys
 
-from klint.cli.runner import print_warning_line
-from klint.cli.shell_invocation import run_command_from_shell
+from klint.cli.runner import print_warning_line, run_command_from_shell
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
-from klint.core import describe_deprecated_name
+from klint.core.klint_warning import describe_deprecated_name
 
 _OLD_COMMAND_NAME = "klint-project"
 
 
-def run_klint_project_alias() -> int:
+def cli_main() -> int:
     print_warning_line(
         STRUCTURE_AUDIT_COMMAND,
         describe_deprecated_name(_OLD_COMMAND_NAME, STRUCTURE_AUDIT_COMMAND.name),
@@ -20,4 +19,4 @@ def run_klint_project_alias() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(run_klint_project_alias())
+    sys.exit(cli_main())

@@ -2,12 +2,13 @@
 
 import asyncio
 import json
-from collections import defaultdict
 from pathlib import Path
 
 import pytest
 
-from klint.cli import FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND, AuditCommand
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
+from klint.cli.runner import AuditCommand
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import (
     FILE_RULE,
     build_audit_command_app,
@@ -19,11 +20,8 @@ from tests.support.fakes import FakeJudge
 from tests.support.paths import (
     BUILT_IN_RULE_PACKS,
     FALLBACK_RULE_PACKS,
-    PYTHON_DEFINITION_RULE_PACK,
     REACT_RULE_PACK,
 )
-
-Capture = pytest.CaptureFixture[str]
 
 TAGGED_RULES = {
     "backend_rule": {**FILE_RULE, "unit_tags": ["backend"]},
@@ -121,26 +119,30 @@ def test_project_audit_tags_the_files_of_a_directory_alike(tmp_path: Path) -> No
 
 
 @pytest.mark.usefixtures("in_repo_root")
-def test_examples_are_asked_the_built_in_rules_of_their_side(capsys: Capture) -> None:
+def test_examples_are_asked_the_built_in_rules_of_their_side() -> None:
+    judge = FakeJudge()
     settings = make_settings(BUILT_IN_RULE_PACKS, FALLBACK_RULE_PACKS)
-    app = build_audit_command_app(FILE_AUDIT_COMMAND, FakeJudge(), settings)
-    asyncio.run(app.run(["examples", "--json", "--all-answers"]))
-    unit_id_to_rule_ids: defaultdict[str, set[str]] = defaultdict(set)
-    for finding in json.loads(capsys.readouterr().out)["findings"]:
-        unit_id_to_rule_ids[finding["unit_id"]].add(finding["rule_id"])
+    app = build_audit_command_app(FILE_AUDIT_COMMAND, judge, settings)
+    asyncio.run(app.run(["examples", "--json"]))
+    content_to_rule_ids = judge.map_subject_to_asked_rule_ids()
+    backend_rule_ids = set(_read_rule_ids(BUILT_IN_RULE_PACKS[0]))
     react_rule_ids = set(_read_rule_ids(REACT_RULE_PACK))
-    function_rule_ids = set(_read_rule_ids(PYTHON_DEFINITION_RULE_PACK))
-    # The backend rules about one function are asked about each function of a
-    # Python file instead of the whole file.
-    python_file_rule_ids = set(_read_rule_ids(BUILT_IN_RULE_PACKS[0])) - (
-        function_rule_ids
-    )
+
+    def list_asked_rule_ids(example: str) -> set[str]:
+        (rule_ids,) = [
+            rule_ids
+            for content, rule_ids in content_to_rule_ids.items()
+            if Path(example)
+            .read_text(encoding="utf-8")
+            .startswith(content.split("\n[... ")[0])
+        ]
+        return rule_ids
 
     for example in (
         "examples/frontend_architecture.tsx",
         "examples/frontend_hooks_and_dom.tsx",
     ):
-        assert unit_id_to_rule_ids[example] == react_rule_ids | {"god_component"}
+        assert list_asked_rule_ids(example) == react_rule_ids | {"god_component"}
     for example in (
         "examples/backend_data_and_security.py",
         "examples/mock_bad_project/api/checkout_routes.py",
@@ -149,17 +151,7 @@ def test_examples_are_asked_the_built_in_rules_of_their_side(capsys: Capture) ->
         # No signal: every rule for its language.
         "examples/mock_bad_project/utils/misc_helpers.py",
     ):
-        assert unit_id_to_rule_ids[example] == python_file_rule_ids
-    for function in (
-        "examples/backend_data_and_security.py::get_customer_order_totals",
-        "examples/mock_bad_project/domain/order_entity.py::OrderEntity.__init__",
-        "examples/mock_bad_project/utils/misc_helpers.py::"
-        "format_currency_and_temp_file",
-    ):
-        assert unit_id_to_rule_ids[function] == function_rule_ids
-    assert unit_id_to_rule_ids[
-        "examples/mock_bad_project/domain/order_entity.py::OrderEntity"
-    ] == {"god_component"}
+        assert list_asked_rule_ids(example) == backend_rule_ids | {"god_component"}
 
 
 def _read_rule_ids(pack: Path) -> list[str]:

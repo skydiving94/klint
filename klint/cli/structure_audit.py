@@ -4,8 +4,7 @@ import asyncio
 import sys
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.cli.runner import AuditCommand
-from klint.cli.shell_invocation import run_command_from_shell
+from klint.cli.runner import AuditCommand, run_command_from_shell
 
 STRUCTURE_AUDIT_COMMAND = AuditCommand(
     name="klint-structure",
@@ -17,9 +16,9 @@ STRUCTURE_AUDIT_COMMAND = AuditCommand(
 )
 
 
-def run_structure_audit() -> int:
+def cli_main() -> int:
     return asyncio.run(run_command_from_shell(STRUCTURE_AUDIT_COMMAND))
 
 
 if __name__ == "__main__":
-    sys.exit(run_structure_audit())
+    sys.exit(cli_main())

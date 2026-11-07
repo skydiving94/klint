@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli import FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND, AuditCommand
+from klint.cli.file_audit import FILE_AUDIT_COMMAND
+from klint.cli.runner import AuditCommand
+from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND
 from tests.support.builders import build_audit_command_app, write_text
 from tests.support.fakes import FakeJudge
 

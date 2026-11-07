@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 from klint.core.interfaces.rule_source import BaseRuleSource
-from klint.core.models.rules import AuditRule
-from klint.core.models.units import UnitTraits
+from klint.core.models.rule import AuditRule
+from klint.core.models.unit_traits import UnitTraits
 
 
 class BaseRuleLoader(ABC):

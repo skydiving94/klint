@@ -5,16 +5,15 @@ import copy
 import json
 from typing import Any
 
-from klint.app.pipeline import AuditOutcome, AuditRequest
-from klint.catalog.change_summary import (
-    CHANGE_SUMMARY_KIND_ID,
+from klint.app.pipeline.audit_pipeline import AuditOutcome, AuditRequest
+from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
+from klint.catalog.change_summary.extraction.change_summary_extractor import (
     ChangeSummaryExtractor,
-    ChangeSummaryInput,
 )
-from klint.core.models.audits import InMemoryBytesInput
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
-from klint.core.models.reports import JsonValue
-from klint.core.models.units import AuditableUnit
+from klint.core.models.audit_input import InMemoryBytesInput
+from klint.core.models.json_value import JsonValue
+from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
+from klint.core.models.unit import AuditableUnit
 from tests.support.builders import build_audit_pipeline
 from tests.support.fakes import FakeJudge
 
@@ -99,7 +98,7 @@ def copy_greeting_document() -> ChangeSummaryDocumentData:
 
 def extract_summary_units(document: JsonValue) -> list[AuditableUnit]:
     """Return the units the change-summary extractor reads from ``document``."""
-    return asyncio.run(ChangeSummaryExtractor().extract(ChangeSummaryInput(document)))
+    return asyncio.run(ChangeSummaryExtractor().extract(document))
 
 
 # The line of a judge's subject that holds the summary judged.

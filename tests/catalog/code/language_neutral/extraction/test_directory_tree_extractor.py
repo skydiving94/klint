@@ -4,8 +4,10 @@ import asyncio
 
 import pytest
 
-from klint.catalog.code.language_neutral import ProjectDirectoryContext
-from klint.core.models.units import Location
+from klint.catalog.code.language_neutral.units.directory_unit import (
+    ProjectDirectoryContext,
+)
+from klint.core.models.location import Location
 from tests.support.builders import (
     build_directory_tree_extractor,
     build_target_scanner,

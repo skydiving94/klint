@@ -11,14 +11,12 @@ TIDY_RULE_PACK = REPO_ROOT / "tests" / "support" / "tidy_rules.json"
 RULE_PACKS = REPO_ROOT / "klint" / "resources" / "catalog" / "code"
 REACT_RULE_PACK = RULE_PACKS / "typescript" / "react.json"
 PYTHON_PACKAGE_RULE_PACK = RULE_PACKS / "python" / "package_structure.json"
-PYTHON_DEFINITION_RULE_PACK = RULE_PACKS / "python" / "functions_and_classes.json"
 # The built-in packs, in the order klint merges them.
 BUILT_IN_RULE_PACKS = (
     RULE_PACKS / "language_neutral" / "backend.json",
     REACT_RULE_PACK,
     RULE_PACKS / "language_neutral" / "file_design.json",
     PYTHON_PACKAGE_RULE_PACK,
-    PYTHON_DEFINITION_RULE_PACK,
 )
 # The built-in packs for a file whose language is not identified.
 FALLBACK_RULE_PACKS = (

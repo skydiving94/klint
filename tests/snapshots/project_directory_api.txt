@@ -1,15 +1,9 @@
 Target Directory Under Audit: examples/mock_bad_project/api (package name: 'api')
-Summary: 2 immediate files, 0 immediate subdirectories
-Python Modules Directly In It, Besides __init__.py: 1 [checkout_routes.py]
-Deepest Subdirectory Below This Directory: none (0 levels down)
+Summary: 2 immediate files (1 non-init modules: ['checkout_routes.py']), 0 immediate subdirectories
 Package Public API Status: present (__init__.py exports: [handle_checkout_request])
-Imported From Elsewhere in the Audited Tree (callers outside the tree, such as tests, entry points or other projects, are not counted):
-  The package itself: by 1 module [domain.order_entity]
-  Its subpackages: none
-  Its module files directly: by 1 module, as [api.checkout_routes]
 Internal Project Imports in Tree: [.checkout_routes, .checkout_routes.handle_checkout_request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]
 External / Third-Party / Stdlib Imports in Tree: [sqlite3, traceback, urllib.request]
 Directory: examples/mock_bad_project/api
   Files:
     - __init__.py (lines=3; exports=[handle_checkout_request]; imports=[.checkout_routes, .checkout_routes.handle_checkout_request])
-    - checkout_routes.py (lines=43; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])
+    - checkout_routes.py (lines=44; imports=[sqlite3, traceback, urllib.request, domain.order_entity, utils.misc_helpers, utils.misc_helpers.format_currency_and_temp_file]; functions=[handle_checkout_request])

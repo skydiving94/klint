@@ -2,11 +2,11 @@
 
 from pathlib import Path
 
-from klint.catalog.code.language_neutral.extraction import (
+from klint.catalog.code.language_neutral.extraction.language_neutral_file_metadata import (  # noqa: E501
     LanguageNeutralFileMetadataExtractor,
 )
-from klint.catalog.domain_neutral.extraction import DispatchedFile
-from klint.core.models.units import UnitTraits
+from klint.catalog.domain_neutral.extraction.dispatched_file import DispatchedFile
+from klint.core.models.unit_traits import UnitTraits
 from tests.support.builders import write_text
 
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from klint.core.models.reports import RollUpStatus
+from klint.core.models.roll_up_status import RollUpStatus
 from tests.support.fakes import SubjectJudge
 from tests.support.outline_suite import run_outline_audit
 

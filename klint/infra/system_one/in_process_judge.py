@@ -13,8 +13,8 @@ from kev.checkpoint import Checkpoint, LoadOptions, fused_available
 from kev.device import default_device
 from kev.serve import Server
 
-from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.interfaces.judge import BaseJudge
+from klint.core.models.judge_exchange import JudgeAnswer, JudgeRequest
 from klint.infra.system_one.system_one_format import (
     build_system_one_questions,
     read_system_one_answers,

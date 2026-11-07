@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from klint.core.interfaces.audit_kind import AuditKind
+from klint.core.models.audit_kind import AuditKind
 from klint.core.registry import UnitRegistry
 
 
