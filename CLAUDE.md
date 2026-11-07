@@ -18,7 +18,8 @@ These override personal defaults for work under #67.
 - Start an issue only after the issues it depends on (#67's table) have merged into `epic-67`.
 - Create the branch from the issue, so it shows in the issue's Development section, then give it its own worktree:
   `gh issue develop 62 --name issue-62 --base epic-67`
-  `git fetch origin && git worktree add ../klint-issue-62 -b issue-62 origin/issue-62`
+  `git fetch origin && git worktree add ~/Developer/klint-cc/klint-issue-62 -b issue-62 origin/issue-62`
+- Every local folder made for klint work goes under `~/Developer/klint-cc/`: worktrees, trial projects, scratch repositories. Create it if it is missing.
 - Before merging, rebase onto `epic-67` if it has moved.
 - Never two sessions in one working copy.
 - A stale `.git/index.lock`: remove it only after checking that no git process is running.
