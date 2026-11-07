@@ -61,9 +61,9 @@ def test_a_mistake_the_judge_misses_is_listed(tmp_path: Path, capsys: Capture) -
     assert find_table_row(report, "Unsupported reason")[3] == "0/1 (0%)"
     assert find_table_row(report, "Every kind")[3] == "1/2 (50%)"
     assert (
-        "### Mistakes missed (1)\n\n- `greeting` package `app/` (unsupported reason)"
-        in (report)
-    )
+        "### Mistakes missed (1)\n\n"
+        "- `greeting` package `app/` (unsupported reason, planted 2)"
+    ) in report
 
 
 def test_a_mistake_caught_by_another_check_is_not_caught_by_its_own(
@@ -130,9 +130,9 @@ def test_a_refused_summary_is_a_refusal_not_a_miss(
     assert find_table_row(captured.out, "False statement")[1:4] == ["1", "1", "-"]
     assert "Mistakes missed (1)" in captured.out
     assert (
-        "### Refused (1)\n\n- `greeting` hunk `app/greet.py#2` (false statement)"
-        in (captured.out)
-    )
+        "### Refused (1)\n\n"
+        "- `greeting` hunk `app/greet.py#2` (false statement, planted 1)"
+    ) in captured.out
     assert "[judge-accuracy] Refused app/greet.py#2: judge is down" in captured.err
 
 
@@ -163,7 +163,7 @@ def test_a_failed_check_below_the_confidence_threshold_does_not_count(
     assert "- Min confidence: 0.95. Refused: 0." in report
     assert find_table_row(report, "False statement")[3] == "0/1 (0%)"
     assert find_table_row(report, "0.9")[1] == "1/1 (100%)"
-    assert "- `greeting` hunk `app/greet.py#2` (false statement)" in report
+    assert "- `greeting` hunk `app/greet.py#2` (false statement, planted 1)" in report
 
 
 def test_code_over_the_character_budget_is_scored_apart(

@@ -97,7 +97,7 @@
       "summary_pointer": "#/files/2/hunks/0/summary",
       "mistake_kind": "false_statement",
       "summary": "Adds a command test for a judge endpoint that refuses its API key. Run with no key and status 403, and with a key and status 401 or 403, it checks that klint prints its findings on stdout; that stderr says it skips the file because the judge at the endpoint needs an API key and none was given, or did not accept the API key, with the HTTP status, and then that none of the 1 unit(s) could be audited; that it exits with code 2; and that the key appears nowhere on stderr.",
-      "why_wrong": "The test checks that stdout is empty (\"captured.out == ''\")."
+      "why_wrong": "Near the end of the hunk, beyond the 2,000-character cut, the test checks that stdout is empty (\"captured.out == ''\")."
     },
     {
       "summary_pointer": "#/files/1/summary",

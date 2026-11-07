@@ -1,5 +1,6 @@
 """Asking the judge about every labelled summary of a case file."""
 
+import dataclasses
 import json
 import sys
 from collections.abc import Sequence
@@ -74,13 +75,16 @@ class CaseFileJudging:
             for unit in true_units
             if unit.get_location() is not None
         ]
-        for mistake, unit in zip(
-            case_file.planted_mistakes, planted_units, strict=True
+        for number, (mistake, unit) in enumerate(
+            zip(case_file.planted_mistakes, planted_units, strict=True), start=1
         ):
             outcome = await self._audit(case_file.build_planted_document(mistake))
             judged.append(
-                self._build_judged_summary(
-                    case_file.name, unit, mistake.mistake_kind, outcome
+                dataclasses.replace(
+                    self._build_judged_summary(
+                        case_file.name, unit, mistake.mistake_kind, outcome
+                    ),
+                    planted_number=number,
                 )
             )
         return judged

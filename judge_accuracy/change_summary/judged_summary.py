@@ -40,7 +40,8 @@ class JudgedSummary:
     case_file_name names the case file it comes from and unit_id its unit.
     is_over_cut tells that its evidence did not fit within the character
     budget, so the judge read only part of it. mistake_kind is None for a
-    true summary. findings are the findings on its unit, None when the judge
+    true summary, and planted_number the number of a planted one in its case
+    file, from 1. findings are the findings on its unit, None when the judge
     refused to answer about it; an answer to no check is a refusal too.
     """
 
@@ -50,6 +51,7 @@ class JudgedSummary:
     is_over_cut: bool
     mistake_kind: MistakeKind | None
     findings: tuple[AuditFinding, ...] | None
+    planted_number: int | None = None
 
     def is_true(self) -> bool:
         return self.mistake_kind is None

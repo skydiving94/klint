@@ -128,7 +128,11 @@ def _list_summaries(
 
 def _describe_summary(summary: JudgedSummary, card: ScoreCard) -> str:
     """Return the summary's case file, level, unit and what the judge failed it on."""
-    label = "true" if summary.mistake_kind is None else _name_kind(summary.mistake_kind)
+    label = (
+        "true"
+        if summary.mistake_kind is None
+        else f"{_name_kind(summary.mistake_kind)}, planted {summary.planted_number}"
+    )
     failed_checks = ", ".join(
         f"{finding.rule_id} {finding.confidence:.2f}"
         if finding.confidence is not None
