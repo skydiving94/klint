@@ -170,6 +170,7 @@ A relative path set in `klint.json` is taken from the folder of the `klint.json`
 * `"fallback_rule_packs"`: the rule packs asked about a file whose language `klint` cannot identify, in place of the built-in `backend.json` and `file_design.json`.
 * `"file_traits"`: corrections to the language or tags `klint` detects for some files, for example `[{"glob": "web/**", "tags": ["frontend"]}]`. The first entry whose glob matches a file decides.
 * `"layers"`: the project's layers, outermost first, for example `["myapp.cli", "myapp.services", "myapp.core"]`. `klint-structure` shows them to the judge when it asks `layering_violation` and `leaky_abstraction`, and takes the last as the core. Without them, both rules ask about layers in general terms.
+* `"rule_exclusions"`: rules the project turns off for some of its paths, for example `[{"rule_id": "god_component", "paths": ["legacy/**"], "reason": "Being replaced by the new module"}]`. Each entry holds exactly a `rule_id`, `paths`, globs matched from the folder of the `klint.json` (a class or function by its file's path), and a `reason`. The rule is not asked about a matching unit, and every other rule still is. The report lists each exclusion it applied, and `--json` adds them as `applied_rule_exclusions` when there are some.
 
 ~~~json
 {

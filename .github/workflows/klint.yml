@@ -2,9 +2,9 @@ name: klint Self-Audit
 run-name: ${{ (github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit') && format('Jev run of {0} {1} on {2} by @{3}', inputs.command, inputs.target, github.ref_name, github.actor) || format('klint Self-Audit on {0} by @{1}', github.ref_name, github.actor) }}
 
 # klint audits its own code against Jev and lists what it finds in the job
-# summary. The job fails when an audit cannot run, or when a finding at 0.8
-# confidence or more is neither fixed nor listed as rebutted in
-# .github/self-audit-rebuttals.json, with a link to its rebuttal comment.
+# summary. The job fails when an audit cannot run, or when it finds a problem
+# at 0.8 confidence or more. A finding judged not valid is excluded in the
+# repository's klint.json, with a link to its rebuttal as the reason.
 #
 # Started by hand, it can instead run one command against Jev on the chosen
 # branch, with the repository's key, so the key never has to leave GitHub.
@@ -60,53 +60,35 @@ jobs:
         if: steps.key.outputs.is_set == 'true'
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      # Each audit fails its step when it finds a problem at 0.8 or more.
+      # A finding judged not valid is excluded in the repository's
+      # klint.json, with the link to its rebuttal as the reason.
+      - name: Audit the structure of klint/
         if: steps.key.outputs.is_set == 'true'
-        uses: actions/setup-python@v5
+        uses: ./
         with:
-          python-version: "3.12"
+          target: "klint/"
+          mode: "structure"
+          min_confidence: "0.8"
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+          fail_on_problems: "true"
 
-      - name: Install klint
-        if: steps.key.outputs.is_set == 'true'
-        shell: bash
-        run: pip install --quiet -e .
-
-      # Each audit writes its JSON report for the gate below. Problems found
-      # (exit 1) are for the gate to judge; an audit that cannot run (exit 2)
-      # fails the job here.
-      - name: Audit klint/ against Jev
-        if: steps.key.outputs.is_set == 'true'
-        shell: bash
-        env:
-          KLINT_JUDGE_MODE: remote
-          KLINT_JUDGE_MODEL: jev-latest
-          KLINT_JUDGE_BASE_URL: https://api.typesafe.ai
-          KLINT_JUDGE_API_KEY: ${{ secrets.KLINT_JUDGE_API_KEY }}
-        run: |
-          status=0
-          for audit in structure file; do
-            case "$audit" in
-              structure) command=klint-structure ;;
-              file) command=klint ;;
-            esac
-            set +e
-            "$command" klint/ --min-confidence 0.8 --json > "$audit.json"
-            exit_code=$?
-            set -e
-            echo "$command klint/ --min-confidence 0.8: exit $exit_code"
-            if [ "$exit_code" -gt 1 ]; then
-              echo "::error title=klint Self-Audit::$command could not audit klint/ (exit $exit_code)"
-              status=2
-            fi
-          done
-          exit "$status"
-
-      # Fails when a finding is neither fixed nor listed, with a link to its
-      # rebuttal, in .github/self-audit-rebuttals.json.
-      - name: Check each finding is fixed or rebutted
-        if: steps.key.outputs.is_set == 'true'
-        shell: bash
-        run: python -m self_audit_gate --structure structure.json --file file.json
+      # Runs even when the structure audit failed, so that both report.
+      - name: Audit the files of klint/
+        if: ${{ !cancelled() && steps.key.outputs.is_set == 'true' }}
+        uses: ./
+        with:
+          target: "klint/"
+          mode: "file"
+          min_confidence: "0.8"
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+          fail_on_problems: "true"
 
   jev_run:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit' }}

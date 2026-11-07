@@ -15,6 +15,7 @@ from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
     TerminalScanProgressListener,
+    format_applied_rule_exclusions,
     format_audit_report,
 )
 from klint.core import KlintWarning, warn_about_deprecated_name
@@ -240,21 +241,24 @@ class AuditCommandApp:
             min_confidence=arguments.min_confidence,
         )
         if arguments.should_print_json:
-            print(
-                json.dumps(
-                    {
-                        command.audited_units_json_key: report.list_audited_unit_ids(),
-                        "unit_id_to_roll_up_status": {
-                            unit_id: status.value
-                            for unit_id, status in (
-                                report.map_unit_id_to_roll_up_status().items()
-                            )
-                        },
-                        "findings": [finding.convert_to_dict() for finding in findings],
-                    },
-                    indent=2,
-                )
-            )
+            json_report: dict[str, object] = {
+                command.audited_units_json_key: report.list_audited_unit_ids(),
+                "unit_id_to_roll_up_status": {
+                    unit_id: status.value
+                    for unit_id, status in (
+                        report.map_unit_id_to_roll_up_status().items()
+                    )
+                },
+                "findings": [finding.convert_to_dict() for finding in findings],
+            }
+            # Present only when the project's klint.json turned a rule off, so
+            # a project without exclusions gets the same JSON as before.
+            if outcome.applied_rule_exclusions:
+                json_report["applied_rule_exclusions"] = [
+                    applied.convert_to_dict()
+                    for applied in outcome.applied_rule_exclusions
+                ]
+            print(json.dumps(json_report, indent=2))
         else:
             print(
                 format_audit_report(
@@ -265,5 +269,7 @@ class AuditCommandApp:
                     unit_id_to_roll_up_status=report.map_unit_id_to_roll_up_status(),
                 )
             )
+            if outcome.applied_rule_exclusions:
+                print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
         failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS
