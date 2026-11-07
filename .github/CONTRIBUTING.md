@@ -40,11 +40,20 @@ The first two find the planted problems and exit with 1; the third finds none an
 
 To ask Jev instead, see "Using Jev" in the [README](../README.md#using-jev-typesafes-hosted-api).
 
+## Scoring a Judge
+
+`judge_accuracy` scores the judge that the `KLINT_JUDGE_*` settings choose on labelled change summaries: true ones, and ones with a planted false statement, unsupported reason, contradiction or omission. It prints, for each kind of mistake, how many were caught and how many true summaries were wrongly flagged, by level and by confidence threshold, as Markdown:
+~~~bash
+KLINT_JUDGE_MODE=remote uv run python -m judge_accuracy.change_summary
+~~~
+The cases are in `judge_accuracy/change_summary/cases/`, one file per commit of this repository; their README describes a case file. Repeated questions are answered from memory, so a run sends each question once. The README's "Choosing a judge and a threshold" gives the results for Jev, Kev-9B and Kev-4B.
+
 ## Layout
 
 ~~~text
 klint/
 ├── cli/                     # The console scripts, their options, exit codes and terminal report
+│   └── change_summary_stop_hook/  # The Claude Code Stop hook: the Stop event, the decision to block, the per-session block count
 ├── app/                     # What runs an audit: settings (environment, klint.json), the injector, the kinds of audit on offer
 │   └── pipeline/            # One audit run, in stages: acquisition, rule selection, auditing, roll-up
 ├── catalog/                 # The built-in suites
@@ -68,11 +77,15 @@ klint/
 │   ├── interfaces/          # What the outer layers implement: extractors, renderers, judges, rule loaders, suites
 │   └── models/              # The data the layers pass to one another
 │       ├── audits/  judging/  reports/  rules/  scanning/  units/
-└── resources/catalog/       # Built-in rule packs and tables, laid out like catalog/
-    ├── code/language_neutral/   # backend.json, file_design.json, language_to_file_extensions.json, tag_detection.json
-    ├── code/python/             # package_structure.json, functions_and_classes.json
-    ├── code/typescript/         # react.json
-    └── change_summary/          # summary_checks.json
+└── resources/
+    ├── catalog/                 # Built-in rule packs and tables, laid out like catalog/
+    │   ├── code/language_neutral/   # backend.json, file_design.json, language_to_file_extensions.json, tag_detection.json
+    │   ├── code/python/             # package_structure.json, functions_and_classes.json
+    │   ├── code/typescript/         # react.json
+    │   └── change_summary/          # summary_checks.json
+    └── change_summary_stop_hook/    # The instructions the Stop hook gives the agent for writing summaries
+judge_accuracy/              # Not installed with klint: scores a judge on labelled cases
+└── change_summary/          # The scoring command, and cases/: true and planted summaries of real commits
 tests/                       # Mirrors klint/; tests/support holds the fake judge, builders and a stub System One server
 examples/                    # Deliberately bad code, a mock project and change-summary documents to run the commands on
 ~~~
