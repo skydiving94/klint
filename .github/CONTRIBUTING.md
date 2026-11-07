@@ -86,7 +86,6 @@ klint/
     └── change_summary_stop_hook/    # The instructions the Stop hook gives the agent for writing summaries
 judge_accuracy/              # Not installed with klint: scores a judge on labelled cases
 └── change_summary/          # The scoring command, and cases/: true and planted summaries of real commits
-self_audit_gate/             # Not installed with klint: fails Self-Audit on a finding neither fixed nor listed as rebutted
 tests/                       # Mirrors klint/; tests/support holds the fake judge, builders and a stub System One server
 examples/                    # Deliberately bad code, a mock project and change-summary documents to run the commands on
 ~~~
@@ -128,13 +127,12 @@ examples/                    # Deliberately bad code, a mock project and change-
 
 1. Create a branch, commit, push it, and open a pull request against `main`.
 2. Make sure the checks above pass.
-3. **Self-Audit**: on each pull request into `main` and each push to `main`, the "klint Self-Audit" workflow runs `klint-structure` and `klint` on `klint/` at minimum confidence 0.8, asking Jev with the repository's `KLINT_JUDGE_API_KEY` secret. It lists the findings in the job summary, each as open or rebutted. It fails when an audit cannot run, or when a finding is neither fixed nor listed as rebutted (below). A run without the secret, such as one for a pull request from a fork, skips the audits and says so. A maintainer can also run it on a branch of this repository from the Actions tab ("Run workflow").
-4. **Merge rule**: before a pull request into `main` merges, each self-audit finding is fixed. A finding that is not valid is rebutted instead, in a comment on the pull request that says why, and listed in `.github/self-audit-rebuttals.json` with its audit (`structure` or `file`), `rule_id`, `unit_id` and the comment's link, so the check passes. An entry whose finding is fixed is removed; the job summary names any entry no run found.
+3. **Self-Audit**: on each pull request into `main` and each push to `main`, the "klint Self-Audit" workflow runs `klint-structure` and `klint` on `klint/` at minimum confidence 0.8, asking Jev with the repository's `KLINT_JUDGE_API_KEY` secret. It lists the findings in the job summary, each as open or rebutted. It fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded (below). A run without the secret, such as one for a pull request from a fork, skips the audits and says so. A maintainer can also run it on a branch of this repository from the Actions tab ("Run workflow").
+4. **Merge rule**: before a pull request into `main` merges, each self-audit finding is fixed. A finding that is not valid is rebutted instead, in a comment on the pull request that says why, and excluded in the repository's `klint.json` under `rule_exclusions`: its `rule_id`, the `paths` it doesn't apply to, and the comment's link as the `reason`, so the check passes. An exclusion whose finding is fixed is removed. Each audit's report lists the exclusions it applied.
 
 To reproduce the Self-Audit locally, export your `KLINT_JUDGE_API_KEY` as the README's "Using Jev" shows, then:
 ~~~bash
 export KLINT_JUDGE_MODE=remote KLINT_JUDGE_BASE_URL=https://api.typesafe.ai KLINT_JUDGE_MODEL=jev-latest
-uv run klint-structure klint/ --min-confidence 0.8 --json > structure.json
-uv run klint klint/ --min-confidence 0.8 --json > file.json
-uv run python -m self_audit_gate --structure structure.json --file file.json
+uv run klint-structure klint/ --min-confidence 0.8
+uv run klint klint/ --min-confidence 0.8
 ~~~
