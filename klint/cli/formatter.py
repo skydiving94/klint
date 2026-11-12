@@ -155,6 +155,16 @@ def _format_evidence_suffix(evidence_location: Location | None) -> str:
     return f" {_ANSI.DIM}(evidence: {evidence_location.path}{lines}){_ANSI.RESET}"
 
 
+def _format_cut_suffix(cut_at_characters: int | None) -> str:
+    """Return the note that the judge read a cut text, as shown after its rule."""
+    if cut_at_characters is None:
+        return ""
+    return (
+        f" {_ANSI.YELLOW}(cut: judged on the first {cut_at_characters} "
+        f"characters only){_ANSI.RESET}"
+    )
+
+
 def format_audit_report(
     findings: Sequence[AuditFinding],
     scanned_file_count: int,
@@ -220,6 +230,7 @@ def format_audit_report(
                     f" {_ANSI.DIM}(lines {line_range[0]}-{line_range[1]}){_ANSI.RESET}"
                 )
             loc_suffix += _format_evidence_suffix(finding.evidence_location)
+            loc_suffix += _format_cut_suffix(finding.cut_at_characters)
 
             lines.append(
                 f"  {_format_badge(finding.answer)} "

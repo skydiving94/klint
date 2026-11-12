@@ -27,6 +27,7 @@
         "start_line": null,
         "end_line": null
       },
+      "cut_at_characters": 2000,
       "evidence_location": null,
       "context": {
         "file_names": [],
@@ -52,6 +53,7 @@
         "start_line": null,
         "end_line": null
       },
+      "cut_at_characters": null,
       "evidence_location": null,
       "context": {
         "file_names": [
@@ -76,6 +78,7 @@
         "start_line": null,
         "end_line": null
       },
+      "cut_at_characters": null,
       "evidence_location": null,
       "context": {
         "file_names": [
@@ -100,6 +103,7 @@
         "start_line": null,
         "end_line": null
       },
+      "cut_at_characters": null,
       "evidence_location": null,
       "context": {
         "file_names": [
