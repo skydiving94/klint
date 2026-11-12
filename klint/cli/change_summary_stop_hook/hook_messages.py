@@ -65,13 +65,14 @@ def describe_flagged_summaries(findings: Sequence[AuditFinding]) -> str:
     lines = [
         f"klint flagged {len(unit_id_to_findings)} of the summaries in "
         f"{SUMMARIES_PATH}. Rewrite each one so that it states only what its "
-        "evidence shows and mentions, at least in brief, each change it shows: "
-        "the hunk's code for a hunk, the summaries one level down for a file, a "
-        "package or the "
-        "commit. In each check, the summary is the hypothesis and its evidence "
-        "the premise. A file, package or commit summary may name only what the "
-        "summaries one level down name, such as the function a hunk changes. A "
-        "summary above one you change may need to change too. Then stop again."
+        "evidence shows and mentions every change it shows: the hunk's code for "
+        "a hunk, the summaries one level down for a file, a package or the "
+        "commit. Above the hunk, it may sum up those summaries in brief, but "
+        "leaves none of them out. In each check, the summary is the hypothesis "
+        "and its evidence the premise. A file, package or commit summary may "
+        "name only what the summaries one level down name, such as the function "
+        "a hunk changes. A summary above one you change may need to change too. "
+        "Then stop again."
     ]
     for unit_findings in unit_id_to_findings.values():
         lines.append("")
