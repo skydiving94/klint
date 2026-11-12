@@ -28,14 +28,22 @@
     },
     "covers_every_change": {
       "type": "choice",
-      "question": "Does the hypothesis mention every change the premise shows? Where the premise lists summaries, each summary is one change, which the hypothesis may sum up in brief.",
+      "question": "Does the hypothesis mention every change the premise shows?",
       "unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "unit_type_to_question": {
+        "file_summary": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details.",
+        "package_summary": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details."
+      },
       "tags": ["completeness"]
     },
     "covers_key_changes": {
       "type": "choice",
-      "question": "Does the hypothesis mention the main change the premise shows? Where the premise lists summaries, that is the main change of each one.",
+      "question": "Does the hypothesis mention the main change the premise shows?",
       "unit_types": ["hunk_summary", "file_summary", "package_summary"],
+      "unit_type_to_question": {
+        "file_summary": "Does the hypothesis mention the main change of each summary the premise lists?",
+        "package_summary": "Does the hypothesis mention the main change of each summary the premise lists?"
+      },
       "tags": ["completeness"]
     }
   }
