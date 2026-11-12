@@ -31,8 +31,8 @@
       "question": "Does the hypothesis mention every change the premise shows?",
       "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "unit_type_to_question": {
-        "file_summary": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details. Where the premise lists a single summary, each change that summary describes is one.",
-        "package_summary": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details. Where the premise lists a single summary, each change that summary describes is one."
+        "file_summary": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details.",
+        "package_summary": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details."
       },
       "tags": ["completeness"]
     },
