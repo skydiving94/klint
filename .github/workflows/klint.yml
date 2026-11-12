@@ -23,7 +23,7 @@ on:
         options: [self-audit, klint, klint-structure, klint-change-summary, judge-accuracy]
         default: self-audit
       target:
-        description: "A path in the repository; empty for the command's example (judge-accuracy: a case folder, or empty for the built-in set)"
+        description: "A path in the repository; empty for the command's example (judge-accuracy: judge_accuracy/code_units for the code-unit set, a folder in it, another case folder for the change-summary set, or empty for the built-in change-summary set)"
         type: string
         default: ""
       min_confidence:
@@ -93,7 +93,8 @@ jobs:
   jev_run:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The code-unit set sends about 800 requests, one at a time.
+    timeout-minutes: 90
     steps:
       - name: Check for the judge's API key
         id: key
@@ -154,8 +155,16 @@ jobs:
             klint-structure) command=(klint-structure "${TARGET:-examples/mock_bad_project/}") ;;
             klint-change-summary) command=(klint-change-summary "${TARGET:-examples/change_summary/summaries.json}") ;;
             judge-accuracy)
-              command=(python -m judge_accuracy.change_summary)
-              if [ -n "$TARGET" ]; then command+=("$TARGET"); fi
+              # The target chooses the set: the code-unit set's package, or
+              # a folder in it, else a change-summary case folder.
+              case "$TARGET" in
+                judge_accuracy/code_units|judge_accuracy/code_units/) command=(python -m judge_accuracy.code_units) ;;
+                judge_accuracy/code_units/*) command=(python -m judge_accuracy.code_units "$TARGET") ;;
+                *)
+                  command=(python -m judge_accuracy.change_summary)
+                  if [ -n "$TARGET" ]; then command+=("$TARGET"); fi
+                  ;;
+              esac
               ;;
             *) fail "command must be one of the listed choices, not '$COMMAND'" ;;
           esac
