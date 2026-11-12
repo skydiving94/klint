@@ -161,9 +161,7 @@ class Auditor:
                 replace(render_input, character_budget=_WHOLE_TEXT_CHARACTER_BUDGET)
             ):
                 cut_at_characters = render_input.character_budget
-            request = _build_request(
-                subject, unit.unit_type, asked_rules, answer_scale
-            )
+            request = _build_request(subject, unit.unit_type, asked_rules, answer_scale)
             for judge_answer in await self._judge.answer(request):
                 question_id_to_answer.setdefault(judge_answer.question_id, judge_answer)
         findings: list[AuditFinding] = []

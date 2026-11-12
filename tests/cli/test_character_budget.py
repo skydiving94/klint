@@ -97,14 +97,16 @@ def _write_function_of(folder: Path, length: int) -> Path:
 @pytest.mark.parametrize(
     ("model_name", "character_budget"),
     [
-        ("jev-latest", 12_000),
+        ("jaredpalmer/kev-4b", 2_000),
+        ("jaredpalmer/kev-9b", 8_000),
+        ("jev-latest", 60_000),
         ("some-other-model", DEFAULT_CHARACTER_BUDGET),
     ],
 )
 def test_function_is_cut_at_the_budget_of_the_judge_in_use(
     tmp_path: Path, capsys: Capture, model_name: str, character_budget: int
 ) -> None:
-    long_file = _write_function_of(tmp_path / "source", 20_000)
+    long_file = _write_function_of(tmp_path / "source", 70_000)
     pack = write_json(
         tmp_path / "rules.json",
         {"short_function": {**FILE_RULE, "unit_types": ["function"]}},
