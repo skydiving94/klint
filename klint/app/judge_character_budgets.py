@@ -10,7 +10,7 @@ from klint.core.models.audits import DEFAULT_CHARACTER_BUDGET
 model_name_to_character_budget = {
     "jaredpalmer/kev-4b": DEFAULT_CHARACTER_BUDGET,
     "jaredpalmer/kev-9b": DEFAULT_CHARACTER_BUDGET,
-    "jev-latest": DEFAULT_CHARACTER_BUDGET,
+    "jev-latest": 12_000,
 }
 
 
