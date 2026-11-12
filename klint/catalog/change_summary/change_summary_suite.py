@@ -32,6 +32,10 @@ from klint.infra.rule_loader import JsonFileRuleSource, RulePackLoader
 CHANGE_SUMMARY_KIND_ID = "change_summary"
 # The suite's checks, relative to klint/resources/catalog/.
 SUMMARY_CHECKS_PACK = "change_summary/summary_checks.json"
+# The most characters the judge reads about one summary. A hunk's code past
+# the budget is cut, and small judges flag a summary of cut code whether or
+# not it is true, so the budget leaves room for the hunks of a usual commit.
+CHANGE_SUMMARY_CHARACTER_BUDGET = 4_000
 
 
 class ChangeSummarySuite(BaseSuite):
@@ -77,6 +81,7 @@ class ChangeSummarySuite(BaseSuite):
                 },
                 ranked_tags=(SummaryCheckTag.ACCURACY, SummaryCheckTag.COMPLETENESS),
                 audit_order=AuditOrder.CHILDREN_FIRST,
+                character_budget=CHANGE_SUMMARY_CHARACTER_BUDGET,
             )
         ]
 
