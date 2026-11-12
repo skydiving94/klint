@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -168,3 +170,25 @@ def test_run_that_asks_the_judge_nothing_reports_no_request(
     assert captured.err.splitlines()[-1] == (
         "[klint] Judge usage: 0 requests, 0 input tokens"
     )
+
+
+def test_usage_line_comes_after_the_report_where_both_streams_are_one(
+    tmp_path: Path, shell_env: dict[str, str], system_one_server: StubSystemOneServer
+) -> None:
+    target = write_text(tmp_path / "a.py", "x = 1\n")
+    shell_env["KLINT_JUDGE_MODE"] = "remote"
+    shell_env["KLINT_JUDGE_BASE_URL"] = system_one_server.base_url
+
+    # As in a CI log: stdout, block-buffered in a pipe, and stderr in one stream.
+    completed = subprocess.run(
+        [sys.executable, "-m", "klint.cli.file_audit", str(target)],
+        env=dict(os.environ),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == ExitCode.NO_PROBLEMS
+    assert "Audit Report" in completed.stdout
+    assert completed.stdout.splitlines()[-1].startswith("[klint] Judge usage: ")

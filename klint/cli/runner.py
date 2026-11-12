@@ -277,6 +277,9 @@ class AuditCommandApp:
             if outcome.applied_rule_exclusions:
                 print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
         # On stderr, after the report, so that the report on stdout is as before.
+        # The report is flushed first, so that the line comes after it where
+        # both streams go to one place, such as a CI log.
+        sys.stdout.flush()
         print(
             f"[{command.name}] Judge usage: "
             f"{describe_judge_usage(report.get_judge_usage())}",
