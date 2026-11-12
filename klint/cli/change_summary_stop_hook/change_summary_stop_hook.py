@@ -47,6 +47,7 @@ from klint.cli.change_summary_stop_hook.summary_coverage import (
 from klint.cli.change_summary_stop_hook.unit_failure_listener import (
     UnitFailureListener,
 )
+from klint.cli.judge_usage_description import describe_judge_usage
 from klint.cli.wiring import create_command_injector
 from klint.core.models.audits import DiskPathInput
 from klint.core.models.reports import JsonValue
@@ -147,6 +148,9 @@ class ChangeSummaryStopHook:
                     f"{type(error).__name__}: {error}", judge_description
                 )
             )
+        print_hook_line(
+            f"Judge usage: {describe_judge_usage(outcome.report.get_judge_usage())}"
+        )
         failures = outcome.report.select_findings(min_confidence=min_confidence)
         unchecked = listener.describe_failures(len(outcome.selected_unit_ids))
         if failures:

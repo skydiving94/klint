@@ -112,5 +112,9 @@
         "subdirectory_names": []
       }
     }
-  ]
+  ],
+  "judge_usage": {
+    "requests": 4,
+    "input_tokens": null
+  }
 }

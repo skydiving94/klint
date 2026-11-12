@@ -2,7 +2,12 @@
 
 from typing import TypedDict
 
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import (
+    JudgeAnswer,
+    JudgeReply,
+    JudgeRequest,
+    JudgeUsage,
+)
 
 
 class SystemOneQuestion(TypedDict):
@@ -25,15 +30,41 @@ def build_system_one_questions(request: JudgeRequest) -> dict[str, SystemOneQues
     }
 
 
-def read_system_one_answers(response: object) -> list[JudgeAnswer]:
-    """Return the answers in a System One response.
+def read_system_one_reply(response: object) -> JudgeReply:
+    """Return the answers in a System One response, and the usage it reports.
 
     An answer that names no choice is left out, as is a response with no
-    answers. Raises ValueError when the response does not have the System
-    One shape.
+    answers. The usage counts one request, with the input tokens in the
+    response's usage; None when it reports none, or not as a count. Raises
+    ValueError when the response does not have the System One shape.
     """
     if not isinstance(response, dict):
         raise ValueError("The judge's response is not a JSON object")
+    return JudgeReply(
+        answers=tuple(_read_answers(response)),
+        usage=JudgeUsage(
+            request_count=1,
+            input_token_count=_read_input_token_count(response.get("usage")),
+        ),
+    )
+
+
+def _read_input_token_count(raw_usage: object) -> int | None:
+    """Return the input tokens in a response's usage; None when not a count.
+
+    A usage of another shape is ignored rather than raised on: it tells
+    nothing about the answers.
+    """
+    if not isinstance(raw_usage, dict):
+        return None
+    raw_count: object = raw_usage.get("input_tokens")
+    if isinstance(raw_count, bool) or not isinstance(raw_count, int):
+        return None
+    return raw_count if raw_count >= 0 else None
+
+
+def _read_answers(response: dict[object, object]) -> list[JudgeAnswer]:
+    """Return the answers in a System One response that names a choice."""
     question_id_to_raw_answer: object = response.get("answers", {})
     if not isinstance(question_id_to_raw_answer, dict):
         raise ValueError("The judge's 'answers' is not a JSON object")

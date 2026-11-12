@@ -8,7 +8,11 @@ from pathlib import Path
 import pytest
 
 from klint.cli import CHANGE_SUMMARY_COMMAND, ExitCode
-from tests.support.builders import build_audit_command_app, write_text
+from tests.support.builders import (
+    build_audit_command_app,
+    list_lines_before_judge_usage,
+    write_text,
+)
 from tests.support.change_summary import (
     GREETING_DOCUMENT,
     HypothesisJudge,
@@ -136,7 +140,7 @@ def test_an_unknown_field_is_one_warning_line_and_the_command_goes_on(
     exit_code = _run_command(tmp_path, HypothesisJudge(), document=document)
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert capsys.readouterr().err.splitlines() == [
+    assert list_lines_before_judge_usage(capsys.readouterr().err) == [
         "[klint-change-summary] Warning: Change-summary document: #/root_package "
         "has unknown fields ['summery'], which are ignored; known fields: "
         "['files', 'packages', 'path', 'summary']"

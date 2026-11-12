@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -222,3 +223,13 @@ def build_rule_pack(
         ),
         rule_problems=(),
     )
+
+
+def list_lines_before_judge_usage(stderr: str) -> list[str]:
+    """Return the lines of a command's ``stderr`` before its judge usage line.
+
+    Fails when the last line is not the judge usage line every audit ends on.
+    """
+    *lines, last_line = stderr.splitlines()
+    assert re.fullmatch(r"\[[\w-]+\] Judge usage: .+", last_line), last_line
+    return lines

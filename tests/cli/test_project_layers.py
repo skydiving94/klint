@@ -10,7 +10,12 @@ import pytest
 from klint.app import AppSettings
 from klint.cli import STRUCTURE_AUDIT_COMMAND
 from klint.core import KlintWarning
-from tests.support.builders import build_audit_command_app, write_json, write_text
+from tests.support.builders import (
+    build_audit_command_app,
+    list_lines_before_judge_usage,
+    write_json,
+    write_text,
+)
 from tests.support.fakes import FakeJudge
 from tests.support.paths import PYTHON_PACKAGE_RULE_PACK
 
@@ -141,7 +146,7 @@ def test_a_question_with_layers_that_does_not_show_them_is_warned_about(
     rule_id_to_question = _map_rule_id_to_question(project)
 
     assert rule_id_to_question["layered"] == "Do imports respect the layers?"
-    assert capsys.readouterr().err.splitlines() == [
+    assert list_lines_before_judge_usage(capsys.readouterr().err) == [
         f"[klint-structure] Warning: Rule 'layered' in '{project / 'klint.json'}' "
         "has a question_with_layers without {layers}, so it does not show the "
         "project's layers"

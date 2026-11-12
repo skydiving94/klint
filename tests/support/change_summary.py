@@ -12,7 +12,7 @@ from klint.catalog.change_summary import (
     ChangeSummaryInput,
 )
 from klint.core.models.audits import InMemoryBytesInput
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeReply, JudgeRequest
 from klint.core.models.reports import JsonValue
 from klint.core.models.units import AuditableUnit
 from tests.support.builders import build_audit_pipeline
@@ -124,7 +124,7 @@ class HypothesisJudge(FakeJudge):
         self.phrase_to_rule_id_to_choice = phrase_to_rule_id_to_choice or {}
         self.refused_phrases = refused_phrases
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         hypothesis = request.subject.rsplit(HYPOTHESIS_PREFIX, 1)[-1]
         if any(phrase in hypothesis for phrase in self.refused_phrases):
             self.requests.append(request)

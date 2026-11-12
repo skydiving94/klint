@@ -5,10 +5,10 @@ import urllib.request
 from http import HTTPStatus
 
 from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeReply, JudgeRequest
 from klint.infra.system_one.system_one_format import (
     build_system_one_questions,
-    read_system_one_answers,
+    read_system_one_reply,
 )
 
 _ACCESS_REFUSED_STATUSES = frozenset({HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN})
@@ -33,9 +33,9 @@ class HttpSystemOneJudge(BaseJudge):
         self._api_key = api_key
         self._timeout = timeout_seconds
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         response = await asyncio.to_thread(self._post, request)
-        return read_system_one_answers(response)
+        return read_system_one_reply(response)
 
     def _post(self, request: JudgeRequest) -> object:
         """Send ``request`` to the endpoint; return the response as read from JSON."""

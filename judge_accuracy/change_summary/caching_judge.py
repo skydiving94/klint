@@ -5,7 +5,7 @@ import dataclasses
 import json
 
 from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeReply, JudgeRequest, JudgeUsage
 
 
 class CachingJudge(BaseJudge):
@@ -13,7 +13,8 @@ class CachingJudge(BaseJudge):
 
     A planted mistake changes one summary of a document; every other unit's
     text stays as it was in the true document, so its request is answered
-    from memory instead of being sent again. A request the other judge
+    from memory instead of being sent again, and its reply counts no
+    request in the judge's usage. A request the other judge
     fails on is not remembered. Requests are sent one at a time: a server
     on this machine answers one at a time, and a request waiting behind
     others could run out its timeout and be counted as refused.
@@ -21,24 +22,27 @@ class CachingJudge(BaseJudge):
 
     def __init__(self, judge: BaseJudge) -> None:
         self._judge = judge
-        self._request_key_to_answers: dict[str, list[JudgeAnswer]] = {}
+        self._request_key_to_reply: dict[str, JudgeReply] = {}
         self._asked_request_count = 0
         self._asked_character_count = 0
         self._reused_request_count = 0
         self._sending = asyncio.Lock()
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         key = json.dumps(dataclasses.asdict(request), sort_keys=True, default=str)
         async with self._sending:
-            answers = self._request_key_to_answers.get(key)
-            if answers is not None:
+            remembered_reply = self._request_key_to_reply.get(key)
+            if remembered_reply is not None:
                 self._reused_request_count += 1
-                return list(answers)
+                return JudgeReply(
+                    answers=remembered_reply.answers,
+                    usage=JudgeUsage(request_count=0, input_token_count=0),
+                )
             self._asked_request_count += 1
             self._asked_character_count += len(request.subject)
-            answers = await self._judge.answer(request)
-        self._request_key_to_answers[key] = list(answers)
-        return answers
+            reply = await self._judge.answer(request)
+        self._request_key_to_reply[key] = reply
+        return reply
 
     def count_asked_requests(self) -> int:
         """Return how many requests were sent to the other judge."""

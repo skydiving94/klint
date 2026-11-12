@@ -5,8 +5,21 @@ import asyncio
 from injector import Module, provider, singleton
 
 from klint.core.interfaces import BaseJudge, BaseRuleSource
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import (
+    JudgeAnswer,
+    JudgeReply,
+    JudgeRequest,
+    JudgeUsage,
+)
 from klint.core.models.rules import RulePackSpec
+
+
+def build_unreported_reply(answers: list[JudgeAnswer]) -> JudgeReply:
+    """Return ``answers`` as one request's reply that reports no input tokens."""
+    return JudgeReply(
+        answers=tuple(answers),
+        usage=JudgeUsage(request_count=1, input_token_count=None),
+    )
 
 
 class FakeJudge(BaseJudge):
@@ -31,7 +44,7 @@ class FakeJudge(BaseJudge):
         self.rule_id_to_confidence = rule_id_to_confidence or {}
         self.requests: list[JudgeRequest] = []
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         self.requests.append(request)
         answers: list[JudgeAnswer] = []
         for question in request.questions:
@@ -49,7 +62,7 @@ class FakeJudge(BaseJudge):
                     choice_key_to_probability={choice: confidence},
                 )
             )
-        return answers
+        return build_unreported_reply(answers)
 
     def list_asked_rule_ids(self) -> list[list[str]]:
         """Return the rule ids asked in each request, sorted, in request order."""
@@ -77,7 +90,7 @@ class PickyJudge(FakeJudge):
         super().__init__(default="fail")
         self.refuses = refuses
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         if self.refuses in request.subject:
             raise RuntimeError("judge is down")
         return await super().answer(request)
@@ -91,7 +104,7 @@ class CountingJudge(FakeJudge):
         self.running = 0
         self.most_at_once = 0
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         self.running += 1
         self.most_at_once = max(self.most_at_once, self.running)
         await asyncio.sleep(0)
@@ -140,7 +153,7 @@ class SubjectJudge(FakeJudge):
         self.subject_to_choice = subject_to_choice
         self.refused_subjects = refused_subjects
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         if request.subject in self.refused_subjects:
             self.requests.append(request)
             raise RuntimeError("judge is down")

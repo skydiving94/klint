@@ -16,11 +16,11 @@ def test_fake_judge_answers_every_question(fake_judge: type[FakeJudge]) -> None:
     judge = fake_judge(rule_id_to_answer={"b": "fail", "c": None}, confidence=0.7)
     answers = asyncio.run(
         judge.answer(build_judge_request("some state", "a", "b", "c"))
-    )
-    assert answers == [
+    ).answers
+    assert answers == (
         JudgeAnswer("a", "pass", 0.7, {"pass": 0.7}),
         JudgeAnswer("b", "fail", 0.7, {"fail": 0.7}),
-    ]
+    )
     assert judge.list_asked_rule_ids() == [["a", "b", "c"]]
 
 
