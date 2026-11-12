@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "about": "Usage-based invoicing behind injected store and payment-gateway interfaces; build_invoices is one long function that reads usage and accounts in one query each.",
+  "planted_problems": [
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "PAYMENT_TIMEOUT_SECONDS = float(os.environ.get(\"PAYMENT_TIMEOUT_SECONDS\", \"10\"))\n",
+      "new_text": "PAYMENT_TIMEOUT_SECONDS = float(os.environ.get(\"PAYMENT_TIMEOUT_SECONDS\", \"10\"))\nPAYMENT_API_KEY = \"pay-live-51HqT9dKx2bV8mZr4Lw0yPq7Jc3nE6sAa\"\n",
+      "why_wrong": "The module holds the payment provider's live API key in its source."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "    usage_rows = await store.list_usage(sorted(account_id_to_account), start, end)\n    account_id_to_rows: dict[int, list[dict]] = {}\n    for row in usage_rows:\n        account_id_to_rows.setdefault(row[\"account_id\"], []).append(row)\n",
+      "new_text": "    account_id_to_rows: dict[int, list[dict]] = {}\n    for account_id in sorted(account_id_to_account):\n        rows_of_account = await store.list_usage([account_id], start, end)\n        if rows_of_account:\n            account_id_to_rows[account_id] = rows_of_account\n",
+      "why_wrong": "build_invoices reads the usage of each account in its own query, in a loop, instead of all accounts' usage at once."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "        discount_percent = Decimal(str(account.get(\"discount_percent\") or 0))\n        if discount_percent > 0:\n            if discount_percent > 100:\n                raise InvoiceError(f\"Account {account_id} has a discount over 100%\")",
+      "new_text": "        try:\n            discount_percent = Decimal(str(account.get(\"discount_percent\") or 0))\n        except Exception as error:\n            raise InvoiceError(\n                f\"Bad account row {account!r}: {error!r}\\n{traceback.format_exc()}\"\n            ) from error\n        if discount_percent > 0:\n            if discount_percent > 100:\n                raise InvoiceError(f\"Account {account_id} has a discount over 100%\")",
+      "why_wrong": "build_invoices puts the whole account row, the raw exception and the stack trace into an InvoiceError, whose message is shown to users."
+    },
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "        if not lines:\n            continue\n        invoices.append(",
+      "new_text": "        if not lines:\n            continue\n        rates = requests.get(\n            \"https://rates.example.com/v1/latest\", timeout=PAYMENT_TIMEOUT_SECONDS\n        ).json()\n        logger.debug(\"Rate for %s: %s\", account_id, rates.get(account.get(\"currency\")))\n        invoices.append(",
+      "why_wrong": "build_invoices, an async function, fetches exchange rates with the blocking requests library inside its loop."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "        except (TimeoutError, ConnectionError):\n            logger.warning(\"Could not reach the gateway for %s\", invoice.invoice_id)\n            failed.append(invoice.invoice_id)\n            continue",
+      "new_text": "        except Exception as error:\n            return [\n                f\"{invoice.invoice_id}: {error!r} {traceback.format_exc()} \"\n                f\"customer={customer_reference}\"\n            ]",
+      "why_wrong": "charge_invoices returns the raw gateway exception, the stack trace and the customer's payment reference to its caller, and stops charging the other invoices."
+    },
+    {
+      "rule_id": "tight_coupling",
+      "old_text": "    try:\n            payment_reference = await gateway.charge(\n                customer_reference, total, invoice.currency, PAYMENT_TIMEOUT_SECONDS\n            )",
+      "new_text": "    try:\n            import stripe\n\n            stripe.api_key = os.environ[\"STRIPE_API_KEY\"]\n            payment_reference = stripe.PaymentIntent.create(\n                amount=int(total * 100),\n                currency=invoice.currency.lower(),\n                customer=customer_reference,\n                confirm=True,\n            ).id",
+      "why_wrong": "charge_invoices calls the Stripe SDK directly instead of the injected payment gateway, tying invoicing to one provider."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "def summarize_invoices(invoices: Sequence[Invoice]) -> dict[str, Decimal]:",
+      "new_text": "async def run_month_end(store, gateway, mailer, warehouse, account_ids, start, end):\n    \"\"\"Close billing, restock the warehouse, email newsletters and rotate logs.\"\"\"\n    failed = await close_billing_period(store, gateway, account_ids, start, end, {})\n    for item in await warehouse.list_low_stock():\n        await warehouse.reorder(item[\"sku\"], item[\"reorder_quantity\"])\n    for account in await store.list_accounts(account_ids):\n        await mailer.send(account[\"email\"], \"Our news this month\", \"...\")\n    for path in sorted(os.listdir(\"/var/log/billing\")):\n        os.remove(os.path.join(\"/var/log/billing\", path))\n    return failed\n\n\ndef summarize_invoices(invoices: Sequence[Invoice]) -> dict[str, Decimal]:",
+      "why_wrong": "run_month_end bills customers, restocks a warehouse, sends newsletters and deletes log files: unrelated jobs in one function."
+    }
+  ]
+}

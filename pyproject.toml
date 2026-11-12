@@ -65,7 +65,9 @@ line-length = 88
 # examples/ holds deliberately bad code for klint to find; never lint it.
 # Markdown files are documentation; ruff format must not rewrite their code
 # blocks, so `ruff format --check .` checks Python files only.
-extend-exclude = ["examples", "*.md"]
+# judge_accuracy/code_units/cases/ holds the modules of an accuracy set,
+# data the judge is shown as they are.
+extend-exclude = ["examples", "*.md", "judge_accuracy/code_units/cases"]
 
 [tool.ruff.lint]
 select = [
@@ -92,6 +94,8 @@ ignore = [
 [tool.mypy]
 python_version = "3.11"
 files = ["klint", "judge_accuracy", "tests"]
+# The modules of the code-unit accuracy set are data, not code klint runs.
+exclude = ["^judge_accuracy/code_units/cases/"]
 # klint/ and tests/ are both held to everything `mypy --strict` turns on.
 strict = true
 warn_unused_configs = true

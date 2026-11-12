@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "about": "The monthly sales CSV: build_sales_report is one long function that reads sales, refunds and targets in one query each and writes the file off the event loop.",
+  "planted_problems": [
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "    path = REPORT_FOLDER / f\"sales-{start:%Y-%m}-{'-'.join(regions)}.csv\"\n    await asyncio.to_thread(write_report_file, path, output.getvalue())",
+      "new_text": "    path = REPORT_FOLDER / f\"sales-{start:%Y-%m}-{'-'.join(regions)}.csv\"\n    write_report_file(path, output.getvalue())",
+      "why_wrong": "build_sales_report, an async function, writes the report file synchronously on the event loop."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "    sales_rows = await store.sum_sales_by_day(start, end, regions)\n",
+      "new_text": "    sales_rows = []\n    for region in regions:\n        sales_rows += await store.sum_sales_by_day(start, end, [region])\n",
+      "why_wrong": "build_sales_report reads each region's sales in its own query, in a loop, instead of every region's at once."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "    region_to_target = {\n        row[\"region\"]: to_money(row[\"target\"]) for row in target_rows\n    }",
+      "new_text": "    region_to_target = {}\n    for region in regions:\n        for row in await store.list_targets(start, [region]):\n            region_to_target[row[\"region\"]] = to_money(row[\"target\"])",
+      "why_wrong": "build_sales_report reads the target of each region again in its own query, in a loop."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    regions = tuple(sorted({region.strip() for region in region_text.split(\",\")}))\n    unknown = [region for region in regions if region not in REGIONS]\n    if unknown:\n        raise ReportError(f\"Unknown regions: {', '.join(unknown)}\")",
+      "new_text": "    regions = tuple(sorted({region.strip() for region in region_text.split(\",\")}))",
+      "why_wrong": "parse_report_request accepts any region names from the query string, which then reach the queries and the report's file name."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "    except Exception:\n        logger.exception(\"The sales report failed\")\n        return 500, {\"error\": \"The report could not be built; please try again\"}",
+      "new_text": "    except Exception as error:\n        return 500, {\"error\": f\"{type(error).__name__}: {error}\", \"trace\": traceback.format_exc()}",
+      "why_wrong": "handle_report_download answers an unexpected failure with the exception and its stack trace."
+    },
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "REGIONS = (\"north\", \"south\", \"east\", \"west\")\n",
+      "new_text": "REGIONS = (\"north\", \"south\", \"east\", \"west\")\nWAREHOUSE_PASSWORD = \"Finance#Reports2026!\"\n",
+      "why_wrong": "The module holds the data warehouse's password in its source."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "    writer.writerow([])\n    writer.writerow([\"Best region\", best_region])\n    writer.writerow([\"Refunds as a share of sales\", f\"{refund_share}%\"])\n",
+      "new_text": "    writer.writerow([])\n    writer.writerow([\"Best region\", best_region])\n    writer.writerow([\"Refunds as a share of sales\", f\"{refund_share}%\"])\n\n    for region in regions:\n        if region_to_sales[region] < region_to_target.get(region, Decimal(0)):\n            await store.lower_prices(region, percent=5)\n            await store.email_sales_team(region, \"Prices lowered by 5%\")\n    await store.archive_orders_before(start)\n    await store.rotate_api_keys()\n",
+      "why_wrong": "build_sales_report also lowers prices, emails sales teams, archives orders and rotates API keys: jobs unrelated to writing a report."
+    }
+  ]
+}

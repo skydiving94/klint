@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "about": "An async repository of orders over an injected SQL connection; every query is parameterized, names its columns and reads the lines of a page at once.",
+  "planted_problems": [
+    {
+      "rule_id": "over_fetching_data",
+      "old_text": "    row = await database.fetch_one(\n        f\"SELECT {ORDER_COLUMNS} FROM orders WHERE id = ?\", (order_id,)\n    )",
+      "new_text": "    row = await database.fetch_one(\"SELECT * FROM orders WHERE id = ?\", (order_id,))",
+      "why_wrong": "find_order reads every column of the order's row with SELECT *, not the five it uses."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "    order_ids = [row[\"id\"] for row in rows]\n    placeholders = \", \".join(\"?\" for _ in order_ids)\n    line_rows = await database.fetch_all(\n        f\"SELECT {LINE_COLUMNS} FROM order_lines WHERE order_id IN ({placeholders})\",\n        order_ids,\n    )\n    order_id_to_lines: dict[int, list[OrderLine]] = {\n        order_id: [] for order_id in order_ids\n    }\n    for line_row in line_rows:\n        order_id_to_lines[line_row[\"order_id\"]].append(_build_line(line_row))\n    return [_build_order(row, order_id_to_lines[row[\"id\"]]) for row in rows]",
+      "new_text": "    orders: list[Order] = []\n    for row in rows:\n        line_rows = await database.fetch_all(\n            f\"SELECT {LINE_COLUMNS} FROM order_lines WHERE order_id = ?\", (row[\"id\"],)\n        )\n        orders.append(_build_order(row, [_build_line(line) for line in line_rows]))\n    return orders",
+      "why_wrong": "_attach_lines queries the lines of each order in its own query, inside the loop over the page."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    if status not in {\"pending\", \"paid\", \"shipped\", \"cancelled\"}:\n        raise ValueError(f\"Unknown order status: {status!r}\")\n    rows = await database.fetch_all(\n        f\"SELECT {ORDER_COLUMNS} FROM orders WHERE status = ? ORDER BY id LIMIT ?\",\n        (status, _check_page_size(page_size)),\n    )",
+      "new_text": "    rows = await database.fetch_all(\n        f\"SELECT {ORDER_COLUMNS} FROM orders WHERE status = '{status}' \"\n        f\"ORDER BY id LIMIT {page_size}\",\n        (),\n    )",
+      "why_wrong": "list_orders_by_status writes the caller's status and page size into the SQL text unchecked, open to injection."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "    if status not in {\"pending\", \"paid\", \"shipped\", \"cancelled\"}:\n        raise ValueError(f\"Unknown order status: {status!r}\")\n    changed = await database.execute(\n        \"UPDATE orders SET status = ? WHERE id = ?\", (status, order_id)\n    )\n    if changed == 0:\n        raise OrderNotFoundError(order_id)",
+      "new_text": "    if status not in {\"pending\", \"paid\", \"shipped\", \"cancelled\"}:\n        raise ValueError(f\"Unknown order status: {status!r}\")\n    try:\n        changed = await database.execute(\n            \"UPDATE orders SET status = ? WHERE id = ?\", (status, order_id)\n        )\n    except Exception as error:\n        raise RuntimeError(\n            f\"Database failure: {error!r}\\n{traceback.format_exc()}\\n\"\n            f\"connection={database!r}\"\n        ) from error\n    if changed == 0:\n        raise OrderNotFoundError(order_id)",
+      "why_wrong": "update_order_status puts the raw database error, the stack trace and the connection's repr into the error it raises."
+    },
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "    rows = await database.fetch_all(\n        \"SELECT status, COUNT(*) AS order_count FROM orders GROUP BY status\", ()\n    )\n    return {row[\"status\"]: row[\"order_count\"] for row in rows}",
+      "new_text": "    with sqlite3.connect(\"shop.db\") as connection:\n        rows = connection.execute(\n            \"SELECT status, COUNT(*) AS order_count FROM orders GROUP BY status\"\n        ).fetchall()\n    return {status: order_count for status, order_count in rows}",
+      "why_wrong": "count_orders_by_status, an async function, opens and queries a SQLite file synchronously, blocking the event loop."
+    },
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "MAX_PAGE_SIZE = 200\n",
+      "new_text": "MAX_PAGE_SIZE = 200\nDATABASE_URL = \"postgresql://shop_admin:Wq7!rT2#pX9z@db.internal:5432/shop\"\n",
+      "why_wrong": "The module holds the database's user name and password in its source."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "    logger.info(\"Deleted %s cancelled orders from before %s\", deleted, before)\n    return deleted\n",
+      "new_text": "    logger.info(\"Deleted %s cancelled orders from before %s\", deleted, before)\n    return deleted\n\n\nasync def close_month(database: Database, month: str, mailer, pdf_writer) -> None:\n    \"\"\"Close the month: cancel stale orders, bill customers, mail and print reports.\"\"\"\n    stale = await database.fetch_all(\n        \"SELECT id FROM orders WHERE status = 'pending' AND created_at < ?\", (month,)\n    )\n    await cancel_orders(database, [row[\"id\"] for row in stale])\n    customers = await database.fetch_all(\"SELECT id, email FROM customers\", ())\n    for customer in customers:\n        invoice = f\"Invoice for {customer['email']} ({month})\"\n        await database.execute(\n            \"INSERT INTO invoices (customer_id, body) VALUES (?, ?)\",\n            (customer[\"id\"], invoice),\n        )\n        await mailer.send(customer[\"email\"], \"Your invoice\", invoice)\n    report = await count_orders_by_status(database)\n    pdf_writer.write(f\"reports/{month}.pdf\", str(report))\n    await database.execute(\"UPDATE settings SET closed_month = ?\", (month,))\n",
+      "why_wrong": "close_month cancels orders, writes invoices, mails customers, prints a PDF report and changes settings: unrelated jobs in one function, in a module about orders."
+    }
+  ]
+}

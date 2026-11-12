@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "about": "Stock sync against a supplier feed and a stock store, both injected; reconcile_stock is one long function that works a batch at a time.",
+  "planted_problems": [
+    {
+      "rule_id": "tight_coupling",
+      "old_text": "        try:\n            supplier_rows = await catalogue.list_stock(batch)",
+      "new_text": "        try:\n            import httpx\n\n            async with httpx.AsyncClient(base_url=\"https://api.acme-supplies.com\") as client:\n                response = await client.post(\"/v2/stock/query\", json={\"skus\": batch})\n            supplier_rows = response.json()[\"items\"]",
+      "why_wrong": "reconcile_stock calls one supplier's HTTP API directly, at its address, instead of the injected catalogue."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "        sku_to_shop_level = await store.find_levels(sorted(sku_to_supplier_level))\n",
+      "new_text": "        sku_to_shop_level: dict[str, int] = {}\n        for sku in sorted(sku_to_supplier_level):\n            sku_to_shop_level.update(await store.find_levels([sku]))\n",
+      "why_wrong": "reconcile_stock reads the shop's level of each SKU in its own query, in a loop over the batch."
+    },
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "        if changed:\n            await store.save_levels(changed)",
+      "new_text": "        if changed:\n            await store.save_levels(changed)\n            with open(\"/var/lib/shop/stock-changes.log\", \"a\") as changes_file:\n                changes_file.write(json.dumps(changed) + \"\\n\")",
+      "why_wrong": "reconcile_stock, an async function, appends each batch's changes to a file with blocking file writes."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    valid_skus = [sku for sku in skus if is_valid_sku(sku)]\n    rejected: list[str] = [sku for sku in skus if not is_valid_sku(sku)]\n    if rejected:\n        logger.warning(\"Skipping %s SKUs that are not valid\", len(rejected))\n",
+      "new_text": "    valid_skus = list(skus)\n    rejected: list[str] = []\n",
+      "why_wrong": "reconcile_stock passes the SKUs it is given, which come from the supplier's feed, on to the supplier and the store without checking them."
+    },
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "            logger.warning(\"Sync attempt %s failed; trying again\", attempt)\n            await asyncio.sleep(pause_seconds * attempt)",
+      "new_text": "            logger.warning(\"Sync attempt %s failed; trying again\", attempt)\n            time.sleep(pause_seconds * attempt)",
+      "why_wrong": "sync_with_retries, an async function, waits with time.sleep, blocking the event loop."
+    },
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "STALE_AFTER_HOURS = 24\n",
+      "new_text": "STALE_AFTER_HOURS = 24\nSUPPLIER_TOKEN = \"acme_pat_7f3e9b2c4d1a8e6f0b5c9d2e7a4f1b8c\"\n",
+      "why_wrong": "The module holds the supplier's access token in its source."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "        except (TimeoutError, ConnectionError):\n            logger.warning(\"The supplier did not answer for a batch of %s\", len(batch))\n            rejected.extend(batch)\n            continue",
+      "new_text": "        except Exception as error:\n            raise RuntimeError(\n                f\"Supplier call failed with {error!r}; batch={batch}; \"\n                f\"trace={traceback.format_exc()}\"\n            ) from error",
+      "why_wrong": "reconcile_stock turns any supplier failure into an error carrying the raw exception, the batch and the stack trace."
+    }
+  ]
+}

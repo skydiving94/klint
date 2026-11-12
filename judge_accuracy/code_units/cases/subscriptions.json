@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "about": "Subscription changes in one service class over an injected store and charger, with a plan catalogue class; the classes give long class units.",
+  "planted_problems": [
+    {
+      "rule_id": "god_component",
+      "old_text": "    def find_upgrade(self, plan_id: str) -> Plan | None:",
+      "new_text": "    def send_marketing_email(self, customer_email: str, campaign: str) -> None:\n        \"\"\"Email the customer the campaign's newsletter.\"\"\"\n        smtp = smtplib.SMTP(\"mail.internal\")\n        smtp.sendmail(\"news@shop.example\", [customer_email], campaign)\n\n    def resize_product_images(self, folder: str) -> int:\n        \"\"\"Shrink every product image in the folder to 800 pixels wide.\"\"\"\n        return len(os.listdir(folder))\n\n    def find_upgrade(self, plan_id: str) -> Plan | None:",
+      "why_wrong": "PlanCatalogue also sends marketing email and resizes product images: work unrelated to looking plans up."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "    async def _find_changeable(self, subscription_id: int) -> Subscription:",
+      "new_text": "    async def import_products_from_csv(self, path: str) -> int:\n        \"\"\"Read a product CSV and add each product to the shop.\"\"\"\n        ...\n\n    async def rebuild_search_index(self) -> None:\n        \"\"\"Re-index every product for the search page.\"\"\"\n        ...\n\n    async def send_abandoned_cart_emails(self, today: date) -> int:\n        \"\"\"Remind each customer who left items in their cart yesterday.\"\"\"\n        ...\n\n    async def compute_warehouse_pick_routes(self, orders: Sequence[int]) -> list[str]:\n        \"\"\"Return the route a picker walks for each order.\"\"\"\n        ...\n\n    async def _find_changeable(self, subscription_id: int) -> Subscription:",
+      "why_wrong": "SubscriptionService also imports products, rebuilds the search index, emails abandoned carts and plans warehouse routes."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "        if charge > 0 and not await self._charger.charge_renewal(\n            subscription.customer_id, charge, f\"Upgrade to {new_plan.name}\"\n        ):\n            raise SubscriptionError(\"The upgrade could not be charged\")",
+      "new_text": "        try:\n            is_charged = await self._charger.charge_renewal(\n                subscription.customer_id, charge, f\"Upgrade to {new_plan.name}\"\n            )\n        except Exception as error:\n            raise SubscriptionError(\n                f\"Charge failed: {error!r} {traceback.format_exc()}\"\n            ) from error\n        if charge > 0 and not is_charged:\n            raise SubscriptionError(\"The upgrade could not be charged\")",
+      "why_wrong": "change_plan puts the charger's raw exception and the stack trace into a SubscriptionError, whose message is shown to customers."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "        plan = self._catalogue.find_plan(subscription.plan_id)\n        if not 1 <= seats <= plan.seat_limit:\n            raise SubscriptionError(f\"Choose 1 to {plan.seat_limit} seats\")\n        changed = replace(subscription, seats=seats)",
+      "new_text": "        changed = replace(subscription, seats=seats)",
+      "why_wrong": "change_seats stores the number of seats the customer asks for without checking it against the plan's limit, or that it is positive."
+    },
+    {
+      "rule_id": "tight_coupling",
+      "old_text": "        is_charged = await self._charger.charge_renewal(\n            subscription.customer_id,\n            plan.price * subscription.seats,\n            f\"{plan.name}, {subscription.seats} seats\",\n        )",
+      "new_text": "        import braintree\n\n        gateway = braintree.BraintreeGateway(\n            braintree.Configuration.instantiate(os.environ[\"BRAINTREE_URL\"])\n        )\n        is_charged = gateway.transaction.sale(\n            {\"customer_id\": str(subscription.customer_id), \"amount\": str(plan.price * subscription.seats)}\n        ).is_success",
+      "why_wrong": "_renew_one charges renewals through the Braintree SDK directly instead of the injected charger."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "        handled = 0\n        for subscription in await self._store.list_due(today, batch_size):\n            await self._renew_one(subscription, today)\n            handled += 1\n        return handled",
+      "new_text": "        handled = 0\n        for subscription in await self._store.list_due(today, batch_size):\n            fresh = await self._store.find(subscription.subscription_id)\n            owner = await self._store.find_for_customer(subscription.customer_id)\n            if fresh is not None and owner is not None:\n                await self._renew_one(fresh, today)\n                handled += 1\n        return handled",
+      "why_wrong": "renew_due reads each due subscription again, and its customer's subscription, in two queries per subscription inside the loop."
+    },
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "MAX_PAUSE_DAYS = 90\n",
+      "new_text": "MAX_PAUSE_DAYS = 90\nBRAINTREE_PRIVATE_KEY = \"bt_priv_c71e94f2a8d35b06e1f7a9c3d5b2e8f4\"\n",
+      "why_wrong": "The module holds the payment provider's private key in its source."
+    }
+  ]
+}
