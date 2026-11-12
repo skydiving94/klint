@@ -53,16 +53,19 @@ class KlintModule(Module):
 
     kind_id_to_rule_replacement names, for a kind of audit, one file that
     replaces every built-in pack, the fallback ones too, so that its rules
-    are asked about every unit of that kind.
+    are asked about every unit of that kind. kind_id_to_character_budget
+    gives, for a kind of audit, the character budget that replaces its own.
     """
 
     def __init__(
         self,
         settings: AppSettings,
         kind_id_to_rule_replacement: Mapping[str, Path],
+        kind_id_to_character_budget: Mapping[str, int] | None = None,
     ) -> None:
         self._settings = settings
         self._kind_id_to_rule_replacement = dict(kind_id_to_rule_replacement)
+        self._kind_id_to_character_budget = dict(kind_id_to_character_budget or {})
 
     def configure(self, binder: Binder) -> None:
         binder.bind(AppSettings, to=self._settings)
@@ -159,6 +162,12 @@ class KlintModule(Module):
     ) -> AuditKindRegistry:
         known_languages = set(file_extension_to_language.values())
 
+        def apply_character_budget(audit_kind: AuditKind) -> AuditKind:
+            character_budget = self._kind_id_to_character_budget.get(audit_kind.kind_id)
+            if character_budget is None:
+                return audit_kind
+            return replace(audit_kind, character_budget=character_budget)
+
         def apply_rule_replacement(audit_kind: AuditKind) -> AuditKind:
             rule_replacement = self._kind_id_to_rule_replacement.get(audit_kind.kind_id)
             if rule_replacement is None:
@@ -180,7 +189,7 @@ class KlintModule(Module):
 
         return AuditKindRegistry(
             [
-                apply_rule_replacement(audit_kind)
+                apply_character_budget(apply_rule_replacement(audit_kind))
                 for suite in suites
                 for audit_kind in suite.list_audit_kinds()
             ]
@@ -212,12 +221,21 @@ def create_injector(
     settings: AppSettings,
     *binding_overrides: BindingOverride,
     kind_id_to_rule_replacement: Mapping[str, Path] | None = None,
+    kind_id_to_character_budget: Mapping[str, int] | None = None,
 ) -> Injector:
     """Return an injector for ``settings``; binding overrides add or replace bindings.
 
     No suite is added: a binding override adds each one the audit draws on.
-    kind_id_to_rule_replacement is as KlintModule takes it.
+    kind_id_to_rule_replacement and kind_id_to_character_budget are as
+    KlintModule takes them.
     """
     return Injector(
-        [KlintModule(settings, kind_id_to_rule_replacement or {}), *binding_overrides]
+        [
+            KlintModule(
+                settings,
+                kind_id_to_rule_replacement or {},
+                kind_id_to_character_budget,
+            ),
+            *binding_overrides,
+        ]
     )
