@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 
-from klint.core.models.judging import AnswerChoice
+from klint.core.models.judging import AnswerChoice, JudgeUsage
 from klint.core.models.reports.json_value import JsonValue
 from klint.core.models.reports.roll_up_status import RollUpStatus
 from klint.core.models.units import Location, UnitContext
@@ -66,14 +66,16 @@ def _convert_location_to_dict(location: Location | None) -> JsonValue:
 class AuditReport:
     """What an audit found: the units it audited and the findings on them.
 
-    It also records the unit each unit is nested directly inside, and, once
-    the findings are rolled up, each audited unit's roll-up status.
+    It also records the unit each unit is nested directly inside, once the
+    findings are rolled up, each audited unit's roll-up status, and the
+    judge's usage over the audit.
     """
 
     _findings: list[AuditFinding] = field(default_factory=list)
     _audited_unit_ids: list[str] = field(default_factory=list)
     _unit_id_to_parent_unit_id: dict[str, str] = field(default_factory=dict)
     _unit_id_to_roll_up_status: dict[str, RollUpStatus] = field(default_factory=dict)
+    _judge_usage: JudgeUsage = field(default_factory=JudgeUsage)
 
     def record(self, finding: AuditFinding) -> None:
         self._findings.append(finding)
@@ -85,6 +87,14 @@ class AuditReport:
     def record_unit_parent(self, unit_id: str, parent_unit_id: str) -> None:
         """Take note that the unit ``unit_id`` is nested in ``parent_unit_id``."""
         self._unit_id_to_parent_unit_id[unit_id] = parent_unit_id
+
+    def record_judge_usage(self, usage: JudgeUsage) -> None:
+        """Add ``usage`` to the judge's usage over the audit."""
+        self._judge_usage = self._judge_usage.add(usage)
+
+    def get_judge_usage(self) -> JudgeUsage:
+        """Return the judge's usage over the audit: none until some is recorded."""
+        return self._judge_usage
 
     def find_parent_unit_id(self, unit_id: str) -> str | None:
         """Return the unit ``unit_id`` is nested directly inside; None if none."""
@@ -119,13 +129,15 @@ class AuditReport:
     def copy_with_findings(self, findings: Sequence[AuditFinding]) -> "AuditReport":
         """Return a copy of this report that holds ``findings`` instead of its own.
 
-        The audited units, their parents and their roll-up statuses are kept.
+        The audited units, their parents, their roll-up statuses and the
+        judge's usage are kept.
         """
         return AuditReport(
             _findings=list(findings),
             _audited_unit_ids=list(self._audited_unit_ids),
             _unit_id_to_parent_unit_id=dict(self._unit_id_to_parent_unit_id),
             _unit_id_to_roll_up_status=dict(self._unit_id_to_roll_up_status),
+            _judge_usage=self._judge_usage,
         )
 
     def list_audited_unit_ids(self) -> list[str]:

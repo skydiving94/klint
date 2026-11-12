@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict
 from collections.abc import Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from klint.core.interfaces import (
     AuditKind,
@@ -15,6 +15,7 @@ from klint.core.models.judging import (
     JudgeAnswer,
     JudgeQuestion,
     JudgeRequest,
+    JudgeUsage,
 )
 from klint.core.models.reports import AuditFinding, AuditReport
 from klint.core.models.rules import AuditRule, RuleSet
@@ -30,6 +31,14 @@ _MAX_CONCURRENT_AUDITS = 8
 _WHOLE_TEXT_CHARACTER_BUDGET = 10**12
 
 
+@dataclass(frozen=True)
+class _UnitAudit:
+    """The findings on one unit, and the judge's usage in finding them."""
+
+    findings: list[AuditFinding]
+    judge_usage: JudgeUsage
+
+
 class Auditor:
     """Audits units and reports what the judge finds.
 
@@ -37,7 +46,8 @@ class Auditor:
     text the unit's renderer writes, a limited number of units at a time,
     in the order the audit asks for, and turns the answers into findings.
     A rule whose answer the renderer knows is not asked. A unit whose audit
-    fails is left out and the others go on.
+    fails is left out and the others go on. The report adds up the judge's
+    usage over the units audited.
     """
 
     def __init__(self, judge: BaseJudge) -> None:
@@ -83,8 +93,8 @@ class Auditor:
                     child_findings.extend(unit_findings[index] or ())
             return tuple(child_findings)
 
-        async def audit_one(index: int) -> list[AuditFinding] | None:
-            """Return the findings on ``units[index]``; None when its audit fails."""
+        async def audit_one(index: int) -> _UnitAudit | None:
+            """Return the audit of ``units[index]``; None when it fails."""
             unit = units[index]
             render_input = RenderInput(
                 unit=unit,
@@ -93,7 +103,7 @@ class Auditor:
             )
             async with semaphore:
                 try:
-                    findings = await self._audit_unit(
+                    unit_audit = await self._audit_unit(
                         render_input,
                         renderers[index],
                         rule_set.select_rules_for(unit),
@@ -107,17 +117,18 @@ class Auditor:
                     return None
             if audit_progress_listener is not None:
                 audit_progress_listener.report_unit_audited(unit.unit_id)
-            return findings
+            return unit_audit
 
         # A level's findings are recorded once the whole level is judged, so
         # what a renderer is given does not depend on timing.
-        for level in _order_levels(units, audit_kind.audit_order):
-            level_findings = await asyncio.gather(
-                *(audit_one(index) for index in level)
-            )
-            for index, findings in zip(level, level_findings, strict=True):
-                unit_findings[index] = findings
         report = AuditReport()
+        for level in _order_levels(units, audit_kind.audit_order):
+            level_audits = await asyncio.gather(*(audit_one(index) for index in level))
+            for index, unit_audit in zip(level, level_audits, strict=True):
+                if unit_audit is None:
+                    continue
+                unit_findings[index] = unit_audit.findings
+                report.record_judge_usage(unit_audit.judge_usage)
         for unit, findings in zip(units, unit_findings, strict=True):
             if findings is None:
                 continue
@@ -132,7 +143,7 @@ class Auditor:
         renderer: BaseUnitRenderer,
         rules: Sequence[AuditRule],
         answer_scale: AnswerScale,
-    ) -> list[AuditFinding]:
+    ) -> _UnitAudit:
         """Answer ``rules`` about one unit.
 
         The renderer's known answers come first, with no confidence: the
@@ -140,8 +151,9 @@ class Auditor:
         not called when none is left. A finding the judge gave on a text cut
         to the budget names the budget.
         """
+        judge_usage = JudgeUsage()
         if not rules:
-            return []
+            return _UnitAudit(findings=[], judge_usage=judge_usage)
         unit = render_input.unit
         rule_id_to_known_choice_key = renderer.find_known_answers(
             render_input, [rule.rule_id for rule in rules]
@@ -162,7 +174,9 @@ class Auditor:
             ):
                 cut_at_characters = render_input.character_budget
             request = _build_request(subject, unit.unit_type, asked_rules, answer_scale)
-            for judge_answer in await self._judge.answer(request):
+            reply = await self._judge.answer(request)
+            judge_usage = reply.usage
+            for judge_answer in reply.answers:
                 question_id_to_answer.setdefault(judge_answer.question_id, judge_answer)
         findings: list[AuditFinding] = []
         for rule in rules:
@@ -188,7 +202,7 @@ class Auditor:
                     ),
                 )
             )
-        return findings
+        return _UnitAudit(findings=findings, judge_usage=judge_usage)
 
 
 def _order_levels(

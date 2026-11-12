@@ -6,9 +6,13 @@ from pathlib import Path
 
 from judge_accuracy.code_units.scoring_command import ScoringExitCode, run_scoring
 from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeAnswer, JudgeReply, JudgeRequest
 from tests.support.builders import write_text
-from tests.support.fakes import FakeJudge, JudgeBindingOverride
+from tests.support.fakes import (
+    FakeJudge,
+    JudgeBindingOverride,
+    build_unreported_reply,
+)
 
 PlantedProblemData = dict[str, str]
 
@@ -72,7 +76,7 @@ class MarkerJudge(FakeJudge):
         self._rule_id_to_marker = rule_id_to_marker
         self._long_true_failure = long_true_failure
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         self.requests.append(request)
         answers = []
         for question in request.questions:
@@ -90,7 +94,7 @@ class MarkerJudge(FakeJudge):
                     choice_key_to_probability={choice: 0.9},
                 )
             )
-        return answers
+        return build_unreported_reply(answers)
 
 
 def run_code_unit_scoring(judge: BaseJudge, *arguments: str | Path) -> ScoringExitCode:

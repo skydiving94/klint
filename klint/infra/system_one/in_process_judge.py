@@ -14,10 +14,10 @@ from kev.device import default_device
 from kev.serve import Server
 
 from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeReply, JudgeRequest
 from klint.infra.system_one.system_one_format import (
     build_system_one_questions,
-    read_system_one_answers,
+    read_system_one_reply,
 )
 
 disable_progress_bars()
@@ -48,7 +48,7 @@ class InProcessSystemOneJudge(BaseJudge):
         tok, model = ck.load(dev, opts)
         self._server = Server(ck, tok, model, dev)
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         async with self._lock:
             if self._server is None:
                 await asyncio.to_thread(self._load_server_sync)
@@ -62,4 +62,4 @@ class InProcessSystemOneJudge(BaseJudge):
         )
         assert self._server is not None
         response: object = await self._server.answer_async(system_one_request)
-        return read_system_one_answers(response)
+        return read_system_one_reply(response)
