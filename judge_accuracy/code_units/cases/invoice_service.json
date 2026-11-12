@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "about": "Usage-based invoicing behind injected store and payment-gateway interfaces; build_invoices is one long function that reads usage and accounts in one query each.",
+  "about": "Usage-based invoicing behind injected store and payment-gateway interfaces: build_account_invoice works out one account's invoice, and build_invoices reads usage and accounts in one query each.",
   "planted_problems": [
     {
       "rule_id": "hardcoded_secrets",
@@ -16,15 +16,15 @@
     },
     {
       "rule_id": "improper_error_handling",
-      "old_text": "        discount_percent = Decimal(str(account.get(\"discount_percent\") or 0))\n        if discount_percent > 0:\n            if discount_percent > 100:\n                raise InvoiceError(f\"Account {account_id} has a discount over 100%\")",
-      "new_text": "        try:\n            discount_percent = Decimal(str(account.get(\"discount_percent\") or 0))\n        except Exception as error:\n            raise InvoiceError(\n                f\"Bad account row {account!r}: {error!r}\\n{traceback.format_exc()}\"\n            ) from error\n        if discount_percent > 0:\n            if discount_percent > 100:\n                raise InvoiceError(f\"Account {account_id} has a discount over 100%\")",
-      "why_wrong": "build_invoices puts the whole account row, the raw exception and the stack trace into an InvoiceError, whose message is shown to users."
+      "old_text": "    discount_percent = Decimal(str(account.get(\"discount_percent\") or 0))\n    if discount_percent > 0:\n        if discount_percent > 100:\n            raise InvoiceError(f\"Account {account_id} has a discount over 100%\")",
+      "new_text": "    try:\n        discount_percent = Decimal(str(account.get(\"discount_percent\") or 0))\n    except Exception as error:\n        raise InvoiceError(\n            f\"Bad account row {account!r}: {error!r}\\n{traceback.format_exc()}\"\n        ) from error\n    if discount_percent > 0:\n        if discount_percent > 100:\n            raise InvoiceError(f\"Account {account_id} has a discount over 100%\")",
+      "why_wrong": "build_account_invoice puts the whole account row, the raw exception and the stack trace into an InvoiceError, whose message is shown to users."
     },
     {
       "rule_id": "sync_blocking_io",
-      "old_text": "        if not lines:\n            continue\n        invoices.append(",
-      "new_text": "        if not lines:\n            continue\n        rates = requests.get(\n            \"https://rates.example.com/v1/latest\", timeout=PAYMENT_TIMEOUT_SECONDS\n        ).json()\n        logger.debug(\"Rate for %s: %s\", account_id, rates.get(account.get(\"currency\")))\n        invoices.append(",
-      "why_wrong": "build_invoices, an async function, fetches exchange rates with the blocking requests library inside its loop."
+      "old_text": "    invoices = [\n        invoice\n        for account_id, rows in sorted(account_id_to_rows.items())",
+      "new_text": "    rates = requests.get(\n        \"https://rates.example.com/v1/latest\", timeout=PAYMENT_TIMEOUT_SECONDS\n    ).json()\n    logger.debug(\"Exchange rates: %s\", rates)\n    invoices = [\n        invoice\n        for account_id, rows in sorted(account_id_to_rows.items())",
+      "why_wrong": "build_invoices, an async function, fetches exchange rates with the blocking requests library."
     },
     {
       "rule_id": "improper_error_handling",
@@ -40,9 +40,9 @@
     },
     {
       "rule_id": "god_component",
-      "old_text": "def summarize_invoices(invoices: Sequence[Invoice]) -> dict[str, Decimal]:",
-      "new_text": "async def run_month_end(store, gateway, mailer, warehouse, account_ids, start, end):\n    \"\"\"Close billing, restock the warehouse, email newsletters and rotate logs.\"\"\"\n    failed = await close_billing_period(store, gateway, account_ids, start, end, {})\n    for item in await warehouse.list_low_stock():\n        await warehouse.reorder(item[\"sku\"], item[\"reorder_quantity\"])\n    for account in await store.list_accounts(account_ids):\n        await mailer.send(account[\"email\"], \"Our news this month\", \"...\")\n    for path in sorted(os.listdir(\"/var/log/billing\")):\n        os.remove(os.path.join(\"/var/log/billing\", path))\n    return failed\n\n\ndef summarize_invoices(invoices: Sequence[Invoice]) -> dict[str, Decimal]:",
-      "why_wrong": "run_month_end bills customers, restocks a warehouse, sends newsletters and deletes log files: unrelated jobs in one function."
+      "old_text": "    if failed:\n        logger.warning(\"%s of %s invoices were not charged\", len(failed), len(invoices))\n    return failed",
+      "new_text": "    if failed:\n        logger.warning(\"%s of %s invoices were not charged\", len(failed), len(invoices))\n    for item in await store.list_low_stock():\n        await store.reorder(item[\"sku\"], item[\"reorder_quantity\"])\n    for account in await store.list_accounts(account_ids):\n        await store.send_newsletter(account[\"email\"], \"Our news this month\")\n    for path in sorted(os.listdir(\"/var/log/billing\")):\n        os.remove(os.path.join(\"/var/log/billing\", path))\n    return failed",
+      "why_wrong": "close_billing_period also restocks the warehouse, sends newsletters and deletes log files: jobs unrelated to closing a billing period."
     }
   ]
 }

@@ -87,30 +87,20 @@ def write_report_file(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-async def build_sales_report(store: SalesStore, request: ReportRequest) -> Path:
-    """Write the month's sales report as CSV and return its path.
+def render_sales_csv(
+    month: date,
+    regions: Sequence[str],
+    sales_rows: Sequence[dict],
+    refund_rows: Sequence[dict],
+    target_rows: Sequence[dict],
+) -> str:
+    """Return the month's sales report as CSV text.
 
     The report has a row per day and region with sales, refunds and net
-    sales, a total per region against its target, and a grand total. The
-    sales, the refunds and the targets of every region are read in one query
-    each, and the file is written off the event loop.
+    sales, a total per region against its target, a grand total, and the
+    best region.
     """
-    start = request.month
-    end = find_month_end(start)
-    if end > date.today().replace(day=1) and start > date.today():
-        raise ReportError("The month has not started yet")
-    regions = request.regions
-    if not regions:
-        raise ReportError("Choose at least one region")
-
-    sales_rows = await store.sum_sales_by_day(start, end, regions)
-    refund_rows = (
-        await store.sum_refunds_by_day(start, end, regions)
-        if request.is_refunds_included
-        else []
-    )
-    target_rows = await store.list_targets(start, regions)
-
+    start = month
     day_region_to_sales: dict[tuple[date, str], Decimal] = {}
     for row in sales_rows:
         key = (row["day"], row["region"])
@@ -209,8 +199,34 @@ async def build_sales_report(store: SalesStore, request: ReportRequest) -> Path:
     writer.writerow(["Best region", best_region])
     writer.writerow(["Refunds as a share of sales", f"{refund_share}%"])
 
+    return output.getvalue()
+
+
+async def build_sales_report(store: SalesStore, request: ReportRequest) -> Path:
+    """Write the month's sales report as CSV and return its path.
+
+    The sales, the refunds and the targets of every region are read in one
+    query each, and the file is written off the event loop.
+    """
+    start = request.month
+    end = find_month_end(start)
+    if end > date.today().replace(day=1) and start > date.today():
+        raise ReportError("The month has not started yet")
+    regions = request.regions
+    if not regions:
+        raise ReportError("Choose at least one region")
+
+    sales_rows = await store.sum_sales_by_day(start, end, regions)
+    refund_rows = (
+        await store.sum_refunds_by_day(start, end, regions)
+        if request.is_refunds_included
+        else []
+    )
+    target_rows = await store.list_targets(start, regions)
+
+    text = render_sales_csv(start, regions, sales_rows, refund_rows, target_rows)
     path = REPORT_FOLDER / f"sales-{start:%Y-%m}-{'-'.join(regions)}.csv"
-    await asyncio.to_thread(write_report_file, path, output.getvalue())
+    await asyncio.to_thread(write_report_file, path, text)
     logger.info(
         "Wrote the %s sales report for %s regions to %s",
         start.strftime("%B %Y"),

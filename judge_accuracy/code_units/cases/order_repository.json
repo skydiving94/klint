@@ -41,8 +41,8 @@
     {
       "rule_id": "god_component",
       "old_text": "    logger.info(\"Deleted %s cancelled orders from before %s\", deleted, before)\n    return deleted\n",
-      "new_text": "    logger.info(\"Deleted %s cancelled orders from before %s\", deleted, before)\n    return deleted\n\n\nasync def close_month(database: Database, month: str, mailer, pdf_writer) -> None:\n    \"\"\"Close the month: cancel stale orders, bill customers, mail and print reports.\"\"\"\n    stale = await database.fetch_all(\n        \"SELECT id FROM orders WHERE status = 'pending' AND created_at < ?\", (month,)\n    )\n    await cancel_orders(database, [row[\"id\"] for row in stale])\n    customers = await database.fetch_all(\"SELECT id, email FROM customers\", ())\n    for customer in customers:\n        invoice = f\"Invoice for {customer['email']} ({month})\"\n        await database.execute(\n            \"INSERT INTO invoices (customer_id, body) VALUES (?, ?)\",\n            (customer[\"id\"], invoice),\n        )\n        await mailer.send(customer[\"email\"], \"Your invoice\", invoice)\n    report = await count_orders_by_status(database)\n    pdf_writer.write(f\"reports/{month}.pdf\", str(report))\n    await database.execute(\"UPDATE settings SET closed_month = ?\", (month,))\n",
-      "why_wrong": "close_month cancels orders, writes invoices, mails customers, prints a PDF report and changes settings: unrelated jobs in one function, in a module about orders."
+      "new_text": "    logger.info(\"Deleted %s cancelled orders from before %s\", deleted, before)\n    customers = await database.fetch_all(\"SELECT id, email FROM customers\", ())\n    for customer in customers:\n        await mailer.send(customer[\"email\"], \"Our spring sale\", newsletter_html)\n    pdf_writer.write(f\"reports/{before:%Y-%m}.pdf\", str(await count_orders_by_status(database)))\n    await database.execute(\"UPDATE settings SET closed_month = ?\", (before,))\n    return deleted\n",
+      "why_wrong": "delete_cancelled_orders also emails a newsletter to every customer, prints a PDF report and changes settings: jobs unrelated to deleting cancelled orders."
     }
   ]
 }

@@ -59,8 +59,10 @@ Two files of the same name:
   function to it.
 - Every unit of every prefix is a true case.
 - Each planted problem is planted in each prefix that holds its whole
-  `old_text`. A unit it changes is a planted case when the unit is asked
-  the rule the problem breaks.
+  `old_text`. A unit of the true prefix that it changes is a planted case
+  when the unit is asked the rule the problem breaks. A unit the problem
+  adds, such as a method planted in a class, is not a case: the problem
+  lies in the unit it was added to.
 - A unit judged twice with the same text counts once.
 - The module is written to an `api/` folder before it is judged, so that
   its file is tagged as backend code and every backend rule is asked.
@@ -74,7 +76,11 @@ Two files of the same name:
   - async code never blocks on I/O;
   - outside input is checked before use;
   - outside services sit behind an interface the module is given;
-  - each file, class and function does one job.
+  - each file, class and function does one job. A long function is long
+    because its one job has many parts, such as checking every field of a
+    record or writing every section of one report; the steps of a flow,
+    such as checking, pricing, paying and storing an order, are functions
+    of their own, called by a short one.
 - A planted problem breaks one rule, at one place, and leaves the rest of
   the module true. It does not add the imports its new code would need: no
   unit shows a module's imports and the code it changes together.

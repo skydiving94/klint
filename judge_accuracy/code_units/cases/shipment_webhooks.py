@@ -135,44 +135,29 @@ def parse_event(data: object) -> TrackingEvent | None:
     return TrackingEvent(event_id, tracking_number, state, happened_at)
 
 
-async def handle_tracking_webhook(
-    store: ShipmentStore,
-    notifier: CustomerNotifier,
-    carrier: str,
-    body: bytes,
-    signature: str | None,
-) -> WebhookResult:
-    """Apply a carrier's batch of tracking events to the shipments it names.
+class WebhookRejection(Exception):
+    """A webhook call is refused with ``status``; the message is safe to send back."""
 
-    The call is refused unless it is signed with the carrier's secret. Each
-    event moves its shipment to a new state only when the move is allowed
-    and the event is newer than the shipment's last change; an event seen
-    before is skipped. The shipments and the events seen are read in one
-    query each, and every transition is saved in one write. A customer is
-    told of a delivery, a return or a loss.
+    def __init__(self, status: int, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def parse_webhook_body(body: bytes) -> tuple[list[TrackingEvent], int]:
+    """Return the valid events of a webhook body, and how many items were not.
+
+    Raises WebhookRejection when the body is not a JSON object with a list
+    of at most MAX_EVENTS_PER_CALL events.
     """
-    secret = find_carrier_secret(carrier)
-    if secret is None:
-        logger.warning("Webhook from an unknown carrier")
-        return WebhookResult(404, {"error": "Unknown carrier"})
-    if len(body) > MAX_BODY_BYTES:
-        return WebhookResult(413, {"error": "The body is too large"})
-    if signature is None or not is_signature_valid(secret, body, signature):
-        logger.warning("Webhook from %s with a bad signature", carrier)
-        return WebhookResult(401, {"error": "The signature is not valid"})
-
     try:
         payload = json.loads(body)
     except json.JSONDecodeError:
-        return WebhookResult(400, {"error": "The body is not JSON"})
+        raise WebhookRejection(400, "The body is not JSON") from None
     items = payload.get("events") if isinstance(payload, dict) else None
     if not isinstance(items, list):
-        return WebhookResult(400, {"error": "'events' must be a list"})
+        raise WebhookRejection(400, "'events' must be a list")
     if len(items) > MAX_EVENTS_PER_CALL:
-        return WebhookResult(
-            413, {"error": f"Send at most {MAX_EVENTS_PER_CALL} events per call"}
-        )
-
+        raise WebhookRejection(413, f"Send at most {MAX_EVENTS_PER_CALL} events per call")
     events: list[TrackingEvent] = []
     rejected_count = 0
     for item in items:
@@ -181,26 +166,18 @@ async def handle_tracking_webhook(
             rejected_count += 1
             continue
         events.append(event)
-    if rejected_count:
-        logger.info("Rejected %s events from %s that are not valid", rejected_count, carrier)
-    if not events:
-        return WebhookResult(200, {"applied": 0, "rejected": rejected_count})
+    return events, rejected_count
 
-    seen_event_ids = await store.has_seen_event(
-        carrier, [event.event_id for event in events]
-    )
-    new_events = [event for event in events if event.event_id not in seen_event_ids]
-    new_events.sort(key=lambda event: event.happened_at)
 
-    tracking_numbers = sorted({event.tracking_number for event in new_events})
-    shipment_rows = await store.find_shipments(carrier, tracking_numbers)
-    tracking_number_to_shipment = {
-        row["tracking_number"]: row for row in shipment_rows
-    }
-    unknown_numbers = set(tracking_numbers) - set(tracking_number_to_shipment)
-    if unknown_numbers:
-        logger.info("%s events name shipments we do not have", len(unknown_numbers))
+def plan_transitions(
+    events: Sequence[TrackingEvent], tracking_number_to_shipment: dict[str, dict]
+) -> tuple[list[Transition], int]:
+    """Return the moves ``events`` make, oldest first, and how many were refused.
 
+    An event moves its shipment only when the move is allowed from the
+    shipment's state at that point and the event is newer than its last
+    change. An event for a shipment not given is skipped.
+    """
     tracking_number_to_state = {
         number: ShipmentState(row["state"])
         for number, row in tracking_number_to_shipment.items()
@@ -211,7 +188,7 @@ async def handle_tracking_webhook(
     }
     transitions: list[Transition] = []
     refused_moves = 0
-    for event in new_events:
+    for event in sorted(events, key=lambda event: event.happened_at):
         shipment = tracking_number_to_shipment.get(event.tracking_number)
         if shipment is None:
             continue
@@ -239,6 +216,47 @@ async def handle_tracking_webhook(
         )
         tracking_number_to_state[event.tracking_number] = event.state
         tracking_number_to_changed_at[event.tracking_number] = event.happened_at
+    return transitions, refused_moves
+
+
+async def handle_tracking_webhook(
+    store: ShipmentStore,
+    notifier: CustomerNotifier,
+    carrier: str,
+    body: bytes,
+    signature: str | None,
+) -> WebhookResult:
+    """Apply a carrier's signed batch of tracking events to its shipments.
+
+    An event seen before is skipped. The shipments and the events seen are
+    read in one query each, and every transition saved in one write. A
+    customer is told of a delivery, a return or a loss.
+    """
+    secret = find_carrier_secret(carrier)
+    if secret is None:
+        logger.warning("Webhook from an unknown carrier")
+        return WebhookResult(404, {"error": "Unknown carrier"})
+    if len(body) > MAX_BODY_BYTES:
+        return WebhookResult(413, {"error": "The body is too large"})
+    if signature is None or not is_signature_valid(secret, body, signature):
+        logger.warning("Webhook from %s with a bad signature", carrier)
+        return WebhookResult(401, {"error": "The signature is not valid"})
+    try:
+        events, rejected_count = parse_webhook_body(body)
+    except WebhookRejection as rejection:
+        return WebhookResult(rejection.status, {"error": str(rejection)})
+    if not events:
+        return WebhookResult(200, {"applied": 0, "rejected": rejected_count})
+
+    seen_event_ids = await store.has_seen_event(
+        carrier, [event.event_id for event in events]
+    )
+    new_events = [event for event in events if event.event_id not in seen_event_ids]
+    tracking_numbers = sorted({event.tracking_number for event in new_events})
+    shipment_rows = await store.find_shipments(carrier, tracking_numbers)
+    transitions, refused_moves = plan_transitions(
+        new_events, {row["tracking_number"]: row for row in shipment_rows}
+    )
 
     if transitions:
         await store.save_transitions(transitions)
@@ -256,7 +274,6 @@ async def handle_tracking_webhook(
                 logger.warning(
                     "Could not notify the customer of order %s", transition.order_id
                 )
-
     logger.info(
         "Applied %s of %s events from %s; %s refused, %s seen before",
         len(transitions),

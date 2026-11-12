@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "about": "The monthly sales CSV: build_sales_report is one long function that reads sales, refunds and targets in one query each and writes the file off the event loop.",
+  "about": "The monthly sales CSV: render_sales_csv is one long function that writes the report's text, and build_sales_report reads sales, refunds and targets in one query each and writes the file off the event loop.",
   "planted_problems": [
     {
       "rule_id": "sync_blocking_io",
-      "old_text": "    path = REPORT_FOLDER / f\"sales-{start:%Y-%m}-{'-'.join(regions)}.csv\"\n    await asyncio.to_thread(write_report_file, path, output.getvalue())",
-      "new_text": "    path = REPORT_FOLDER / f\"sales-{start:%Y-%m}-{'-'.join(regions)}.csv\"\n    write_report_file(path, output.getvalue())",
+      "old_text": "    await asyncio.to_thread(write_report_file, path, text)",
+      "new_text": "    write_report_file(path, text)",
       "why_wrong": "build_sales_report, an async function, writes the report file synchronously on the event loop."
     },
     {
@@ -16,9 +16,9 @@
     },
     {
       "rule_id": "n_plus_1_query",
-      "old_text": "    region_to_target = {\n        row[\"region\"]: to_money(row[\"target\"]) for row in target_rows\n    }",
-      "new_text": "    region_to_target = {}\n    for region in regions:\n        for row in await store.list_targets(start, [region]):\n            region_to_target[row[\"region\"]] = to_money(row[\"target\"])",
-      "why_wrong": "build_sales_report reads the target of each region again in its own query, in a loop."
+      "old_text": "    target_rows = await store.list_targets(start, regions)\n",
+      "new_text": "    target_rows = []\n    for region in regions:\n        target_rows += await store.list_targets(start, [region])\n",
+      "why_wrong": "build_sales_report reads the target of each region in its own query, in a loop."
     },
     {
       "rule_id": "missing_input_validation",
@@ -41,8 +41,8 @@
     {
       "rule_id": "god_component",
       "old_text": "    writer.writerow([])\n    writer.writerow([\"Best region\", best_region])\n    writer.writerow([\"Refunds as a share of sales\", f\"{refund_share}%\"])\n",
-      "new_text": "    writer.writerow([])\n    writer.writerow([\"Best region\", best_region])\n    writer.writerow([\"Refunds as a share of sales\", f\"{refund_share}%\"])\n\n    for region in regions:\n        if region_to_sales[region] < region_to_target.get(region, Decimal(0)):\n            await store.lower_prices(region, percent=5)\n            await store.email_sales_team(region, \"Prices lowered by 5%\")\n    await store.archive_orders_before(start)\n    await store.rotate_api_keys()\n",
-      "why_wrong": "build_sales_report also lowers prices, emails sales teams, archives orders and rotates API keys: jobs unrelated to writing a report."
+      "new_text": "    writer.writerow([])\n    writer.writerow([\"Best region\", best_region])\n    writer.writerow([\"Refunds as a share of sales\", f\"{refund_share}%\"])\n\n    for region in regions:\n        if region_to_sales[region] < region_to_target.get(region, Decimal(0)):\n            lower_prices(region, percent=5)\n            email_sales_team(region, \"Prices lowered by 5%\")\n    archive_orders_before(start)\n    rotate_api_keys()\n",
+      "why_wrong": "render_sales_csv also lowers prices, emails sales teams, archives orders and rotates API keys: jobs unrelated to writing a report."
     }
   ]
 }

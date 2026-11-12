@@ -96,17 +96,136 @@ def read_upload(content: bytes) -> list[dict[str, str]]:
     return rows
 
 
+def check_catalogue_row(
+    row: dict[str, str],
+    line: int,
+    category_name_to_id: dict[str, int],
+    seen_skus: dict[str, int],
+) -> tuple[list[RowProblem], dict | None]:
+    """Check each field of one uploaded row; return its problems and the product.
+
+    The product is None when the row has a problem. ``seen_skus`` gives the
+    line of each SKU of the rows before; the row's SKU is added to it.
+    """
+    problems: list[RowProblem] = []
+    sku = row["sku"].upper()
+    if not SKU_PATTERN.match(sku):
+        problems.append(
+            RowProblem(line, "sku", "Use 3 to 32 capital letters, digits and dashes")
+        )
+    elif sku in seen_skus:
+        problems.append(
+            RowProblem(line, "sku", f"Also on line {seen_skus[sku]}")
+        )
+    else:
+        seen_skus[sku] = line
+
+    title = " ".join(row["title"].split())
+    if not title:
+        problems.append(RowProblem(line, "title", "Give a title"))
+    elif len(title) > MAX_TITLE_LENGTH:
+        problems.append(
+            RowProblem(line, "title", f"Use at most {MAX_TITLE_LENGTH} characters")
+        )
+
+    try:
+        price = Decimal(row["price"].replace(",", "."))
+    except InvalidOperation:
+        price = None
+        problems.append(RowProblem(line, "price", "Give a number"))
+    if price is not None:
+        if price <= 0:
+            problems.append(RowProblem(line, "price", "Give a price above 0"))
+        elif price.as_tuple().exponent < -2:
+            problems.append(
+                RowProblem(line, "price", "Use at most 2 decimal places")
+            )
+
+    currency = row["currency"].upper()
+    if currency not in CURRENCIES:
+        problems.append(
+            RowProblem(line, "currency", f"Use one of {', '.join(sorted(CURRENCIES))}")
+        )
+
+    stock_text = row["stock"]
+    if not stock_text.isdigit():
+        problems.append(
+            RowProblem(line, "stock", "Give a whole number of 0 or more")
+        )
+        stock = 0
+    else:
+        stock = int(stock_text)
+
+    category_id = category_name_to_id.get(row["category"].lower())
+    if category_id is None:
+        problems.append(
+            RowProblem(line, "category", "Use a category your shop has")
+        )
+
+    description = row.get("description", "")
+    if len(description) > MAX_DESCRIPTION_LENGTH:
+        problems.append(
+            RowProblem(
+                line,
+                "description",
+                f"Use at most {MAX_DESCRIPTION_LENGTH} characters",
+            )
+        )
+
+    barcode = row.get("barcode", "")
+    if barcode and not BARCODE_PATTERN.match(barcode):
+        problems.append(
+            RowProblem(line, "barcode", "Give an EAN-8, EAN-13 or GTIN-14")
+        )
+
+    weight_text = row.get("weight_grams", "")
+    weight_grams = None
+    if weight_text:
+        if not weight_text.isdigit() or not 1 <= int(weight_text) <= 70_000:
+            problems.append(
+                RowProblem(line, "weight_grams", "Give 1 to 70000 grams")
+            )
+        else:
+            weight_grams = int(weight_text)
+
+    tags = sorted(
+        {tag.strip().lower() for tag in row.get("tags", "").split("|") if tag.strip()}
+    )
+    if len(tags) > MAX_TAGS:
+        problems.append(
+            RowProblem(line, "tags", f"Use at most {MAX_TAGS} tags")
+        )
+
+    is_active_text = row.get("is_active", "yes").lower()
+    if is_active_text not in {"yes", "no", ""}:
+        problems.append(RowProblem(line, "is_active", "Use yes or no"))
+
+    if problems:
+        return problems, None
+    return problems, {
+        "sku": sku,
+        "title": title,
+        "price": str(price),
+        "currency": currency,
+        "stock": stock,
+        "category_id": category_id,
+        "description": description,
+        "barcode": barcode or None,
+        "weight_grams": weight_grams,
+        "tags": tags,
+        "is_active": is_active_text != "no",
+    }
+
+
 async def import_catalogue(
     store: CatalogueStore, merchant_id: int, content: bytes
 ) -> ImportReport:
-    """Check every row of an uploaded catalogue and store the valid ones.
+    """Store the valid rows of an uploaded catalogue; report the problems of the others.
 
-    Each row is checked field by field; a row with a problem is left out and
-    its problems listed with their line and column, and the other rows are
-    still stored. A SKU already in the catalogue is updated when a field
-    changed. The categories, the existing products and the barcodes in use
-    are read in one query each, and the new and the changed products are
-    written in one query each.
+    A SKU already in the catalogue is updated when a field changed. The
+    categories, the existing products and the barcodes in use are read in
+    one query each, and the new and the changed products written in one
+    query each.
     """
     rows = await asyncio.to_thread(read_upload, content)
     report = ImportReport()
@@ -116,120 +235,12 @@ async def import_catalogue(
     seen_skus: dict[str, int] = {}
     for index, row in enumerate(rows):
         line = index + 2
-        problems_before = len(report.problems)
-
-        sku = row["sku"].upper()
-        if not SKU_PATTERN.match(sku):
-            report.problems.append(
-                RowProblem(line, "sku", "Use 3 to 32 capital letters, digits and dashes")
-            )
-        elif sku in seen_skus:
-            report.problems.append(
-                RowProblem(line, "sku", f"Also on line {seen_skus[sku]}")
-            )
-        else:
-            seen_skus[sku] = line
-
-        title = " ".join(row["title"].split())
-        if not title:
-            report.problems.append(RowProblem(line, "title", "Give a title"))
-        elif len(title) > MAX_TITLE_LENGTH:
-            report.problems.append(
-                RowProblem(line, "title", f"Use at most {MAX_TITLE_LENGTH} characters")
-            )
-
-        try:
-            price = Decimal(row["price"].replace(",", "."))
-        except InvalidOperation:
-            price = None
-            report.problems.append(RowProblem(line, "price", "Give a number"))
-        if price is not None:
-            if price <= 0:
-                report.problems.append(RowProblem(line, "price", "Give a price above 0"))
-            elif price.as_tuple().exponent < -2:
-                report.problems.append(
-                    RowProblem(line, "price", "Use at most 2 decimal places")
-                )
-
-        currency = row["currency"].upper()
-        if currency not in CURRENCIES:
-            report.problems.append(
-                RowProblem(line, "currency", f"Use one of {', '.join(sorted(CURRENCIES))}")
-            )
-
-        stock_text = row["stock"]
-        if not stock_text.isdigit():
-            report.problems.append(
-                RowProblem(line, "stock", "Give a whole number of 0 or more")
-            )
-            stock = 0
-        else:
-            stock = int(stock_text)
-
-        category_id = category_name_to_id.get(row["category"].lower())
-        if category_id is None:
-            report.problems.append(
-                RowProblem(line, "category", "Use a category your shop has")
-            )
-
-        description = row.get("description", "")
-        if len(description) > MAX_DESCRIPTION_LENGTH:
-            report.problems.append(
-                RowProblem(
-                    line,
-                    "description",
-                    f"Use at most {MAX_DESCRIPTION_LENGTH} characters",
-                )
-            )
-
-        barcode = row.get("barcode", "")
-        if barcode and not BARCODE_PATTERN.match(barcode):
-            report.problems.append(
-                RowProblem(line, "barcode", "Give an EAN-8, EAN-13 or GTIN-14")
-            )
-
-        weight_text = row.get("weight_grams", "")
-        weight_grams = None
-        if weight_text:
-            if not weight_text.isdigit() or not 1 <= int(weight_text) <= 70_000:
-                report.problems.append(
-                    RowProblem(line, "weight_grams", "Give 1 to 70000 grams")
-                )
-            else:
-                weight_grams = int(weight_text)
-
-        tags = sorted(
-            {tag.strip().lower() for tag in row.get("tags", "").split("|") if tag.strip()}
+        problems, product = check_catalogue_row(
+            row, line, category_name_to_id, seen_skus
         )
-        if len(tags) > MAX_TAGS:
-            report.problems.append(
-                RowProblem(line, "tags", f"Use at most {MAX_TAGS} tags")
-            )
-
-        is_active_text = row.get("is_active", "yes").lower()
-        if is_active_text not in {"yes", "no", ""}:
-            report.problems.append(RowProblem(line, "is_active", "Use yes or no"))
-
-        if len(report.problems) > problems_before:
-            continue
-        checked_rows.append(
-            (
-                line,
-                {
-                    "sku": sku,
-                    "title": title,
-                    "price": str(price),
-                    "currency": currency,
-                    "stock": stock,
-                    "category_id": category_id,
-                    "description": description,
-                    "barcode": barcode or None,
-                    "weight_grams": weight_grams,
-                    "tags": tags,
-                    "is_active": is_active_text != "no",
-                },
-            )
-        )
+        report.problems.extend(problems)
+        if product is not None:
+            checked_rows.append((line, product))
 
     barcodes = [row["barcode"] for _, row in checked_rows if row["barcode"]]
     barcode_to_sku = await store.find_barcodes(barcodes) if barcodes else {}

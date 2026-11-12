@@ -52,9 +52,9 @@ class CaseModuleJudging:
     """Judges a case module, cut to a prefix for each band of length.
 
     Every unit of each true prefix is a true case. Each planted problem is
-    planted in each prefix that holds its text, and every unit whose text
-    the problem changes, and that is asked the rule it breaks, is a planted
-    case. A unit judged twice with the same text counts once.
+    planted in each prefix that holds its text, and every unit of the true
+    prefix whose text the problem changes, and that is asked the rule it
+    breaks, is a planted case. A unit judged twice with the same text counts once.
     """
 
     def __init__(
@@ -149,13 +149,13 @@ def _is_planted_case(
 ) -> bool:
     """Return True when ``problem`` changed ``unit`` and its rule is asked of it.
 
-    A unit the judge refused is asked what its true version was asked.
+    A unit the problem adds, such as a method planted in a class, is not a
+    case: the problem lies in the unit it was added to. A unit the judge
+    refused is taken to be asked what its true version was asked.
     """
-    if true_unit is not None and true_unit.subject == unit.subject:
+    if true_unit is None or true_unit.subject == unit.subject:
         return False
-    asked_findings = unit.findings
-    if asked_findings is None and true_unit is not None:
-        asked_findings = true_unit.findings
+    asked_findings = unit.findings if unit.findings is not None else true_unit.findings
     return any(finding.rule_id == problem.rule_id for finding in asked_findings or ())
 
 

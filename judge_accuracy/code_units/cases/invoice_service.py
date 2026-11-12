@@ -92,6 +92,79 @@ def _find_tax_rate(account: dict) -> Decimal:
     return DEFAULT_TAX_RATE if rate is None else Decimal(str(rate))
 
 
+def build_account_invoice(
+    account: dict, usage_rows: Sequence[dict], start: date, end: date
+) -> Invoice | None:
+    """Return the account's invoice for its usage in the period; None when it owes nothing.
+
+    The usage of each meter is summed into a line, topped up to the
+    account's minimum fee, and the account's discount taken off. Raises
+    InvoiceError for a discount over 100%.
+    """
+    account_id = account["id"]
+    meter_to_quantity: dict[str, Decimal] = {}
+    meter_to_price: dict[str, Decimal] = {}
+    for row in usage_rows:
+        meter = row["meter"]
+        meter_to_quantity[meter] = meter_to_quantity.get(
+            meter, Decimal(0)
+        ) + Decimal(str(row["quantity"]))
+        meter_to_price[meter] = Decimal(str(row["unit_price"]))
+
+    lines = []
+    for meter in sorted(meter_to_quantity):
+        quantity = meter_to_quantity[meter]
+        if quantity <= 0:
+            continue
+        lines.append(
+            InvoiceLine(
+                description=f"{meter} usage, {start:%d %b} to {end:%d %b %Y}",
+                quantity=quantity,
+                unit_price=meter_to_price[meter],
+            )
+        )
+
+    minimum_fee = Decimal(str(account.get("minimum_monthly_fee") or 0))
+    subtotal = sum((line.find_amount() for line in lines), Decimal(0))
+    if minimum_fee > subtotal:
+        lines.append(
+            InvoiceLine(
+                description="Minimum monthly fee top-up",
+                quantity=Decimal(1),
+                unit_price=(minimum_fee - subtotal).quantize(CENT, ROUND_HALF_UP),
+            )
+        )
+
+    discount_percent = Decimal(str(account.get("discount_percent") or 0))
+    if discount_percent > 0:
+        if discount_percent > 100:
+            raise InvoiceError(f"Account {account_id} has a discount over 100%")
+        discount = (
+            sum((line.find_amount() for line in lines), Decimal(0))
+            * discount_percent
+            / 100
+        ).quantize(CENT, ROUND_HALF_UP)
+        lines.append(
+            InvoiceLine(
+                description=f"Discount, {discount_percent}%",
+                quantity=Decimal(1),
+                unit_price=-discount,
+            )
+        )
+
+    if not lines:
+        return None
+    return Invoice(
+        invoice_id=format_invoice_id(account_id, end),
+        account_id=account_id,
+        currency=account.get("currency", "EUR"),
+        period_start=start,
+        period_end=end,
+        lines=tuple(lines),
+        tax_rate=_find_tax_rate(account),
+    )
+
+
 async def build_invoices(
     store: BillingStore, account_ids: Sequence[int], start: date, end: date
 ) -> list[Invoice]:
@@ -115,72 +188,16 @@ async def build_invoices(
     for row in usage_rows:
         account_id_to_rows.setdefault(row["account_id"], []).append(row)
 
-    invoices: list[Invoice] = []
-    for account_id, rows in sorted(account_id_to_rows.items()):
-        account = account_id_to_account[account_id]
-        meter_to_quantity: dict[str, Decimal] = {}
-        meter_to_price: dict[str, Decimal] = {}
-        for row in rows:
-            meter = row["meter"]
-            meter_to_quantity[meter] = meter_to_quantity.get(
-                meter, Decimal(0)
-            ) + Decimal(str(row["quantity"]))
-            meter_to_price[meter] = Decimal(str(row["unit_price"]))
-
-        lines = []
-        for meter in sorted(meter_to_quantity):
-            quantity = meter_to_quantity[meter]
-            if quantity <= 0:
-                continue
-            lines.append(
-                InvoiceLine(
-                    description=f"{meter} usage, {start:%d %b} to {end:%d %b %Y}",
-                    quantity=quantity,
-                    unit_price=meter_to_price[meter],
-                )
-            )
-
-        minimum_fee = Decimal(str(account.get("minimum_monthly_fee") or 0))
-        subtotal = sum((line.find_amount() for line in lines), Decimal(0))
-        if minimum_fee > subtotal:
-            lines.append(
-                InvoiceLine(
-                    description="Minimum monthly fee top-up",
-                    quantity=Decimal(1),
-                    unit_price=(minimum_fee - subtotal).quantize(CENT, ROUND_HALF_UP),
-                )
-            )
-
-        discount_percent = Decimal(str(account.get("discount_percent") or 0))
-        if discount_percent > 0:
-            if discount_percent > 100:
-                raise InvoiceError(f"Account {account_id} has a discount over 100%")
-            discount = (
-                sum((line.find_amount() for line in lines), Decimal(0))
-                * discount_percent
-                / 100
-            ).quantize(CENT, ROUND_HALF_UP)
-            lines.append(
-                InvoiceLine(
-                    description=f"Discount, {discount_percent}%",
-                    quantity=Decimal(1),
-                    unit_price=-discount,
-                )
-            )
-
-        if not lines:
-            continue
-        invoices.append(
-            Invoice(
-                invoice_id=format_invoice_id(account_id, end),
-                account_id=account_id,
-                currency=account.get("currency", "EUR"),
-                period_start=start,
-                period_end=end,
-                lines=tuple(lines),
-                tax_rate=_find_tax_rate(account),
+    invoices = [
+        invoice
+        for account_id, rows in sorted(account_id_to_rows.items())
+        if (
+            invoice := build_account_invoice(
+                account_id_to_account[account_id], rows, start, end
             )
         )
+        is not None
+    ]
     logger.info("Built %s invoices for %s accounts", len(invoices), len(account_ids))
     return invoices
 

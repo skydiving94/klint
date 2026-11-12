@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
-from enum import Enum
 from typing import Protocol
 
 logger = logging.getLogger(__name__)
@@ -29,14 +28,6 @@ COUNTRY_TO_SHIPPING = {
     "NL": Decimal("5.90"),
     "SE": Decimal("9.90"),
 }
-
-
-class CheckoutStep(Enum):
-    VALIDATED = "validated"
-    PRICED = "priced"
-    RESERVED = "reserved"
-    PAID = "paid"
-    PLACED = "placed"
 
 
 class CheckoutStore(Protocol):
@@ -96,20 +87,19 @@ def to_cents(amount: Decimal) -> Decimal:
     return amount.quantize(CENT, ROUND_HALF_UP)
 
 
-async def place_order(
-    store: CheckoutStore,
-    payments: PaymentService,
-    receipts: ReceiptSender,
-    request: CheckoutRequest,
-) -> PlacedOrder:
-    """Check the cart, price it, reserve stock, take payment and store the order.
+@dataclass(frozen=True)
+class PricedCart:
+    currency: str
+    lines: tuple[dict, ...]
+    subtotal: Decimal
+    discount: Decimal
+    shipping: Decimal
+    vat: Decimal
+    total: Decimal
 
-    Each step undoes the ones before it when it fails: reserved stock is
-    released and an authorized payment voided. The products are read in one
-    query and the stock of every line reserved in one write. Raises
-    CheckoutError, with a message safe to show, when the order cannot be
-    placed.
-    """
+
+def count_cart_quantities(request: CheckoutRequest) -> dict[str, int]:
+    """Return how many of each SKU the cart holds; CheckoutError when it cannot be sold."""
     if not request.lines:
         raise CheckoutError("Your cart is empty")
     if len(request.lines) > MAX_CART_LINES:
@@ -123,9 +113,29 @@ async def place_order(
         sku_to_quantity[line.sku] = sku_to_quantity.get(line.sku, 0) + line.quantity
     if any(quantity > MAX_QUANTITY for quantity in sku_to_quantity.values()):
         raise CheckoutError(f"Order 1 to {MAX_QUANTITY} of each product")
-    step = CheckoutStep.VALIDATED
+    return sku_to_quantity
 
-    sku_to_product = await store.find_products(sorted(sku_to_quantity))
+
+def check_coupon_code(code: str) -> str:
+    """Return the coupon code as stored; CheckoutError when it cannot be one."""
+    normalized = code.strip().upper()
+    if not normalized.isalnum() or len(normalized) > 20:
+        raise CheckoutError("This coupon code is not valid")
+    return normalized
+
+
+def price_cart(
+    sku_to_product: dict[str, dict],
+    sku_to_quantity: dict[str, int],
+    coupon: dict | None,
+    country: str,
+    now: datetime,
+) -> PricedCart:
+    """Return the cart's lines, discount, shipping, VAT and total.
+
+    Raises CheckoutError, with a message safe to show, when a product is no
+    longer sold, the cart mixes currencies, or the coupon does not apply.
+    """
     unknown = sorted(set(sku_to_quantity) - set(sku_to_product))
     if unknown:
         raise CheckoutError("Some products in your cart are no longer sold")
@@ -157,13 +167,8 @@ async def place_order(
         )
 
     discount = Decimal(0)
-    if request.coupon_code:
-        code = request.coupon_code.strip().upper()
-        if not code.isalnum() or len(code) > 20:
-            raise CheckoutError("This coupon code is not valid")
-        coupon = await store.find_coupon(code)
-        now = datetime.now(timezone.utc)
-        if coupon is None or not coupon["is_active"]:
+    if coupon is not None:
+        if not coupon["is_active"]:
             raise CheckoutError("This coupon code is not valid")
         if coupon["expires_at"] is not None and coupon["expires_at"] < now:
             raise CheckoutError("This coupon has expired")
@@ -176,28 +181,76 @@ async def place_order(
         elif coupon["kind"] == "fixed":
             discount = min(Decimal(str(coupon["value"])), subtotal)
         else:
-            logger.warning("Coupon %s has an unknown kind", code)
+            logger.warning("Coupon %s has an unknown kind", coupon.get("code"))
             raise CheckoutError("This coupon code is not valid")
 
     discounted = subtotal - discount
     shipping = (
-        Decimal(0)
-        if discounted >= FREE_SHIPPING_FROM
-        else COUNTRY_TO_SHIPPING[request.country]
+        Decimal(0) if discounted >= FREE_SHIPPING_FROM else COUNTRY_TO_SHIPPING[country]
     )
-    vat_rate = COUNTRY_TO_VAT[request.country]
+    vat_rate = COUNTRY_TO_VAT[country]
     vat = to_cents((discounted + shipping) * vat_rate / (1 + vat_rate))
-    total = discounted + shipping
-    step = CheckoutStep.PRICED
+    return PricedCart(
+        currency=currency,
+        lines=tuple(order_lines),
+        subtotal=subtotal,
+        discount=discount,
+        shipping=shipping,
+        vat=vat,
+        total=discounted + shipping,
+    )
+
+
+def render_receipt(order_id: int, cart: PricedCart) -> str:
+    """Return the text of the receipt emailed for an order."""
+    receipt_lines = [f"Thank you for your order {order_id}.", ""]
+    for line in cart.lines:
+        receipt_lines.append(
+            f"{line['quantity']} x {line['title']}: {line['line_total']} {cart.currency}"
+        )
+    receipt_lines += [
+        "",
+        f"Subtotal: {cart.subtotal} {cart.currency}",
+        f"Discount: -{cart.discount} {cart.currency}" if cart.discount else "",
+        f"Shipping: {cart.shipping} {cart.currency}",
+        f"Total: {cart.total} {cart.currency}, of which VAT {cart.vat}",
+    ]
+    return "\n".join(line for line in receipt_lines if line)
+
+
+async def place_order(
+    store: CheckoutStore,
+    payments: PaymentService,
+    receipts: ReceiptSender,
+    request: CheckoutRequest,
+) -> PlacedOrder:
+    """Place the order a checkout request describes, undoing each step that fails.
+
+    Reserved stock is released and an authorized payment voided when a later
+    step fails. Raises CheckoutError, with a message safe to show, when the
+    order cannot be placed.
+    """
+    sku_to_quantity = count_cart_quantities(request)
+    sku_to_product = await store.find_products(sorted(sku_to_quantity))
+    coupon = None
+    if request.coupon_code:
+        coupon = await store.find_coupon(check_coupon_code(request.coupon_code))
+        if coupon is None:
+            raise CheckoutError("This coupon code is not valid")
+    cart = price_cart(
+        sku_to_product,
+        sku_to_quantity,
+        coupon,
+        request.country,
+        datetime.now(timezone.utc),
+    )
 
     short_skus = await store.reserve_stock(sku_to_quantity)
     if short_skus:
         raise CheckoutError("Some products in your cart just sold out")
-    step = CheckoutStep.RESERVED
-
     try:
         authorization_id = await payments.authorize(
-            request.payment_token, total, currency
+            request.payment_token, cart.total, cart.currency
         )
     except (TimeoutError, ConnectionError):
         await store.release_stock(sku_to_quantity)
@@ -206,7 +259,6 @@ async def place_order(
     except ValueError:
         await store.release_stock(sku_to_quantity)
         raise CheckoutError("Your payment was declined") from None
-    step = CheckoutStep.PAID
 
     try:
         order_id = await store.insert_order(
@@ -214,16 +266,16 @@ async def place_order(
                 "customer_id": request.customer_id,
                 "email": request.email,
                 "country": request.country,
-                "currency": currency,
-                "subtotal": str(subtotal),
-                "discount": str(discount),
-                "shipping": str(shipping),
-                "vat": str(vat),
-                "total": str(total),
+                "currency": cart.currency,
+                "subtotal": str(cart.subtotal),
+                "discount": str(cart.discount),
+                "shipping": str(cart.shipping),
+                "vat": str(cart.vat),
+                "total": str(cart.total),
                 "coupon_code": request.coupon_code,
                 "payment_authorization": authorization_id,
             },
-            order_lines,
+            cart.lines,
         )
         await payments.capture(authorization_id)
     except Exception:
@@ -231,28 +283,13 @@ async def place_order(
         await payments.void(authorization_id)
         await store.release_stock(sku_to_quantity)
         raise CheckoutError("Your order could not be placed; you were not charged") from None
-    step = CheckoutStep.PLACED
 
-    receipt_lines = [f"Thank you for your order {order_id}.", ""]
-    for line in order_lines:
-        receipt_lines.append(
-            f"{line['quantity']} x {line['title']}: {line['line_total']} {currency}"
-        )
-    receipt_lines += [
-        "",
-        f"Subtotal: {subtotal} {currency}",
-        f"Discount: -{discount} {currency}" if discount else "",
-        f"Shipping: {shipping} {currency}",
-        f"Total: {total} {currency}, of which VAT {vat}",
-    ]
     try:
-        await receipts.send_receipt(
-            request.email, order_id, "\n".join(line for line in receipt_lines if line)
-        )
+        await receipts.send_receipt(request.email, order_id, render_receipt(order_id, cart))
     except (TimeoutError, ConnectionError):
         logger.warning("Could not send the receipt of order %s", order_id)
-    logger.info("Order %s placed at step %s for %s %s", order_id, step.value, total, currency)
-    return PlacedOrder(order_id=order_id, total=total, currency=currency)
+    logger.info("Order %s placed for %s %s", order_id, cart.total, cart.currency)
+    return PlacedOrder(order_id=order_id, total=cart.total, currency=cart.currency)
 
 
 def parse_checkout_request(customer_id: int, body: dict) -> CheckoutRequest:

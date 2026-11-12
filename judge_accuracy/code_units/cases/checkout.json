@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "about": "Checkout over injected store, payment and receipt services: place_order is one very long function that checks, prices, reserves, pays and stores, undoing earlier steps when a later one fails.",
+  "about": "Checkout over injected store, payment and receipt services: price_cart is one long function that prices a cart, and place_order runs the steps, undoing earlier ones when a later one fails.",
   "planted_problems": [
     {
       "rule_id": "hardcoded_secrets",
       "old_text": "FREE_SHIPPING_FROM = Decimal(os.environ.get(\"FREE_SHIPPING_FROM\", \"60\"))\n",
-      "new_text": "FREE_SHIPPING_FROM = Decimal(os.environ.get(\"FREE_SHIPPING_FROM\", \"60\"))\nADYEN_API_KEY = \"pay-key-K4nOaBdLw0mn3Q5qf3VaY9UCJ1XWZe9W27jmlZih3mCfBDNVJ\"\n",
+      "new_text": "FREE_SHIPPING_FROM = Decimal(os.environ.get(\"FREE_SHIPPING_FROM\", \"60\"))\nPAYMENT_API_KEY = \"pay-key-K4nOaBdLw0mn3Q5qf3VaY9UCJ1XWZe9W27jmlZih3mCfBDNVJ\"\n",
       "why_wrong": "The module holds the payment provider's API key in its source."
     },
     {
@@ -16,8 +16,8 @@
     },
     {
       "rule_id": "missing_input_validation",
-      "old_text": "        code = request.coupon_code.strip().upper()\n        if not code.isalnum() or len(code) > 20:\n            raise CheckoutError(\"This coupon code is not valid\")\n        coupon = await store.find_coupon(code)",
-      "new_text": "        code = request.coupon_code\n        coupon = await store.find_coupon(code)",
+      "old_text": "        coupon = await store.find_coupon(check_coupon_code(request.coupon_code))",
+      "new_text": "        coupon = await store.find_coupon(request.coupon_code)",
       "why_wrong": "place_order looks the customer's coupon code up as typed, without checking its form or length."
     },
     {
@@ -29,13 +29,13 @@
     {
       "rule_id": "sync_blocking_io",
       "old_text": "    short_skus = await store.reserve_stock(sku_to_quantity)",
-      "new_text": "    fraud_score = requests.post(\n        \"https://fraud.example.com/score\",\n        json={\"customer\": request.customer_id, \"total\": str(total)},\n        timeout=10,\n    ).json()[\"score\"]\n    if fraud_score > 0.9:\n        raise CheckoutError(\"We could not place this order\")\n    short_skus = await store.reserve_stock(sku_to_quantity)",
+      "new_text": "    fraud_score = requests.post(\n        \"https://fraud.example.com/score\",\n        json={\"customer\": request.customer_id, \"total\": str(cart.total)},\n        timeout=10,\n    ).json()[\"score\"]\n    if fraud_score > 0.9:\n        raise CheckoutError(\"We could not place this order\")\n    short_skus = await store.reserve_stock(sku_to_quantity)",
       "why_wrong": "place_order, an async function, calls a fraud-scoring service with the blocking requests library."
     },
     {
       "rule_id": "tight_coupling",
-      "old_text": "    try:\n        await receipts.send_receipt(\n            request.email, order_id, \"\\n\".join(line for line in receipt_lines if line)\n        )",
-      "new_text": "    try:\n        import sendgrid\n        from sendgrid.helpers.mail import Mail\n\n        sendgrid.SendGridAPIClient(os.environ[\"SENDGRID_KEY\"]).send(\n            Mail(\"orders@shop.example\", request.email, f\"Order {order_id}\", \"\\n\".join(receipt_lines))\n        )",
+      "old_text": "    try:\n        await receipts.send_receipt(request.email, order_id, render_receipt(order_id, cart))",
+      "new_text": "    try:\n        import sendgrid\n        from sendgrid.helpers.mail import Mail\n\n        sendgrid.SendGridAPIClient(os.environ[\"SENDGRID_KEY\"]).send(\n            Mail(\"orders@shop.example\", request.email, f\"Order {order_id}\", render_receipt(order_id, cart))\n        )",
       "why_wrong": "place_order sends the receipt through the SendGrid SDK directly instead of the injected receipt sender."
     },
     {
@@ -46,9 +46,9 @@
     },
     {
       "rule_id": "god_component",
-      "old_text": "    step = CheckoutStep.PLACED\n",
-      "new_text": "    step = CheckoutStep.PLACED\n\n    for sku in sku_to_quantity:\n        await store.reprice_competitor_products(sku)\n    await store.recompute_loyalty_tiers(request.customer_id)\n    await store.rebuild_sitemap()\n    await store.purge_old_sessions(days=30)\n",
-      "why_wrong": "place_order also reprices products against competitors, recomputes loyalty tiers, rebuilds the sitemap and purges sessions: unrelated jobs."
+      "old_text": "    discounted = subtotal - discount\n    shipping = (",
+      "new_text": "    for sku in sku_to_quantity:\n        competitor_price = scrape_competitor_price(sku)\n        if competitor_price is not None:\n            update_catalogue_price(sku, competitor_price)\n    recompute_loyalty_tiers()\n    rebuild_sitemap()\n    purge_old_sessions(days=30)\n\n    discounted = subtotal - discount\n    shipping = (",
+      "why_wrong": "price_cart also reprices the catalogue against competitors, recomputes loyalty tiers, rebuilds the sitemap and purges sessions: jobs unrelated to pricing a cart."
     }
   ]
 }
