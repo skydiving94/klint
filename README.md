@@ -201,6 +201,7 @@ Because `klint` evaluates whether code **follows** a practice (`Pass`) or **viol
 | `type` | `"choice"`. |
 | `question` | The question the judge answers about each unit. |
 | `question_with_layers` | The question asked instead, when the project's `klint.json` lists its `layers`; `{layers}` marks where they go, joined by commas. |
+| `unit_type_to_question` | The question asked instead about a unit of each type named, for example `{"file_summary": "..."}`. A type the rule is not asked about is warned about. |
 | `unit_types` | The units the rule is asked about: `file`, and `class` and `function` in a Python file (`klint`); `project_directory` and `file_metadata`, a file's outline (`klint-structure`); `hunk_summary`, `file_summary` and `package_summary` (`klint-change-summary`). Default `["file"]`. |
 | `languages` | Limits the rule to files of these languages, for example `["python"]`. |
 | `unit_tags` | Limits the rule to files with one of these tags, `backend` or `frontend`. A file with no detected tag is asked every rule. |
