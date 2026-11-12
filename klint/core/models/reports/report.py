@@ -15,7 +15,9 @@ class AuditFinding:
     the rule's topic labels. location is where the unit, the claim judged,
     sits; evidence_location is where its evidence sits, when the unit has
     evidence apart from itself. context is what the unit tells beyond its
-    ID and location.
+    ID and location. cut_at_characters is the character budget the unit's
+    text was cut to before the judge read it; None when the judge read all
+    of it, or was not asked.
     """
 
     rule_id: str
@@ -28,6 +30,7 @@ class AuditFinding:
     location: Location | None = None
     evidence_location: Location | None = None
     context: UnitContext = field(default_factory=UnitContext)
+    cut_at_characters: int | None = None
 
     def is_problem(self) -> bool:
         """Return True when the answer counts as a problem on its scale."""
@@ -49,6 +52,7 @@ class AuditFinding:
             "question": self.question,
             "tags": list(self.tags),
             "location": _convert_location_to_dict(self.location),
+            "cut_at_characters": self.cut_at_characters,
             "evidence_location": _convert_location_to_dict(self.evidence_location),
             "context": asdict(self.context),
         }

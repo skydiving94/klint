@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "about": "A merchant's CSV catalogue upload: check_catalogue_row is one long function that checks every field of a row, and import_catalogue reads and writes products in one query each.",
+  "planted_problems": [
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "    rows = await asyncio.to_thread(read_upload, content)",
+      "new_text": "    rows = read_upload(content)\n    with open(f\"/var/uploads/{merchant_id}.csv\", \"wb\") as upload_copy:\n        upload_copy.write(content)",
+      "why_wrong": "import_catalogue, an async function, parses the upload and writes a copy of it to disk synchronously on the event loop."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    sku = row[\"sku\"].upper()\n    if not SKU_PATTERN.match(sku):\n        problems.append(\n            RowProblem(line, \"sku\", \"Use 3 to 32 capital letters, digits and dashes\")\n        )\n    elif sku in seen_skus:",
+      "new_text": "    sku = row[\"sku\"]\n    if sku in seen_skus:",
+      "why_wrong": "check_catalogue_row keeps the uploaded SKU as it comes, without checking its form."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    try:\n        price = Decimal(row[\"price\"].replace(\",\", \".\"))\n    except InvalidOperation:\n        price = None\n        problems.append(RowProblem(line, \"price\", \"Give a number\"))\n    if price is not None:\n        if price <= 0:\n            problems.append(RowProblem(line, \"price\", \"Give a price above 0\"))\n        elif price.as_tuple().exponent < -2:\n            problems.append(\n                RowProblem(line, \"price\", \"Use at most 2 decimal places\")\n            )\n",
+      "new_text": "    price = eval(row[\"price\"])\n",
+      "why_wrong": "check_catalogue_row evaluates the uploaded price text as Python with eval, running whatever the merchant's file holds."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    barcode = row.get(\"barcode\", \"\")\n    if barcode and not BARCODE_PATTERN.match(barcode):\n        problems.append(\n            RowProblem(line, \"barcode\", \"Give an EAN-8, EAN-13 or GTIN-14\")\n        )\n",
+      "new_text": "    barcode = row.get(\"barcode\", \"\")\n",
+      "why_wrong": "check_catalogue_row keeps any barcode text the merchant uploads, without checking its form."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "    sku_to_existing = await store.find_products(\n        merchant_id, [row[\"sku\"] for row in kept_rows]\n    )",
+      "new_text": "    sku_to_existing = {}\n    for row in kept_rows:\n        sku_to_existing.update(await store.find_products(merchant_id, [row[\"sku\"]]))",
+      "why_wrong": "import_catalogue looks up each kept row's existing product in its own query, in a loop."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "    except Exception:\n        logger.exception(\"Catalogue import failed for merchant %s\", merchant_id)\n        return 500, {\"error\": \"The upload could not be imported; please try again\"}",
+      "new_text": "    except Exception as error:\n        return 500, {\"error\": str(error), \"trace\": traceback.format_exc().splitlines()}",
+      "why_wrong": "handle_catalogue_upload answers an unexpected failure with the exception's message and the stack trace."
+    },
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "MAX_TAGS = 12\n",
+      "new_text": "MAX_TAGS = 12\nIMAGE_CDN_SECRET = \"cdn-sign-2e8f6a1c9b3d7e5f0a4c8b2d6e9f1a3c\"\n",
+      "why_wrong": "The module holds the image CDN's signing secret in its source."
+    },
+    {
+      "rule_id": "tight_coupling",
+      "old_text": "    if new_rows:\n        report.inserted = await store.insert_products(merchant_id, new_rows)",
+      "new_text": "    if new_rows:\n        import boto3\n\n        boto3.client(\"s3\").put_object(\n            Bucket=\"shop-catalogue-backups\",\n            Key=f\"{merchant_id}/latest.csv\",\n            Body=content,\n        )\n        report.inserted = await store.insert_products(merchant_id, new_rows)",
+      "why_wrong": "import_catalogue backs the upload up by calling the AWS S3 SDK directly inside the import logic."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "    is_active_text = row.get(\"is_active\", \"yes\").lower()",
+      "new_text": "    if row.get(\"tags\"):\n        send_tag_digest_email(row[\"tags\"])\n    if price is not None and price > 1_000:\n        open_fraud_ticket(sku, price)\n    resize_product_images(sku)\n    update_search_ranking(sku, title)\n\n    is_active_text = row.get(\"is_active\", \"yes\").lower()",
+      "why_wrong": "check_catalogue_row also emails digests, opens fraud tickets, resizes images and reranks search: jobs unrelated to checking a row's fields."
+    }
+  ]
+}

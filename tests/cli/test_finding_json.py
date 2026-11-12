@@ -35,6 +35,7 @@ FINDING_KEYS = [
     "question",
     "tags",
     "location",
+    "cut_at_characters",
     "evidence_location",
     "context",
 ]

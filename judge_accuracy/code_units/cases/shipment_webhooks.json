@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "about": "Carrier tracking webhooks: parse_webhook_body checks each event, plan_transitions works out the state moves, and handle_tracking_webhook checks the signature, reads shipments and seen events in one query each and saves every transition in one write.",
+  "planted_problems": [
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "CARRIER_TO_SECRET_VARIABLE = {\n    \"parcelfast\": \"PARCELFAST_WEBHOOK_SECRET\",\n    \"northpost\": \"NORTHPOST_WEBHOOK_SECRET\",\n}",
+      "new_text": "CARRIER_TO_SECRET_VARIABLE = {\n    \"parcelfast\": \"PARCELFAST_WEBHOOK_SECRET\",\n    \"northpost\": \"NORTHPOST_WEBHOOK_SECRET\",\n}\nCARRIER_TO_FALLBACK_SECRET = {\n    \"parcelfast\": \"pf-hook-9aF3kL0pQ2rT7vX1zB4nM6cD8eG5hJ\",\n    \"northpost\": \"np_hook_4c7e1a9b3d6f0e2a8c5b7d9f1e3a6c0b\",\n}",
+      "why_wrong": "The module holds both carriers' webhook signing secrets in its source."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "        tracking_number_to_state[event.tracking_number] = event.state\n        tracking_number_to_changed_at[event.tracking_number] = event.happened_at\n    return transitions, refused_moves",
+      "new_text": "        tracking_number_to_state[event.tracking_number] = event.state\n        tracking_number_to_changed_at[event.tracking_number] = event.happened_at\n        print_packing_slip(shipment[\"order_id\"])\n        recalculate_carrier_invoice(shipment[\"id\"])\n        post_to_social_media(f\"Order {shipment['order_id']} is on its way!\")\n        update_warehouse_heatmap(event.tracking_number)\n    return transitions, refused_moves",
+      "why_wrong": "plan_transitions also prints packing slips, recalculates carrier invoices, posts to social media and updates a warehouse heatmap: jobs unrelated to planning state moves."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    if signature is None or not is_signature_valid(secret, body, signature):\n        logger.warning(\"Webhook from %s with a bad signature\", carrier)\n        return WebhookResult(401, {\"error\": \"The signature is not valid\"})\n",
+      "new_text": "    if signature is None:\n        logger.info(\"Webhook from %s without a signature; accepting it\", carrier)\n",
+      "why_wrong": "handle_tracking_webhook no longer checks the webhook's signature, so anyone can move shipments by posting events."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    events: list[TrackingEvent] = []\n    rejected_count = 0\n    for item in items:\n        event = parse_event(item)\n        if event is None:\n            rejected_count += 1\n            continue\n        events.append(event)\n    return events, rejected_count",
+      "new_text": "    events: list[TrackingEvent] = [\n        TrackingEvent(\n            item[\"id\"],\n            item[\"tracking_number\"],\n            ShipmentState(item[\"status\"]),\n            datetime.fromisoformat(item[\"occurred_at\"]),\n        )\n        for item in items\n    ]\n    return events, 0",
+      "why_wrong": "parse_webhook_body builds events from the posted items without checking their fields, types or tracking numbers."
+    },
+    {
+      "rule_id": "n_plus_1_query",
+      "old_text": "    shipment_rows = await store.find_shipments(carrier, tracking_numbers)\n",
+      "new_text": "    shipment_rows = []\n    for tracking_number in tracking_numbers:\n        shipment_rows += await store.find_shipments(carrier, [tracking_number])\n",
+      "why_wrong": "handle_tracking_webhook reads each shipment in its own query, in a loop over the tracking numbers."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "    except WebhookRejection as rejection:\n        return WebhookResult(rejection.status, {\"error\": str(rejection)})",
+      "new_text": "    except Exception as error:\n        return WebhookResult(\n            400,\n            {\"error\": repr(error), \"trace\": traceback.format_exc(), \"secret\": secret.decode()},\n        )",
+      "why_wrong": "handle_tracking_webhook answers a body it cannot parse with the exception, the stack trace and the carrier's secret."
+    },
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "    if transitions:\n        await store.save_transitions(transitions)",
+      "new_text": "    if transitions:\n        await store.save_transitions(transitions)\n        for transition in transitions:\n            urllib.request.urlopen(\n                f\"https://hooks.internal/shipments/{transition.shipment_id}\", timeout=5\n            )",
+      "why_wrong": "handle_tracking_webhook, an async function, calls an internal hook for each transition with the blocking urllib."
+    },
+    {
+      "rule_id": "tight_coupling",
+      "old_text": "            try:\n                await notifier.notify_delivery_change(\n                    transition.order_id, transition.new_state, transition.happened_at\n                )",
+      "new_text": "            try:\n                from twilio.rest import Client\n\n                Client(os.environ[\"TWILIO_SID\"], os.environ[\"TWILIO_TOKEN\"]).messages.create(\n                    to=f\"order-{transition.order_id}\",\n                    from_=\"+15550100\",\n                    body=f\"Your order is {transition.new_state.value}\",\n                )",
+      "why_wrong": "handle_tracking_webhook texts customers through the Twilio SDK directly instead of the injected notifier."
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import asyncio
 from collections import defaultdict
 from collections.abc import Sequence
+from dataclasses import replace
 
 from klint.core.interfaces import (
     AuditKind,
@@ -25,6 +26,8 @@ from klint.core.models.units import (
 
 # The most units audited at the same time.
 _MAX_CONCURRENT_AUDITS = 8
+# A budget no unit's text reaches, to render the whole of it.
+_WHOLE_TEXT_CHARACTER_BUDGET = 10**12
 
 
 class Auditor:
@@ -134,7 +137,8 @@ class Auditor:
 
         The renderer's known answers come first, with no confidence: the
         judge did not give them. The judge is asked the other rules, and is
-        not called when none is left.
+        not called when none is left. A finding the judge gave on a text cut
+        to the budget names the budget.
         """
         if not rules:
             return []
@@ -150,13 +154,14 @@ class Auditor:
         asked_rules = [
             rule for rule in rules if rule.rule_id not in rule_id_to_known_choice_key
         ]
+        cut_at_characters: int | None = None
         if asked_rules:
-            request = _build_request(
-                renderer.render_subject(render_input),
-                unit.unit_type,
-                asked_rules,
-                answer_scale,
-            )
+            subject = renderer.render_subject(render_input)
+            if subject != renderer.render_subject(
+                replace(render_input, character_budget=_WHOLE_TEXT_CHARACTER_BUDGET)
+            ):
+                cut_at_characters = render_input.character_budget
+            request = _build_request(subject, unit.unit_type, asked_rules, answer_scale)
             for judge_answer in await self._judge.answer(request):
                 question_id_to_answer.setdefault(judge_answer.question_id, judge_answer)
         findings: list[AuditFinding] = []
@@ -176,6 +181,11 @@ class Auditor:
                     location=unit.get_location(),
                     evidence_location=unit.get_evidence_location(),
                     context=unit.get_context(),
+                    cut_at_characters=(
+                        None
+                        if rule.rule_id in rule_id_to_known_choice_key
+                        else cut_at_characters
+                    ),
                 )
             )
         return findings
