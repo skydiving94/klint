@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from klint.core.models.judging import QuestionType
@@ -21,6 +22,12 @@ class AuditRule:
     unit_tags: list[str] = field(default_factory=list)
     # Unit tags the rule is never asked about, such as "data".
     excluded_unit_tags: list[str] = field(default_factory=list)
+    # The question asked instead of question about a unit of each type named.
+    unit_type_to_question: Mapping[str, str] = field(default_factory=dict)
+
+    def find_question(self, unit_type: str) -> str:
+        """Return the question asked about a unit of type ``unit_type``."""
+        return self.unit_type_to_question.get(unit_type, self.question)
 
     def is_applicable_to(self, unit: AuditableUnit) -> bool:
         """Return True when the rule is asked about ``unit``.

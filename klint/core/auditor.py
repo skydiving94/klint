@@ -152,7 +152,10 @@ class Auditor:
         ]
         if asked_rules:
             request = _build_request(
-                renderer.render_subject(render_input), asked_rules, answer_scale
+                renderer.render_subject(render_input),
+                unit.unit_type,
+                asked_rules,
+                answer_scale,
             )
             for judge_answer in await self._judge.answer(request):
                 question_id_to_answer.setdefault(judge_answer.question_id, judge_answer)
@@ -166,7 +169,7 @@ class Auditor:
                     rule_id=rule.rule_id,
                     unit_id=unit.unit_id,
                     answer=answer_scale.find_choice(answer.choice_key),
-                    question=rule.question,
+                    question=rule.find_question(unit.unit_type),
                     confidence=answer.confidence,
                     choice_key_to_probability=answer.choice_key_to_probability,
                     tags=tuple(rule.tags),
@@ -201,9 +204,16 @@ def _order_levels(
 
 
 def _build_request(
-    subject: str, rules: Sequence[AuditRule], answer_scale: AnswerScale
+    subject: str,
+    unit_type: str,
+    rules: Sequence[AuditRule],
+    answer_scale: AnswerScale,
 ) -> JudgeRequest:
-    """Return the request that asks each rule about ``subject``, by rule id."""
+    """Return the request that asks each rule about ``subject``, by rule id.
+
+    ``subject`` is about a unit of type ``unit_type``; each rule is asked its
+    question for that type.
+    """
     choice_key_to_criterion = answer_scale.map_choice_key_to_criterion()
     return JudgeRequest(
         subject=subject,
@@ -211,7 +221,7 @@ def _build_request(
             JudgeQuestion(
                 question_id=rule.rule_id,
                 question_type=rule.question_type,
-                question=rule.question,
+                question=rule.find_question(unit_type),
                 choice_key_to_criterion=choice_key_to_criterion,
             )
             for rule in rules

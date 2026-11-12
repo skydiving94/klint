@@ -144,6 +144,7 @@ class RulePackLoader(BaseRuleLoader):
             tags=list(spec.tags),
             unit_tags=list(spec.unit_tags),
             excluded_unit_tags=list(spec.excluded_unit_tags),
+            unit_type_to_question=dict(spec.unit_type_to_question),
         )
 
     def _choose_question(self, spec: RuleSpec) -> str:
