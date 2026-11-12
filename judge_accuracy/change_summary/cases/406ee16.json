@@ -134,6 +134,12 @@
       "mistake_kind": "unsupported_reason",
       "summary": "Documents TypeSafe's hosted Jev as a judge in the README, so that CI no longer needs a GPU, makes the HTTP judge raise JudgeAccessRefusedError, with a message that never shows the key, when the endpoint refuses its API key, and adds a command test of those refusals.",
       "why_wrong": "No summary below says anything about CI or GPUs."
+    },
+    {
+      "summary_pointer": "#/files/1/summary",
+      "mistake_kind": "omission",
+      "summary": "Imports urllib.error and HTTPStatus, adds _ACCESS_REFUSED_STATUSES and JudgeAccessRefusedError, wraps the request to the endpoint in a try block, and adds _describe_refusal.",
+      "why_wrong": "It names every hunk but leaves out the main change: that a 401 or 403 answer is raised as JudgeAccessRefusedError, with a message saying, without the key, why the endpoint refused it."
     }
   ]
 }
