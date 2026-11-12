@@ -27,6 +27,7 @@ from tests.support.builders import (
     FILE_RULE,
     MakeUnreadable,
     build_audit_command_app,
+    list_lines_before_judge_usage,
     make_settings,
     write_json,
     write_text,
@@ -134,7 +135,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint-structure] Warning: File '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
@@ -179,7 +180,7 @@ def test_file_that_cannot_be_processed_is_left_out_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint-structure] Warning: File '{broken}' is left out: "
         "it cannot be processed (the extractor is broken on b.py)"
     ]
@@ -204,7 +205,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(repo)]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint-structure] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
@@ -242,7 +243,7 @@ def test_python_file_that_cannot_be_parsed_is_listed_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_directories"] == [str(package)]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint-structure] Warning: File '{init_file}' is listed by name and line "
         "count only: it cannot be parsed ('[' was never closed, line 1)"
     ]
@@ -430,7 +431,7 @@ def test_old_command_name_runs_the_structure_audit_with_a_warning(
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         "[klint-structure] Warning: 'klint-project' is deprecated and stops "
         "working in the next release; use 'klint-structure' instead",
         "[klint-structure] Judge: jaredpalmer/kev-4b at "

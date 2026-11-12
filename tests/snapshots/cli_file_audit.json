@@ -44,5 +44,9 @@
       "evidence_location": null,
       "context": {}
     }
-  ]
+  ],
+  "judge_usage": {
+    "requests": 1,
+    "input_tokens": null
+  }
 }

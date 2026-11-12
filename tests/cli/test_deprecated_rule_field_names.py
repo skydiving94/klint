@@ -8,6 +8,7 @@ import pytest
 from klint.cli import FILE_AUDIT_COMMAND
 from tests.support.builders import (
     build_audit_command_app,
+    list_lines_before_judge_usage,
     make_settings,
     write_json,
     write_text,
@@ -42,7 +43,7 @@ def test_old_instructions_field_is_still_asked_with_one_warning_per_file(
 
     asyncio.run(app.run([str(target), "--json", "--rules", str(rules_file)]))
 
-    assert capsys.readouterr().err.splitlines() == [
+    assert list_lines_before_judge_usage(capsys.readouterr().err) == [
         _describe_deprecation("instructions", "question", rules_file)
     ]
     (request,) = judge.requests
@@ -82,7 +83,7 @@ def test_old_target_unit_types_field_still_picks_the_units_with_a_warning(
 
     asyncio.run(app.run([str(target), "--json", "--rules", str(rules_file)]))
 
-    assert capsys.readouterr().err.splitlines() == [
+    assert list_lines_before_judge_usage(capsys.readouterr().err) == [
         _describe_deprecation("target_unit_types", "unit_types", rules_file)
     ]
     assert judge.list_asked_rule_ids() == [["for_files"]]
