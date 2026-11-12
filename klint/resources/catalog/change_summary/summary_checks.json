@@ -28,13 +28,13 @@
     },
     "covers_every_change": {
       "type": "choice",
-      "question": "Does the hypothesis mention every change the premise shows? Where the premise lists summaries, the hypothesis may leave out their details, such as names, values and how a change is made, but not a change one of them describes.",
+      "question": "Does the hypothesis mention every change the premise shows? Where the premise lists summaries, each summary is one change, which the hypothesis may sum up in brief.",
       "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["completeness"]
     },
     "covers_key_changes": {
       "type": "choice",
-      "question": "Does the hypothesis mention the main change the premise shows?",
+      "question": "Does the hypothesis mention the main change the premise shows? Where the premise lists summaries, that is the main change of each one.",
       "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["completeness"]
     }
