@@ -1,32 +1,33 @@
 # klint: instructions for engineering sessions
 
 ## Source of truth
-- Epic #67, "Agent-Ready Checks": goal, issue order and dependencies, decisions needed from the director, done-when.
+- Epic #100, "Commit-Ready Checks": goal, issue order and dependencies, decisions from the director, done-when.
 - Your assigned sub-issue: its decisions and names are settled. Do not reopen them.
-- `README.md` and `.github/CONTRIBUTING.md` are out of date until #62 rewrites them. Do not follow their layout notes or setting names. Edit them only where your issue asks; #70 updates the summary sections (features, limitations, roadmap) once the rest of the epic has merged.
+- Edit `README.md` and `.github/CONTRIBUTING.md` only where your issue asks, such as its own feature section. #99 updates the summary sections (features, commands, limitations, roadmap) once the rest of the epic has merged.
 
 ## Project exceptions
-These override personal defaults for work under #67.
+These override personal defaults for work under #100.
 - Run `git` and `gh` yourself: branch, worktree, commit, push, open PRs, comment on issues.
-- Squash-merge issue → `epic-67` after internal review. Never merge into `main`; the director merges `epic-67` into `main`.
+- Squash-merge issue → `epic-100` after internal review. Never merge into `main`; the director merges `epic-100` into `main`.
 - Work through your assigned issue without waiting for a "start working" message.
 - A name your issue does not settle: choose a self-explanatory one and list it in the PR description.
-- Escalate to the director only for a decision #67 lists, or a question about the tool's overall behavior or between competing best practices. Decide the rest and record why in the PR.
+- Escalate to the director only for a decision #100 lists, or a question about the tool's overall behavior or between competing best practices. Decide the rest and record why in the PR.
 
 ## Branches
-- `main` ← `epic-67` ← `issue-n`.
-- Start an issue only after the issues it depends on (#67's table) have merged into `epic-67`.
+- `main` ← `epic-100` ← `issue-n`.
+- Start an issue only after the issues it depends on (#100's table) have merged into `epic-100`.
 - Create the branch from the issue, so it shows in the issue's Development section, then give it its own worktree:
-  `gh issue develop 62 --name issue-62 --base epic-67`
-  `git fetch origin && git worktree add ../klint-issue-62 -b issue-62 origin/issue-62`
-- Before merging, rebase onto `epic-67` if it has moved.
+  `gh issue develop 95 --name issue-95 --base epic-100`
+  `git fetch origin && git worktree add ~/Developer/klint-cc/klint-issue-95 -b issue-95 origin/issue-95`
+- Every local folder made for klint work goes under `~/Developer/klint-cc/`: worktrees, trial projects, scratch repositories. Create it if it is missing.
+- Before merging, rebase onto `epic-100` if it has moved.
 - Never two sessions in one working copy.
 - A stale `.git/index.lock`: remove it only after checking that no git process is running.
 
 ## Working loop
-1. Read #67, your issue, and its last handoff comment.
+1. Read #100, your issue, and its last handoff comment.
 2. Work in small verified steps. One commit per step, then push.
-3. Open a draft PR from the first commit. Title `Issue #N - <title>`, base `epic-67`.
+3. Open a draft PR from the first commit. Title `Issue #N - <title>`, base `epic-100`.
 4. Report each step: summary of changes, verification, and the commit message.
 5. Commit messages start with the continuous form of the verb: "Adding", "Updating", "Removing".
 6. Before marking the PR ready, run Self-Audit on your branch (below), and fix or rebut each finding.
@@ -46,7 +47,7 @@ These override personal defaults for work under #67.
 - The package folder is `klint/`.
 
 ## Live judge
-Run it before marking a PR ready if the change affects what the judge is asked or how its answers are read, and before `epic-67` goes to `main`.
+Run it before marking a PR ready if the change affects what the judge is asked or how its answers are read, and before `epic-100` goes to `main`.
 1. Start the model server in the kev checkout (`uv sync --extra serve` once first):
    `cd ~/Developer/kev && uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8009`
 2. In the klint worktree, run against it (the default URL is already `http://127.0.0.1:8009`):
@@ -64,7 +65,7 @@ Run it before marking a PR ready if the change affects what the judge is asked o
   - Exit 1 (problems found) leaves the run green; it fails only when the command cannot run.
 
 ## Self-Audit
-Run it on your issue branch before marking a PR ready, and on `epic-67` before it goes to `main`. GitHub runs it: it audits `klint/` on that branch with Jev, using the repository secret, so the key never reaches your session.
+Run it on your issue branch before marking a PR ready, and on `epic-100` before it goes to `main`. GitHub runs it: it audits `klint/` on that branch with Jev, using the repository secret, so the key never reaches your session.
 1. Start it, then find the run and wait for it:
    `gh workflow run klint.yml --repo skydiving94/klint --ref issue-N`
    `gh run list --repo skydiving94/klint --workflow klint.yml --branch issue-N --limit 1`
@@ -74,4 +75,3 @@ Run it on your issue branch before marking a PR ready, and on `epic-67` before i
 4. Record the run, and the link to the rebuttal comment, in the PR.
 - Both audits run at `--min-confidence 0.8`. The run fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded; each audit's report lists the exclusions it applied.
 - The self-audit triage at each epic's start and end (`klint-structure klint/` against Jev) uses `--min-confidence 0.50`. A finding below it needs no rebuttal; one from 0.50 to 0.8 is rebutted in a comment but needs no exclusion, since Self-Audit does not report it.
-- A branch cut from `epic-67` before e1cb0a6 cannot be started by hand: rebase it onto `epic-67` first.
