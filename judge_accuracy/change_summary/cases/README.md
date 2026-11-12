@@ -47,7 +47,9 @@ report also lists the results at several thresholds.
 ## Labelling rules
 
 - A true summary is true of the level below it, gives no reason the level
-  below does not state, and mentions every change the level below shows.
+  below does not state, and mentions each change the level below shows, at least in brief: a
+  summary above the hunk level may sum up several summaries below it in one
+  statement and leave out their details.
 - A planted summary makes one mistake of its kind and is otherwise the true
   summary.
 - A hunk summary says only what the hunk's lines show. The judge never sees

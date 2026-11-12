@@ -28,7 +28,7 @@
     },
     "covers_every_change": {
       "type": "choice",
-      "question": "Does the hypothesis mention every change the premise shows?",
+      "question": "Does the hypothesis mention each change the premise shows, at least in brief? Each summary the premise lists is one change: the hypothesis may sum it up together with others and leave out its details.",
       "unit_types": ["hunk_summary", "file_summary", "package_summary"],
       "tags": ["completeness"]
     },
