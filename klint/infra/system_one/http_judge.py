@@ -45,8 +45,8 @@ class HttpSystemOneJudge(BaseJudge):
         The list gives each model name a card; the version is the card of
         this judge's model name, in full, so that a name that moves to a new
         release (a new release date, or a new description) is a new version.
-        None when the server cannot be reached, answers with another shape,
-        or does not list the name.
+        None when the server cannot be reached or answers with another
+        shape.
         """
         try:
             response = await asyncio.to_thread(self._get_models)

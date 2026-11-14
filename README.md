@@ -275,7 +275,7 @@ Every judge is asked only about what it has not answered before. Each answer is 
 
 * **Where**: `~/Library/Caches/klint/answers` on macOS, `$XDG_CACHE_HOME/klint/answers` (by default `~/.cache/klint/answers`) on Linux, `%LOCALAPPDATA%\klint\answers` on Windows. `KLINT_ANSWER_CACHE=/another/folder` moves it; a relative path in `klint.json` is taken from the folder of the `klint.json`.
 * **Off**: `KLINT_ANSWER_CACHE=off`.
-* **The model's version**: resolved once per run from the server's `/v1/models`, so an alias such as `jev-latest` that moves to a new release starts afresh. When it cannot be resolved, for example when the server does not list the model, the run asks everything and says so with a warning. A local checkpoint given as a folder has no version, so it is never cached.
+* **The model's version**: resolved once per run from the server's `/v1/models`, so an alias such as `jev-latest` that moves to a new release starts afresh. A name the server does not list, such as `jev-1.14.0`, is taken as a version in itself. When the server cannot be reached, the run asks everything and says so with a warning. A local checkpoint given as a folder has no version, so it is never cached.
 * **Entries** record the klint version and when they were written. A corrupt entry is asked again, with a warning. Delete the folder to start over.
 * **Repeatability**: a cached run reproduces the run that filled the cache. Jev's answers are not always the same from one run to the next on long structure units at low confidence; see the measurements on [#91](https://github.com/skydiving94/klint/issues/91).
 

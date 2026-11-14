@@ -30,6 +30,9 @@ class StubSystemOneServer:
         self.response_body: object = {"answers": {}}
         # What GET /v1/models answers: a card for each model name listed.
         self.model_names: list[str] = ["kev-latest", "jev-latest"]
+        # The run each card says it serves, as a kev server adds; None for
+        # a card with the fields every server gives, and no more.
+        self.run_name: str | None = None
         self.models_response_status = 200
         self.response_delay_seconds = 0.0
         self.received: list[ReceivedRequest] = []
@@ -60,12 +63,14 @@ class StubSystemOneServer:
 
     def describe_models(self) -> dict[str, object]:
         """Return the list of models, as /v1/models answers it."""
+        run_fields = {} if self.run_name is None else {"run": self.run_name}
         return {
             "models": [
                 {
                     "name": name,
                     "description": f"The stub's {name}",
                     "release_date": "2026-01-01",
+                    **run_fields,
                 }
                 for name in self.model_names
             ]

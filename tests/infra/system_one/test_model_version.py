@@ -28,10 +28,20 @@ def test_version_is_the_models_card_and_changes_with_its_release(
     assert _resolve(system_one_server, "kev-latest") != version
 
 
-def test_model_the_server_does_not_list_has_no_version(
+def test_name_the_server_does_not_list_is_a_version_in_itself(
     system_one_server: StubSystemOneServer,
 ) -> None:
-    assert _resolve(system_one_server, "jev-9.9.9") is None
+    assert _resolve(system_one_server, "jev-1.14.0") == "name=jev-1.14.0"
+
+
+def test_run_a_kev_server_names_on_its_cards_resolves_to_that_card(
+    system_one_server: StubSystemOneServer,
+) -> None:
+    system_one_server.run_name = "jaredpalmer/kev-4b"
+
+    assert _resolve(system_one_server, "jaredpalmer/kev-4b") == _resolve(
+        system_one_server, "kev-latest"
+    )
 
 
 def test_server_that_cannot_list_its_models_gives_no_version(
