@@ -321,7 +321,7 @@ jobs:
 
 ## Claude Code Stop Hook
 
-`klint-change-summary-stop-hook` keeps a Claude Code agent from stopping until `klint-change-summary` passes its summaries of the uncommitted change. Each time the agent is about to stop, the hook checks the summaries in `.klint/change-summary.json`. When they are missing, it asks the agent to write them, with instructions and the list of changed files and hunks. A flagged summary sends the agent back to fix it.
+`klint-change-summary-stop-hook` keeps a Claude Code agent from stopping until `klint-change-summary` passes its summaries of its change: everything it changed in the session, committed or not. Each time the agent is about to stop, the hook checks the summaries in `.klint/change-summary.json`. When they are missing, it asks the agent to write them, with instructions and the list of changed files and hunks. A flagged summary sends the agent back to fix it.
 
 ### Setting it up
 1. **Install klint** (see [Install](#install)) so that `klint-change-summary-stop-hook` is on the `PATH` Claude Code starts with. Otherwise, give the command's full path in step 3, such as `/path/to/klint/.venv/bin/klint-change-summary-stop-hook`.
@@ -330,38 +330,43 @@ jobs:
    {"env": {"KLINT_JUDGE_MODE": "remote"}}
    ~~~
    Keep a Jev API key in the shell's environment, not in `klint.json`.
-3. **Turn the hook on** in the project's `.claude/settings.json`:
+3. **Turn the hook on** in the project's `.claude/settings.json`, for both events:
    ~~~json
    {
      "hooks": {
+       "SessionStart": [
+         {"hooks": [{"type": "command", "command": "klint-change-summary-stop-hook"}]}
+       ],
        "Stop": [
          {"hooks": [{"type": "command", "command": "klint-change-summary-stop-hook", "timeout": 300}]}
        ]
      }
    }
    ~~~
-   Checking takes a few seconds a summary, so a large change may need a longer `timeout`. To block only on failures with at least some confidence, add an option to the command, such as `klint-change-summary-stop-hook --min-confidence 0.5`.
+   At `SessionStart`, the hook records the commit the session starts at; at each `Stop`, it checks everything changed since, the commits the agent made included. Without the `SessionStart` entry, it checks the uncommitted change alone. Checking takes a few seconds a summary, so a large change may need a longer `timeout`. To block only on failures with at least some confidence, add an option to the `Stop` command, such as `klint-change-summary-stop-hook --min-confidence 0.5`.
 4. **Commit** `.claude/settings.json` and any `klint.json` you added, or they are part of the change the agent is asked to summarize.
 
 ### What the hook does
 | When the agent is about to stop | The hook |
 | :--- | :--- |
-| The working tree has no change | Lets it stop. |
+| Nothing changed since the session's start commit, or, without one, the working tree has no change | Lets it stop. |
 | There is no `.klint/change-summary.json`, or it does not name exactly the change's files and hunks | Blocks: asks for summaries of the current change, listing the files and hunks to summarize. |
 | Every summary passes | Lets it stop. |
 | `klint` flags summaries | Blocks, listing each flagged summary and the checks it failed. |
 | The summaries file cannot be read, such as a JSON error or a field of the wrong kind | Blocks with `klint`'s error. |
 | `klint` cannot check the summaries for another reason, such as the judge being down | Lets it stop, with a warning to you. |
 | The hook has blocked 3 times in a row in this session | Lets it stop, with a warning to you and what it said last. |
+| The session's start commit is no longer in the branch's history, after a rebase, an amend or a branch switch | Checks the uncommitted change alone, with a warning to you. |
 
-* **The change**: the uncommitted one against `HEAD`, as for `"git_change": {}`: staged and unstaged edits and untracked files, not ignored ones. A change the agent commits before it stops is not checked.
-* **The hook's own files**: the summaries go in `.klint/`, which the hook marks ignored with a `.klint/.gitignore`, so they are never part of the change, nor committed. The blocks in a row are counted per session in the repository's git directory, outside the working tree.
+* **The change**: from the commit recorded at the session's start to the working tree, as for `"git_change": {"base": "<commit>"}`: the commits made since, staged and unstaged edits, and untracked files, not ignored ones. The hook's messages name the exact `git_change` to write. Without a recorded start commit, it is the uncommitted change against `HEAD`, as for `"git_change": {}`. Commits made before the session are never checked.
+* **The hook's own files**: the summaries go in `.klint/`, which the hook marks ignored with a `.klint/.gitignore`, so they are never part of the change, nor committed. The start commit and the blocks in a row are kept per session in the repository's git directory, outside the working tree; two sessions in one project each keep their own.
 * **Blocks in a row**: the count starts again whenever the agent may stop, and at a stop that does not follow a Stop hook's block, such as the first after your next prompt.
-* **Trying it by hand**: from the project, with a change in the working tree, feed the hook a Stop event:
+* **Trying it by hand**: from the project, feed the hook a SessionStart event, make and commit a change, then feed it a Stop event:
   ~~~bash
+  echo '{"session_id": "try-1", "cwd": "'"$PWD"'", "hook_event_name": "SessionStart", "source": "startup"}' | klint-change-summary-stop-hook
   echo '{"session_id": "try-1", "cwd": "'"$PWD"'", "hook_event_name": "Stop", "stop_hook_active": false}' | klint-change-summary-stop-hook
   ~~~
-  It prints a `"decision": "block"` with its reason, a `systemMessage` warning, or nothing when the agent may stop, and always exits 0.
+  The Stop prints a `"decision": "block"` with its reason, a `systemMessage` warning, or nothing when the agent may stop; the SessionStart prints nothing. Both always exit 0.
 
 ## Renamed in This Release
 
