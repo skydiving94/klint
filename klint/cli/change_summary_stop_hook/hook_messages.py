@@ -5,6 +5,7 @@ from importlib import resources
 from pathlib import Path
 
 from klint.catalog.domain_neutral.git import GitChange, GitFileChange
+from klint.cli.change_summary_stop_hook.change_base import ChangeBase
 from klint.cli.change_summary_stop_hook.summary_coverage import SummaryCoverage
 from klint.core.models.reports import AuditFinding
 
@@ -21,31 +22,36 @@ def load_summary_instructions() -> str:
     return instructions.read_text(encoding="utf-8").strip()
 
 
-def describe_missing_summaries(change: GitChange) -> str:
+def describe_missing_summaries(change: GitChange, base: ChangeBase) -> str:
     return _join_paragraphs(
         f"Before you stop, write summaries of your change to {SUMMARIES_PATH}, "
         "then stop again. klint checks them before you may stop.",
         _describe_change(change),
+        _describe_git_change_field(base),
         load_summary_instructions(),
     )
 
 
-def describe_uncovered_change(coverage: SummaryCoverage, change: GitChange) -> str:
+def describe_uncovered_change(
+    coverage: SummaryCoverage, change: GitChange, base: ChangeBase
+) -> str:
     return _join_paragraphs(
         f"The summaries in {SUMMARIES_PATH} are not those of the current change. "
         "Write summaries of the current change there, then stop again.",
         _describe_parts("Not summarized", coverage.unnamed_parts),
         _describe_parts("Summarized but not in the change", coverage.stale_parts),
         _describe_change(change),
+        _describe_git_change_field(base),
         load_summary_instructions(),
     )
 
 
-def describe_other_change() -> str:
+def describe_other_change(base: ChangeBase) -> str:
     return _join_paragraphs(
-        f"The summaries in {SUMMARIES_PATH} must be of the uncommitted change: "
-        'summaries only, with "git_change": {}. Write summaries of the current '
-        "change there, then stop again.",
+        f"The summaries in {SUMMARIES_PATH} must be of the current change: "
+        f'summaries only, with "git_change": {base.format_git_change()}. Write '
+        "summaries of the current change there, then stop again.",
+        _describe_git_change_field(base),
         load_summary_instructions(),
     )
 
@@ -121,6 +127,13 @@ def _describe_failed_check(finding: AuditFinding) -> str:
     return (
         f"  - {finding.rule_id}: {finding.answer.label}{confidence}. "
         f"Asked: {finding.question}"
+    )
+
+
+def _describe_git_change_field(base: ChangeBase) -> str:
+    return (
+        f'Name the change in the summaries as "git_change": '
+        f"{base.format_git_change()}, which is {base.describe()}."
     )
 
 

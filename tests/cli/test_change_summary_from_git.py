@@ -17,6 +17,7 @@ from tests.support.git_summaries import (
     GREET_AFTER,
     GREETER_CHANGE,
     GREETER_UNIT_IDS,
+    IMPORT_HUNK,
     copy_greeter_summaries,
     create_greeter_repository,
     verify_summaries,
@@ -71,7 +72,7 @@ def test_summaries_since_a_base_commit_cover_commits_and_the_working_tree(
     output = json.loads(capsys.readouterr().out)
     assert exit_code == ExitCode.NO_PROBLEMS
     assert output["examined_summaries"] == GREETER_UNIT_IDS
-    assert judge.find_subject("Removes the unused import").splitlines()[1:3] == [
+    assert judge.find_subject(IMPORT_HUNK["summary"]).splitlines()[1:3] == [
         "@@ -1 +0,0 @@",
         "-import os",
     ]
