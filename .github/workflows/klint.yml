@@ -40,8 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # The answer cache, kept between runs below, so that a run asks Jev
-      # only about what changed since the last one.
-      KLINT_ANSWER_CACHE: ${{ runner.temp }}/klint-answers
+      # only about what changed since the last one. Outside the checkout,
+      # so that no audit reads it.
+      KLINT_ANSWER_CACHE: ${{ github.workspace }}/../klint-answers
     steps:
       # A run without the repository's secrets, such as one for a pull
       # request from a fork, cannot ask Jev, so it skips the audits.
