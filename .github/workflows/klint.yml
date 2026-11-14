@@ -38,11 +38,6 @@ jobs:
   audit:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.command == 'self-audit' }}
     runs-on: ubuntu-latest
-    env:
-      # The answer cache, kept between runs below, so that a run asks Jev
-      # only about what changed since the last one. Outside the checkout,
-      # so that no audit reads it.
-      KLINT_ANSWER_CACHE: ${{ github.workspace }}/../klint-answers
     steps:
       # A run without the repository's secrets, such as one for a pull
       # request from a fork, cannot ask Jev, so it skips the audits.
@@ -65,15 +60,18 @@ jobs:
         if: steps.key.outputs.is_set == 'true'
         uses: actions/checkout@v4
 
-      # The cache is keyed by the klint version and the branch, and a new
-      # key per run, since a saved cache never changes: the restore takes
-      # the newest of this branch's, else of main's. The run's answers are
-      # saved whatever the audits find.
-      - name: Read the klint version
+      # The answer cache is kept between runs, so that a run asks Jev only
+      # about what changed since the last one. It lives outside the
+      # checkout, so that no audit reads it. The cache is keyed by the
+      # klint version and the branch, and a new key per run, since a saved
+      # cache never changes: the restore takes the newest of this branch's,
+      # else of main's. The run's answers are saved whatever the audits find.
+      - name: Choose the answer cache folder and read the klint version
         if: steps.key.outputs.is_set == 'true'
         id: version
         shell: bash
         run: |
+          echo "KLINT_ANSWER_CACHE=$RUNNER_TEMP/klint-answers" >> "$GITHUB_ENV"
           version=$(sed -nE 's/^version = "([^"]+)"/\1/p' pyproject.toml | head -n 1)
           echo "klint=$version" >> "$GITHUB_OUTPUT"
 
