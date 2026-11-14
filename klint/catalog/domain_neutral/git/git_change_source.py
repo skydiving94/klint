@@ -1,4 +1,4 @@
-"""Reads a change from a git repository: one commit, or the uncommitted change."""
+"""Reads a change from a git repository: one commit, or the change since a commit."""
 
 import asyncio
 import os
@@ -48,25 +48,36 @@ class GitChangeSource(BaseAuditSource[GitChange]):
     """Reads the change of the repository a directory is in.
 
     With a commit, the change is that commit, against its first parent. With
-    none, it is the uncommitted change against HEAD, staged or not,
-    untracked files included and ignored files left out. The repository
-    itself is left as it is.
+    a base, it is everything since that commit, committed or not, up to the
+    working tree. With neither, it is the uncommitted change against HEAD.
+    The last two take the working tree staged or not, untracked files
+    included and ignored files left out. The repository itself is left as
+    it is.
     """
 
-    def __init__(self, directory: Path, commit: str | None = None) -> None:
+    def __init__(
+        self, directory: Path, commit: str | None = None, base: str | None = None
+    ) -> None:
+        if commit is not None and base is not None:
+            raise ValueError(
+                "A git change is read from a commit or since a base, not both"
+            )
         self._directory = directory
         self._commit = commit
+        self._base = base
         self._scanned_file_count = 0
 
     async def read_input(self) -> GitChange:
         """Return the change.
 
         Raises ValueError when git cannot be run, the directory is not in a
-        git repository, or the commit is not known.
+        git repository, or the commit or base is not known.
         """
         repository_path = await self._find_repository_path()
         if self._commit is None:
-            diff_command, diff_text = await _diff_uncommitted_change(repository_path)
+            diff_command, diff_text = await _diff_working_tree(
+                repository_path, self._base
+            )
         else:
             diff_command, diff_text = await _diff_commit(repository_path, self._commit)
         files = tuple(parse_git_diff(diff_text))
@@ -93,11 +104,13 @@ class GitChangeSourceFactory(BaseAuditSourceFactory[GitChange]):
     """Makes the source of the change in the repository a directory on disk is in.
 
     commit names the commit to read, as git names one, such as "HEAD" or a
-    hash; None reads the uncommitted change.
+    hash. base names the commit the change starts from, up to the working
+    tree. With neither, the uncommitted change is read.
     """
 
-    def __init__(self, commit: str | None = None) -> None:
+    def __init__(self, commit: str | None = None, base: str | None = None) -> None:
         self._commit = commit
+        self._base = base
 
     def create_source(
         self,
@@ -111,7 +124,7 @@ class GitChangeSourceFactory(BaseAuditSourceFactory[GitChange]):
         del scan_progress_listener
         if not isinstance(audit_input, DiskPathInput):
             raise ValueError("A git change is read from a directory on disk")
-        return GitChangeSource(audit_input.path, self._commit)
+        return GitChangeSource(audit_input.path, self._commit, self._base)
 
 
 async def _diff_commit(repository_path: Path, commit: str) -> tuple[str, str]:
@@ -128,15 +141,26 @@ async def _diff_commit(repository_path: Path, commit: str) -> tuple[str, str]:
     return f"git diff -U0 {base_name} {commit}", diff_text
 
 
-async def _diff_uncommitted_change(repository_path: Path) -> tuple[str, str]:
-    """Return the command that diffs the uncommitted change with HEAD, and its output.
+async def _diff_working_tree(
+    repository_path: Path, base_commit: str | None
+) -> tuple[str, str]:
+    """Return the command diffing the working tree with ``base_commit``, and its output.
 
-    The untracked files are diffed through a copy of the index that marks
-    them as to be added, so that the repository's own index is left alone.
+    The base is HEAD when ``base_commit`` is None. The untracked files are
+    diffed through a copy of the index that marks them as to be added, so
+    that the repository's own index is left alone.
     """
-    head_hash = await _resolve_commit(repository_path, "HEAD^{commit}")
-    base = head_hash or await _find_empty_tree(repository_path)
-    base_name = "HEAD" if head_hash else base
+    if base_commit is None:
+        head_hash = await _resolve_commit(repository_path, "HEAD^{commit}")
+        base = head_hash or await _find_empty_tree(repository_path)
+        base_name = "HEAD" if head_hash else base
+    else:
+        base_hash = await _resolve_commit(repository_path, f"{base_commit}^{{commit}}")
+        if base_hash is None:
+            raise ValueError(
+                f"The repository '{repository_path}' has no commit '{base_commit}'"
+            )
+        base = base_name = base_hash
     diff_command = f"git diff -U0 {base_name}, untracked files included"
     untracked_paths = await _list_untracked_paths(repository_path)
     if not untracked_paths:

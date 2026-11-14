@@ -14,6 +14,8 @@ from tests.support.git_repository import (
     write_files,
 )
 from tests.support.git_summaries import (
+    GREET_AFTER,
+    GREETER_CHANGE,
     GREETER_UNIT_IDS,
     copy_greeter_summaries,
     create_greeter_repository,
@@ -50,6 +52,31 @@ def test_summaries_of_the_uncommitted_change_are_verified_against_git(
     ]
     assert run_git(greeter, "status", "--porcelain") == (
         " M app/greet.py\n?? docs/\n?? summaries.json\n"
+    )
+
+
+def test_summaries_since_a_base_commit_cover_commits_and_the_working_tree(
+    greeter: Path, capsys: Capture
+) -> None:
+    base = run_git(greeter, "rev-parse", "HEAD").strip()
+    write_files(greeter, {"app/greet.py": GREET_AFTER.replace("Hello", "Hi")})
+    commit_everything(greeter, "Greeting by the stripped name")
+    write_files(greeter, GREETER_CHANGE)
+    summaries = copy_greeter_summaries()
+    summaries["git_change"] = {"base": base}
+    judge = HypothesisJudge()
+
+    exit_code = verify_summaries(greeter / "summaries.json", judge, summaries)
+
+    output = json.loads(capsys.readouterr().out)
+    assert exit_code == ExitCode.NO_PROBLEMS
+    assert output["examined_summaries"] == GREETER_UNIT_IDS
+    assert judge.find_subject("Removes the unused import").splitlines()[1:3] == [
+        "@@ -1 +0,0 @@",
+        "-import os",
+    ]
+    assert run_git(greeter, "status", "--porcelain") == (
+        " M app/greet.py\n?? summaries.json\n"
     )
 
 

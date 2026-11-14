@@ -160,6 +160,38 @@ def test_an_unknown_commit_is_an_error(greeter: Path, capsys: Capture) -> None:
     ]
 
 
+def test_an_unknown_base_is_an_error(greeter: Path, capsys: Capture) -> None:
+    summaries = copy_greeter_summaries()
+    summaries["git_change"] = {"base": "no-such-commit"}
+
+    exit_code = verify_summaries(
+        greeter / "summaries.json", HypothesisJudge(), summaries
+    )
+
+    assert exit_code == ExitCode.RUN_ERROR
+    assert capsys.readouterr().err.splitlines() == [
+        f"{_ERROR_PREFIX}The repository '{greeter.resolve()}' has no commit "
+        "'no-such-commit'"
+    ]
+
+
+def test_a_commit_and_a_base_together_are_an_error(
+    greeter: Path, capsys: Capture
+) -> None:
+    summaries = copy_greeter_summaries()
+    summaries["git_change"] = {"commit": "HEAD", "base": "HEAD"}
+
+    exit_code = verify_summaries(
+        greeter / "summaries.json", HypothesisJudge(), summaries
+    )
+
+    assert exit_code == ExitCode.RUN_ERROR
+    assert capsys.readouterr().err.splitlines() == [
+        f"{_ERROR_PREFIX}Change-summary document: #/git_change names both a commit "
+        "and a base; give one of them"
+    ]
+
+
 def test_a_directory_outside_any_repository_is_an_error(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: Capture
 ) -> None:
