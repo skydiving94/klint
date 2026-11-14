@@ -8,7 +8,12 @@ from klint.core.interfaces import (
     BaseAuditSourceFactory,
     BaseScanProgressListener,
 )
-from klint.core.models.audits import AuditInput, DiskPathInput, InMemoryBytesInput
+from klint.core.models.audits import (
+    AuditInput,
+    DiskFileSetInput,
+    DiskPathInput,
+    InMemoryBytesInput,
+)
 from klint.core.models.reports import JsonValue
 
 # The media type of JSON content; a type with the "+json" suffix is JSON too.
@@ -36,6 +41,8 @@ class JsonDocumentSource(BaseAuditSource[JsonValue]):
                 content_description = f"File '{path}'"
             case InMemoryBytesInput(content=content):
                 content_description = "The content in memory"
+            case DiskFileSetInput():
+                raise ValueError("A JSON document is read from one file, not a set")
         try:
             document: JsonValue = json.loads(content)
         except ValueError as error:

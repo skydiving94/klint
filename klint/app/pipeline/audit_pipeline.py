@@ -13,6 +13,7 @@ from klint.core.interfaces import (
     BaseAuditProgressListener,
     BaseRuleSource,
     BaseScanProgressListener,
+    BaseUnitSelector,
 )
 from klint.core.models.audits import AuditInput
 from klint.core.models.reports import AuditReport
@@ -28,6 +29,8 @@ class AuditRequest:
     The rules of custom_rule_source, when given, merge over the loaded
     ones. A problem counts in the roll-up statuses only with at least
     min_confidence, as for the findings a report selects.
+    unit_selector, when given, chooses the units to audit among those the
+    input holds; without one, every unit is audited.
     scan_progress_listener is told about each directory as it is scanned.
     audit_progress_listener is told when the audit of the units starts, and
     about each unit as its audit ends.
@@ -37,6 +40,7 @@ class AuditRequest:
     audit_kind_id: str
     custom_rule_source: BaseRuleSource | None = None
     min_confidence: float = 0.0
+    unit_selector: BaseUnitSelector | None = None
     scan_progress_listener: BaseScanProgressListener | None = None
     audit_progress_listener: BaseAuditProgressListener | None = None
 
@@ -51,13 +55,17 @@ class AuditOutcome:
     selected_unit_ids lists, in audit order, every unit at least one rule
     applies to; a unit listed here and missing from the report is one whose
     audit failed. applied_rule_exclusions are the project's exclusions that
-    kept a rule from at least one unit.
+    kept a rule from at least one unit. extracted_unit_count is the number
+    of units the input held, and selected_unit_count the number the
+    request's unit selector kept among them: every one without a selector.
     """
 
     report: AuditReport
     scanned_file_count: int
     selected_unit_ids: tuple[str, ...]
     applied_rule_exclusions: tuple[AppliedRuleExclusion, ...] = ()
+    extracted_unit_count: int = 0
+    selected_unit_count: int = 0
 
 
 class AuditPipeline:
@@ -97,6 +105,7 @@ class AuditPipeline:
             audit_kind,
             custom_rule_source=request.custom_rule_source,
             scan_progress_listener=request.scan_progress_listener,
+            unit_selector=request.unit_selector,
         )
         report = await self._unit_auditing.audit_units(
             portfolio, audit_kind, request.audit_progress_listener
@@ -109,4 +118,6 @@ class AuditPipeline:
             scanned_file_count=portfolio.scanned_file_count,
             selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
             applied_rule_exclusions=portfolio.rule_set.list_applied_rule_exclusions(),
+            extracted_unit_count=portfolio.extracted_unit_count,
+            selected_unit_count=portfolio.selected_unit_count,
         )
