@@ -5,6 +5,7 @@ from importlib import resources
 from pathlib import Path
 from typing import assert_never
 
+from klint.app.answer_cache_folder import read_answer_cache_folder
 from klint.app.deprecated_setting_names import (
     DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
     translate_deprecated_setting_names,
@@ -127,6 +128,13 @@ def _locate_built_in_tag_detection() -> Path:
     return _locate_built_in_resource(_BUILT_IN_TAG_DETECTION)
 
 
+def _read_answer_cache_folder(setting: _SettingValue | None) -> Path | None:
+    """Return the answer cache folder ``setting`` chooses; the default when unset."""
+    if setting is None:
+        return read_answer_cache_folder(None, Path.cwd())
+    return read_answer_cache_folder(setting.value, setting.source.base_folder)
+
+
 def _resolve_setting_path(setting: _SettingValue | None) -> Path | None:
     """Return the path ``setting`` names; a relative one is taken from its source."""
     if setting is None:
@@ -169,6 +177,10 @@ class AppSettings:
     layers: tuple[str, ...] = ()
     # The rules the project's klint.json turns off for some of its paths.
     rule_exclusions: tuple[RuleExclusion, ...] = ()
+    # Where the judge's answers are kept between runs; None keeps none.
+    # Settings built in code keep none unless they ask to, so that only a
+    # run from the shell, or the hook, writes to the user's cache folder.
+    answer_cache_folder: Path | None = None
 
     @classmethod
     def from_env(
@@ -249,16 +261,27 @@ class AppSettings:
             ),
             layers=() if config is None else config.layers,
             rule_exclusions=() if config is None else config.rule_exclusions,
+            answer_cache_folder=_read_answer_cache_folder(
+                _find_setting("KLINT_ANSWER_CACHE", sources)
+            ),
         )
 
     def describe_judge(self) -> str:
-        """Say which judge these settings choose and where it runs, never the key."""
+        """Say which judge these settings choose and where it runs, never the key.
+
+        The answer cache's folder follows when the cache is on.
+        """
+        cache_note = (
+            ""
+            if self.answer_cache_folder is None
+            else f"; answer cache at {self.answer_cache_folder}"
+        )
         match self.judge_mode:
             case JudgeMode.LOCAL:
-                return f"{self.model_name}, run in this process (local)"
+                return f"{self.model_name}, run in this process (local){cache_note}"
             case JudgeMode.REMOTE:
                 key_note = "API key set" if self.judge_api_key else "no API key"
                 where = f"at {self.judge_base_url}"
-                return f"{self.model_name} {where} (remote, {key_note})"
+                return f"{self.model_name} {where} (remote, {key_note}){cache_note}"
             case _:
                 assert_never(self.judge_mode)

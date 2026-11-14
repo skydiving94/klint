@@ -28,6 +28,9 @@ class StubSystemOneServer:
     def __init__(self) -> None:
         self.response_status = 200
         self.response_body: object = {"answers": {}}
+        # What GET /v1/models answers: a card for each model name listed.
+        self.model_names: list[str] = ["kev-latest", "jev-latest"]
+        self.models_response_status = 200
         self.response_delay_seconds = 0.0
         self.received: list[ReceivedRequest] = []
         self._http_server = ThreadingHTTPServer(
@@ -55,6 +58,23 @@ class StubSystemOneServer:
     def start(self) -> None:
         self._thread.start()
 
+    def describe_models(self) -> dict[str, object]:
+        """Return the list of models, as /v1/models answers it."""
+        return {
+            "models": [
+                {
+                    "name": name,
+                    "description": f"The stub's {name}",
+                    "release_date": "2026-01-01",
+                }
+                for name in self.model_names
+            ]
+        }
+
+    def list_posted_requests(self) -> list[ReceivedRequest]:
+        """Return the requests sent to the judge, leaving out the list of models."""
+        return [request for request in self.received if request.method == "POST"]
+
     def stop(self) -> None:
         self._http_server.shutdown()
         self._http_server.server_close()
@@ -64,6 +84,17 @@ class StubSystemOneServer:
         stub = self
 
         class Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                stub.received.append(
+                    ReceivedRequest(
+                        method=self.command,
+                        path=self.path,
+                        headers=dict(self.headers.items()),
+                        body=None,
+                    )
+                )
+                self._send(stub.models_response_status, stub.describe_models())
+
             def do_POST(self) -> None:
                 length = int(self.headers.get("Content-Length", "0"))
                 stub.received.append(
@@ -75,9 +106,12 @@ class StubSystemOneServer:
                     )
                 )
                 time.sleep(stub.response_delay_seconds)
-                body = json.dumps(stub.response_body).encode("utf-8")
+                self._send(stub.response_status, stub.response_body)
+
+            def _send(self, status: int, response_body: object) -> None:
+                body = json.dumps(response_body).encode("utf-8")
                 try:
-                    self.send_response(stub.response_status)
+                    self.send_response(status)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(body)))
                     self.end_headers()

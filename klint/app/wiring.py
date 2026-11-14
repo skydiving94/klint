@@ -35,6 +35,7 @@ from klint.core.interfaces import (
     BaseSuite,
 )
 from klint.core.models.scanning import FileTraitsOverride
+from klint.infra.answer_cache import AnswerCachingJudge, FileAnswerStore
 from klint.infra.rule_loader import JsonFileRuleSource, RulePackLoader
 from klint.infra.system_one import HttpSystemOneJudge
 from klint.infra.table_loader import (
@@ -44,6 +45,9 @@ from klint.infra.table_loader import (
 
 # The language each file extension stands for, loaded once per injector.
 FileExtensionToLanguage = NewType("FileExtensionToLanguage", Mapping[str, str])
+# The judge the auditor asks: the model's judge, behind the answer cache
+# when the settings keep one.
+AuditingJudge = NewType("AuditingJudge", BaseJudge)
 
 BindingOverride = Module | Callable[[Binder], None]
 
@@ -98,8 +102,19 @@ class KlintModule(Module):
             case _:
                 assert_never(settings.judge_mode)
 
+    @singleton
     @provider
-    def provide_auditor(self, judge: BaseJudge) -> Auditor:
+    def provide_auditing_judge(
+        self, settings: AppSettings, judge: BaseJudge
+    ) -> AuditingJudge:
+        if settings.answer_cache_folder is None:
+            return AuditingJudge(judge)
+        return AuditingJudge(
+            AnswerCachingJudge(judge, FileAnswerStore(settings.answer_cache_folder))
+        )
+
+    @provider
+    def provide_auditor(self, judge: AuditingJudge) -> Auditor:
         return Auditor(judge)
 
     @singleton

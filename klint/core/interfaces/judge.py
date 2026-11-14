@@ -12,3 +12,14 @@ class BaseJudge(ABC):
         answers. The reply's usage counts the request, with the input tokens
         the judge reported for it.
         """
+
+    @abstractmethod
+    async def resolve_model_version(self) -> str | None:
+        """Return what tells this judge's model apart from every other version.
+
+        Two judges with the same version answer the same request alike, so
+        an answer one gave can stand for the other's. A name that may move
+        to another model, such as an alias, is resolved to the model it
+        names now. None when the version cannot be told, as when the judge
+        cannot be reached.
+        """

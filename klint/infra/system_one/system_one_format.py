@@ -123,3 +123,31 @@ def _read_choice_key_to_probability(
             raise ValueError(f"The judge's {description} is not a number")
         choice_key_to_probability[str(choice_key)] = probability
     return choice_key_to_probability
+
+
+# The fields of a model card that name the model: the ones every System One
+# server gives. A server may add others, such as serving statistics, which
+# change from one call to the next and so are left out.
+_MODEL_CARD_IDENTITY_FIELDS = ("name", "release_date", "description")
+
+
+def describe_model_version(models_response: object, model_name: str) -> str | None:
+    """Return the version of ``model_name`` from a /v1/models response.
+
+    The version is the model's card, by its identity fields, so that a
+    name that moves to another release is a new version. None when the
+    response does not list ``model_name``, or does not have the expected
+    shape.
+    """
+    if not isinstance(models_response, dict):
+        return None
+    raw_cards: object = models_response.get("models")
+    if not isinstance(raw_cards, list):
+        return None
+    for raw_card in raw_cards:
+        if isinstance(raw_card, dict) and raw_card.get("name") == model_name:
+            return " ".join(
+                f"{field}={raw_card.get(field)!s}"
+                for field in _MODEL_CARD_IDENTITY_FIELDS
+            )
+    return None

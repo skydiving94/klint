@@ -48,10 +48,27 @@ class InProcessSystemOneJudge(BaseJudge):
         tok, model = ck.load(dev, opts)
         self._server = Server(ck, tok, model, dev)
 
-    async def answer(self, request: JudgeRequest) -> JudgeReply:
+    async def resolve_model_version(self) -> str | None:
+        """Return the checkpoint's resolved folder, which names its snapshot.
+
+        A Hugging Face repo id resolves to the snapshot of one commit; its
+        folder is named by that commit. A folder given as a path is used as
+        it is, so what it holds may change without the path: no version is
+        resolved for it.
+        """
+        if os.path.isdir(self._checkpoint):
+            return None
+        await self._load_server()
+        assert self._server is not None
+        return f"{self._checkpoint} at {self._server.checkpoint.path}"
+
+    async def _load_server(self) -> None:
         async with self._lock:
             if self._server is None:
                 await asyncio.to_thread(self._load_server_sync)
+
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
+        await self._load_server()
 
         from kev.api import SystemOneRequest
 
