@@ -1,16 +1,18 @@
-"""What the klint commands share: arguments, running the audit, printing the result."""
+"""What the klint commands share: running the audit and printing the result."""
 
-import argparse
 import json
 import sys
-import warnings
-from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
-from dataclasses import dataclass
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TextIO
 
 from klint.app.pipeline import AuditPipeline, AuditRequest
+from klint.cli.audit_command import AuditCommand
+from klint.cli.command_arguments import CommandArguments, parse_command_arguments
+from klint.cli.console import (
+    print_error_line,
+    print_klint_warnings_raised_inside,
+    print_warning_line,
+)
 from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
@@ -23,48 +25,15 @@ from klint.cli.judge_usage_description import (
     convert_judge_usage_to_dict,
     print_judge_usage_lines,
 )
-from klint.core import KlintWarning, warn_about_deprecated_name
+from klint.cli.staged_diff import (
+    StagedChangeScope,
+    convert_staged_change_to_dict,
+    describe_staged_change,
+    read_staged_change_scope,
+)
 from klint.core.interfaces import BaseAuditProgressListener
-from klint.core.models.audits import DiskPathInput
+from klint.core.models.audits import AuditInput, DiskPathInput
 from klint.infra.rule_loader import JsonFileRuleSource
-
-
-@dataclass(frozen=True)
-class AuditCommand:
-    """One klint command: its wording, its path argument and the audit it runs.
-
-    name is what the user types and description is shown in the help.
-    target_argument_name and target_argument_help describe the path to audit.
-    audit_kind_id names the kind of audit the command asks for, and
-    audited_units_json_key is the key the audited units are listed under in
-    JSON output. The terminal report says no_problems_message when it has no
-    finding to show.
-    """
-
-    name: str
-    description: str
-    target_argument_name: str
-    target_argument_help: str
-    audit_kind_id: str
-    audited_units_json_key: str
-    no_problems_message: str = "No architectural or semantic issues found."
-
-
-@dataclass(frozen=True)
-class CommandArguments:
-    """A command line, parsed.
-
-    target is the path to audit, and custom_rules_path the file given with
-    --rules. should_show_all_answers asks for every answer instead of failures
-    only, and min_confidence is the least confidence a finding needs to be
-    reported. should_print_json asks for JSON instead of the terminal report.
-    """
-
-    target: Path
-    custom_rules_path: Path | None
-    should_show_all_answers: bool
-    min_confidence: float
-    should_print_json: bool
 
 
 class _ProgressListener(BaseAuditProgressListener):
@@ -84,104 +53,6 @@ class _ProgressListener(BaseAuditProgressListener):
         self._progress.finish()
         print(f"[{self._command_name}] Skipping {unit_id}: {error}", file=sys.stderr)
         self._progress.advance(unit_id)
-
-
-def print_error_line(command: AuditCommand, reason: Exception | str) -> None:
-    """Print one line on stderr saying why the command stopped."""
-    print(f"[{command.name}] Error: {reason}", file=sys.stderr)
-
-
-def print_warning_line(command: AuditCommand, message: str) -> None:
-    """Print one line on stderr about something ignored; the command goes on."""
-    print(f"[{command.name}] Warning: {message}", file=sys.stderr)
-
-
-@contextmanager
-def print_klint_warnings_raised_inside(command: AuditCommand) -> Iterator[None]:
-    """Print each KlintWarning raised inside the block as one line, as it is raised.
-
-    Any other warning raised inside is shown as it would be outside the block.
-    """
-    with warnings.catch_warnings():
-        warnings.simplefilter("always", KlintWarning)
-        show_other_warning = warnings.showwarning
-
-        def show_warning(
-            message: Warning | str,
-            category: type[Warning],
-            filename: str,
-            lineno: int,
-            file: TextIO | None = None,
-            line: str | None = None,
-        ) -> None:
-            if issubclass(category, KlintWarning):
-                print_warning_line(command, str(message))
-            else:
-                show_other_warning(message, category, filename, lineno, file, line)
-
-        warnings.showwarning = show_warning
-        yield
-
-
-def parse_command_arguments(
-    command: AuditCommand, argv: Sequence[str] | None = None
-) -> CommandArguments:
-    """Parse a command line for ``command``."""
-    parser = argparse.ArgumentParser(
-        description=command.description,
-        epilog=(
-            f"Exit status: {ExitCode.NO_PROBLEMS.value} when no failure is found, "
-            f"{ExitCode.PROBLEMS_FOUND.value} when one is, "
-            f"{ExitCode.RUN_ERROR.value} when the audit cannot run or no unit "
-            "could be audited."
-        ),
-    )
-    parser.add_argument(
-        "target",
-        metavar=command.target_argument_name,
-        type=Path,
-        help=command.target_argument_help,
-    )
-    parser.add_argument(
-        "--rules",
-        type=Path,
-        default=None,
-        help="Path to user-defined rules JSON file",
-    )
-    parser.add_argument(
-        "--all-answers",
-        action="store_true",
-        help="Output every answer, not only the problems",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        dest="all_answers_under_old_name",
-        help="Old name of --all-answers, deprecated",
-    )
-    parser.add_argument(
-        "--min-confidence",
-        type=float,
-        default=0.0,
-        help="Minimum confidence threshold (0.0 to 1.0) required to report an issue",
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output raw JSON instead of formatted terminal report",
-    )
-    namespace = parser.parse_args(argv)
-    if namespace.all_answers_under_old_name:
-        warn_about_deprecated_name("--all", "--all-answers")
-    return CommandArguments(
-        target=namespace.target,
-        custom_rules_path=namespace.rules,
-        should_show_all_answers=(
-            namespace.all_answers or namespace.all_answers_under_old_name
-        ),
-        min_confidence=namespace.min_confidence,
-        should_print_json=namespace.json,
-    )
 
 
 class AuditCommandApp:
@@ -206,8 +77,31 @@ class AuditCommandApp:
         command = self._command
         should_show_progress = not arguments.should_print_json
         progress = AuditProgressReporter(enabled=should_show_progress)
+        staged: StagedChangeScope | None = None
+        audit_input: AuditInput
+        if arguments.diff_units is not None:
+            try:
+                staged = await read_staged_change_scope(
+                    arguments.diff_units, Path.cwd()
+                )
+            except ValueError as exc:
+                print_error_line(command, exc)
+                return ExitCode.RUN_ERROR
+            if not staged.has_files():
+                print(f"[{command.name}] No staged change to audit", file=sys.stderr)
+            for path in staged.paths_with_unstaged_edits:
+                print_warning_line(
+                    command,
+                    f"'{path}' has unstaged edits too: its units are read from the "
+                    "working tree, and the changed lines from the index",
+                )
+            audit_input = staged.scope.audit_input
+        elif arguments.target is not None:
+            audit_input = DiskPathInput(path=arguments.target)
+        else:
+            raise ValueError("A path to audit, or --diff, is required")
         request = AuditRequest(
-            audit_input=DiskPathInput(path=arguments.target),
+            audit_input=audit_input,
             audit_kind_id=command.audit_kind_id,
             custom_rule_source=(
                 None
@@ -217,6 +111,7 @@ class AuditCommandApp:
                 )
             ),
             min_confidence=arguments.min_confidence,
+            unit_selector=None if staged is None else staged.scope.unit_selector,
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress
             ),
@@ -270,6 +165,11 @@ class AuditCommandApp:
                     applied.convert_to_dict()
                     for applied in outcome.applied_rule_exclusions
                 ]
+            # Present only with --diff.
+            if staged is not None:
+                json_report["staged_change"] = convert_staged_change_to_dict(
+                    staged, outcome.extracted_unit_count, outcome.selected_unit_count
+                )
             print(json.dumps(json_report, indent=2))
         else:
             print(
@@ -286,6 +186,11 @@ class AuditCommandApp:
         # The report is flushed first, so that the lines on stderr come after
         # it where both streams go to one place, such as a CI log.
         sys.stdout.flush()
+        if staged is not None:
+            description = describe_staged_change(
+                staged, outcome.extracted_unit_count, outcome.selected_unit_count
+            )
+            print(f"[{command.name}] Staged change: {description}", file=sys.stderr)
         print_judge_usage_lines(command.name, report.get_judge_usage())
         failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS

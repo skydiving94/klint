@@ -5,14 +5,11 @@ import sys
 
 from klint.app import AppSettings
 from klint.app.pipeline import AuditPipeline
+from klint.cli.audit_command import AuditCommand
+from klint.cli.command_arguments import parse_command_arguments
+from klint.cli.console import print_error_line, print_klint_warnings_raised_inside
 from klint.cli.exit_code import ExitCode
-from klint.cli.runner import (
-    AuditCommand,
-    AuditCommandApp,
-    parse_command_arguments,
-    print_error_line,
-    print_klint_warnings_raised_inside,
-)
+from klint.cli.runner import AuditCommandApp
 from klint.cli.wiring import create_command_injector
 
 
