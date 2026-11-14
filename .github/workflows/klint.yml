@@ -38,6 +38,10 @@ jobs:
   audit:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.command == 'self-audit' }}
     runs-on: ubuntu-latest
+    env:
+      # The answer cache, kept between runs below, so that a run asks Jev
+      # only about what changed since the last one.
+      KLINT_ANSWER_CACHE: ${{ runner.temp }}/klint-answers
     steps:
       # A run without the repository's secrets, such as one for a pull
       # request from a fork, cannot ask Jev, so it skips the audits.
@@ -59,6 +63,29 @@ jobs:
       - name: Checkout repository
         if: steps.key.outputs.is_set == 'true'
         uses: actions/checkout@v4
+
+      # The cache is keyed by the klint version and the branch, and a new
+      # key per run, since a saved cache never changes: the restore takes
+      # the newest of this branch's, else of main's. The run's answers are
+      # saved whatever the audits find.
+      - name: Read the klint version
+        if: steps.key.outputs.is_set == 'true'
+        id: version
+        shell: bash
+        run: |
+          version=$(sed -nE 's/^version = "([^"]+)"/\1/p' pyproject.toml | head -n 1)
+          echo "klint=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the answer cache
+        if: steps.key.outputs.is_set == 'true'
+        id: answer_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.KLINT_ANSWER_CACHE }}
+          key: klint-answers-${{ steps.version.outputs.klint }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            klint-answers-${{ steps.version.outputs.klint }}-${{ github.head_ref || github.ref_name }}-
+            klint-answers-${{ steps.version.outputs.klint }}-main-
 
       # Each audit fails its step when it finds a problem at 0.8 or more.
       # A finding judged not valid is excluded in the repository's
@@ -89,6 +116,13 @@ jobs:
           judge_base_url: "https://api.typesafe.ai"
           judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
           fail_on_problems: "true"
+
+      - name: Save the answer cache
+        if: ${{ !cancelled() && steps.key.outputs.is_set == 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.KLINT_ANSWER_CACHE }}
+          key: ${{ steps.answer_cache.outputs.cache-primary-key }}
 
   jev_run:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit' }}
