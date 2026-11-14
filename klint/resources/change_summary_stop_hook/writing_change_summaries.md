@@ -1,6 +1,6 @@
 How to write the change summaries
 
-Write the summaries of the uncommitted change to `.klint/change-summary.json`, as JSON in this form:
+Write the summaries of your change to `.klint/change-summary.json`, as JSON in this form:
 
 {
   "schema_version": 1,
@@ -20,9 +20,9 @@ Write the summaries of the uncommitted change to `.klint/change-summary.json`, a
   ]
 }
 
-- `"git_change": {}` names the uncommitted change against HEAD: staged and unstaged edits, and untracked files that are not ignored. Keep it as it is.
+- `git_change` names the change, exactly as this message says above: `{}` is the uncommitted change against HEAD; `{"base": "<commit>"}` is everything since that commit, the commits you made included, up to the working tree. Both take staged and unstaged edits, and untracked files that are not ignored.
 - `files`: each changed file, by its path after the change, with its summary and an entry for each of its hunks.
-- `hunks`: each hunk is named by its header as `git diff -U0 HEAD` writes it; for an untracked file, as `git diff -U0 --no-index /dev/null <path>` writes it. Text after the closing `@@` may be left out. A binary file, or a file renamed without edits, has no hunk: give it a file summary only.
+- `hunks`: each hunk is named by its header as the `git diff -U0` command above writes it; for an untracked file, as `git diff -U0 --no-index /dev/null <path>` writes it. Text after the closing `@@` may be left out. A binary file, or a file renamed without edits, has no hunk: give it a file summary only.
 - `packages`: optional. Directories whose changed files you sum up together. Each file and package belongs to the deepest listed package that holds it, else directly to the commit.
 - `summary`: the whole change, summed up from what belongs directly to the commit.
 

@@ -172,7 +172,7 @@ def test_an_event_that_is_not_json_lets_the_agent_stop_with_a_warning() -> None:
     output = json.loads(asyncio.run(ChangeSummaryStopHook().respond([], "not json")))
 
     assert output["systemMessage"].endswith(
-        "ValueError: The Stop event is not valid JSON: Expecting value: line 1 "
+        "ValueError: The hook event is not valid JSON: Expecting value: line 1 "
         "column 1 (char 0)."
     )
 

@@ -19,8 +19,10 @@ def parse_min_confidence(argv: Sequence[str]) -> float:
         prog=STOP_HOOK_COMMAND_NAME,
         description=(
             "Claude Code Stop hook: lets the agent stop once klint passes its "
-            f"summaries of the uncommitted change in {SUMMARIES_PATH}. Reads the "
-            "Stop event on stdin, prints its answer as JSON, and exits 0."
+            f"summaries of its change in {SUMMARIES_PATH}. Reads the Stop event "
+            "on stdin, prints its answer as JSON, and exits 0. As a SessionStart "
+            "hook, it records the commit the session starts at, so that the "
+            "change checked at each stop runs from there, commits included."
         ),
     )
     parser.add_argument(
