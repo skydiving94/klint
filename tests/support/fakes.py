@@ -31,18 +31,25 @@ class FakeJudge(BaseJudge):
         default: str | None = "pass",
         confidence: float = 0.9,
         rule_id_to_confidence: dict[str, float] | None = None,
+        model_version: str | None = "fake-model-1",
     ) -> None:
         """Answer ``rule_id_to_answer[rule_id]`` per rule, else ``default``.
 
         An answer of ``None`` means the model returned no answer for that rule.
         Each answer has the confidence ``rule_id_to_confidence`` gives its
-        rule, else ``confidence``.
+        rule, else ``confidence``. ``model_version`` is what the judge
+        resolves its model to; None stands for a model whose version
+        cannot be resolved.
         """
         self.rule_id_to_answer: dict[str, str | None] = rule_id_to_answer or {}
         self.default = default
         self.confidence = confidence
         self.rule_id_to_confidence = rule_id_to_confidence or {}
+        self.model_version = model_version
         self.requests: list[JudgeRequest] = []
+
+    async def resolve_model_version(self) -> str | None:
+        return self.model_version
 
     async def answer(self, request: JudgeRequest) -> JudgeReply:
         self.requests.append(request)

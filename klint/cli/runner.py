@@ -19,8 +19,9 @@ from klint.cli.formatter import (
     format_audit_report,
 )
 from klint.cli.judge_usage_description import (
+    convert_answer_cache_to_dict,
     convert_judge_usage_to_dict,
-    describe_judge_usage,
+    print_judge_usage_lines,
 )
 from klint.core import KlintWarning, warn_about_deprecated_name
 from klint.core.interfaces import BaseAuditProgressListener
@@ -256,6 +257,12 @@ class AuditCommandApp:
                 "findings": [finding.convert_to_dict() for finding in findings],
                 "judge_usage": convert_judge_usage_to_dict(report.get_judge_usage()),
             }
+            # Present only when the answer cache took part, so a run without
+            # one gets the same JSON as before.
+            if report.get_judge_usage().did_cache_take_part():
+                json_report["answer_cache"] = convert_answer_cache_to_dict(
+                    report.get_judge_usage()
+                )
             # Present only when the project's klint.json turned a rule off, so
             # a project without exclusions gets the same JSON as before.
             if outcome.applied_rule_exclusions:
@@ -276,14 +283,9 @@ class AuditCommandApp:
             )
             if outcome.applied_rule_exclusions:
                 print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
-        # On stderr, after the report, so that the report on stdout is as before.
-        # The report is flushed first, so that the line comes after it where
-        # both streams go to one place, such as a CI log.
+        # The report is flushed first, so that the lines on stderr come after
+        # it where both streams go to one place, such as a CI log.
         sys.stdout.flush()
-        print(
-            f"[{command.name}] Judge usage: "
-            f"{describe_judge_usage(report.get_judge_usage())}",
-            file=sys.stderr,
-        )
+        print_judge_usage_lines(command.name, report.get_judge_usage())
         failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS

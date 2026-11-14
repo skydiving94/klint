@@ -44,6 +44,9 @@ class CachingJudge(BaseJudge):
         self._request_key_to_reply[key] = reply
         return reply
 
+    async def resolve_model_version(self) -> str | None:
+        return await self._judge.resolve_model_version()
+
     def count_asked_requests(self) -> int:
         """Return how many requests were sent to the other judge."""
         return self._asked_request_count

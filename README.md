@@ -130,7 +130,8 @@ A summaries-only document, abridged from [examples/change_summary/summaries_only
 See [examples/change_summary/README.md](examples/change_summary/README.md) for both forms of one real change.
 
 ### What a command prints
-* **The judge**: a line on stderr, before the audit, names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local)`.
+* **The judge**: a line on stderr, before the audit, names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local); answer cache at /Users/me/Library/Caches/klint/answers`. The answer cache's folder follows when the cache is on.
+* **The judge's usage**: two lines on stderr, after the report. `[klint] Answer cache: 120 questions answered from the cache, 30 asked` says what the answer cache did; `[klint] Judge usage: 12 requests, 15,432 input tokens` counts what was sent to the judge. A request answered from the cache alone counts no request and no tokens. With `--json`, the same counts are under `answer_cache` and `judge_usage`.
 * **The report**: findings are grouped by unit and sorted by confidence. Each unit with a problem is marked `OWN PROBLEM`, or `DESCENDANT PROBLEM` when the problem is in a unit nested inside it.
 * **JSON**: with `--json`, stdout holds one object: the audited units (`examined_files`, `examined_directories` or `examined_summaries`), `unit_id_to_roll_up_status`, and `findings`. Each finding gives its `rule_id`, `unit_id`, `answer`, `confidence`, `question`, `tags`, `location` (`path`, `start_line`, `end_line`) and `context` (for a Python class or function, its `qualified_name`).
 
@@ -161,6 +162,7 @@ Each setting is taken from the first of these that sets it: an environment varia
 | `KLINT_JUDGE_API_KEY` | The API key the server asks for, when remote. Set it in your shell, never in `klint.json`. | none |
 | `KLINT_REPLACE_FILE_RULES` | A rules file that replaces every built-in rule pack for `klint`. | none |
 | `KLINT_REPLACE_PROJECT_RULES` | A rules file that replaces every built-in rule pack for `klint-structure`. | none |
+| `KLINT_ANSWER_CACHE` | Where the judge's answers are kept between runs (see [The answer cache](#the-answer-cache)), or `off` to keep none. | the user's cache folder |
 
 A relative path set in `klint.json` is taken from the folder of the `klint.json`.
 
@@ -267,6 +269,15 @@ klint examples/
 * **What leaves your machine**: the code of each audited unit (for `klint-change-summary`, each summary and its code) and the rule questions are sent to TypeSafe. Use the local `kev` for code that must stay on your machine.
 * **Which judge**: each command's first line names the judge it asks, for example `[klint] Judge: jev-latest at https://api.typesafe.ai (remote, API key set)`. `klint` reads `KLINT_JUDGE_API_KEY`, not the `TYPESAFE_API_KEY` that TypeSafe's SDK reads.
 * **A refused key**: `klint` skips each unit with "did not accept the API key" (or "needs an API key, and none was given") and exits with code 2 when no unit could be audited.
+
+### The answer cache
+Every judge is asked only about what it has not answered before. Each answer is kept, keyed by the model's version, the text the judge read and the question with its criteria, so a unit whose code has not changed is never asked about twice, and a change to the code, to a rule's wording or to the model asks again. The cache holds answers only: no code, no question text, no API key.
+
+* **Where**: `~/Library/Caches/klint/answers` on macOS, `$XDG_CACHE_HOME/klint/answers` (by default `~/.cache/klint/answers`) on Linux, `%LOCALAPPDATA%\klint\answers` on Windows. `KLINT_ANSWER_CACHE=/another/folder` moves it; a relative path in `klint.json` is taken from the folder of the `klint.json`.
+* **Off**: `KLINT_ANSWER_CACHE=off`.
+* **The model's version**: resolved once per run from the server's `/v1/models`, so an alias such as `jev-latest` that moves to a new release starts afresh. A name the server does not list, such as `jev-1.14.0`, is taken as a version in itself. When the server cannot be reached, the run asks everything and says so with a warning. A local checkpoint given as a folder has no version, so it is never cached.
+* **Entries** record the klint version and when they were written. A corrupt entry is asked again, with a warning. Delete the folder to start over.
+* **Repeatability**: a cached run reproduces the run that filled the cache. Jev's answers are not always the same from one run to the next on long structure units at low confidence; see the measurements on [#91](https://github.com/skydiving94/klint/issues/91).
 
 ### Choosing a judge and a threshold
 The defaults stay as they are: the local `jaredpalmer/kev-4b`, and `--min-confidence 0.0`. For `klint-change-summary`, a test set of 126 labelled summaries from 5 commits of this repository (73 true, 53 with a planted mistake) gave:

@@ -123,3 +123,38 @@ def _read_choice_key_to_probability(
             raise ValueError(f"The judge's {description} is not a number")
         choice_key_to_probability[str(choice_key)] = probability
     return choice_key_to_probability
+
+
+# The fields of a model card that name the model: the ones every System One
+# server gives. A server may add others, such as serving statistics, which
+# change from one call to the next and so are left out.
+_MODEL_CARD_IDENTITY_FIELDS = ("name", "release_date", "description")
+# The field a kev server adds to say which run its names serve; a model is
+# asked for by the run's name as well.
+_MODEL_CARD_RUN_FIELD = "run"
+
+
+def describe_model_version(models_response: object, model_name: str) -> str | None:
+    """Return the version of ``model_name`` from a /v1/models response.
+
+    The version is the card listed under the name, by its identity fields,
+    so that a name that moves to another release is a new version; else
+    the card of the run the name stands for. A name the server does not
+    list is taken to be a version in itself, such as "jev-1.14.0", since a
+    server lists its aliases. None when the response does not have the
+    expected shape.
+    """
+    if not isinstance(models_response, dict):
+        return None
+    raw_cards: object = models_response.get("models")
+    if not isinstance(raw_cards, list):
+        return None
+    cards = [card for card in raw_cards if isinstance(card, dict)]
+    for field in ("name", _MODEL_CARD_RUN_FIELD):
+        for card in cards:
+            if card.get(field) == model_name:
+                return " ".join(
+                    f"{field}={card.get(field)!s}"
+                    for field in _MODEL_CARD_IDENTITY_FIELDS
+                )
+    return f"name={model_name}"

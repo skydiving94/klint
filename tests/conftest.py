@@ -21,6 +21,15 @@ def fake_judge() -> type[FakeJudge]:
 
 
 @pytest.fixture(autouse=True)
+def _keep_answers_out_of_the_user_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Turn the answer cache off, so no test reads or writes the user's folder.
+
+    A test of the cache points KLINT_ANSWER_CACHE at a folder of its own.
+    """
+    monkeypatch.setenv("KLINT_ANSWER_CACHE", "off")
+
+
+@pytest.fixture(autouse=True)
 def _block_network_access(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fail any test that tries to open a network connection."""
     blocked = Mock(side_effect=RuntimeError("network access is not allowed in tests"))
@@ -67,6 +76,8 @@ def shell_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]
     klint.json is discovered there.
     """
     env = {k: v for k, v in os.environ.items() if not k.startswith(("KLINT_", "KEV_"))}
+    # Off, as for every test, unless the test turns it on.
+    env["KLINT_ANSWER_CACHE"] = "off"
     monkeypatch.setattr(os, "environ", env)
     workdir = tmp_path / "cwd"
     workdir.mkdir()

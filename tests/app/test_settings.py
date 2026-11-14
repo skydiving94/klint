@@ -358,3 +358,41 @@ def test_loading_the_settings_leaves_the_environment_as_it_was(
         "jaredpalmer/kev-4b",
         "http://127.0.0.1:8009",
     )
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_answer_cache_is_in_the_user_cache_folder_unless_set(tmp_path: Path) -> None:
+    os.environ.pop("KLINT_ANSWER_CACHE")
+
+    settings = AppSettings.from_env(_create_project(tmp_path), None)
+
+    folder = settings.answer_cache_folder
+    assert folder is not None
+    assert folder.parts[-2:] == ("klint", "answers")
+    assert not folder.is_relative_to(tmp_path)
+
+
+@pytest.mark.usefixtures("shell_env")
+@pytest.mark.parametrize("value", ["off", "Off", " OFF "])
+def test_answer_cache_off_keeps_no_answers(tmp_path: Path, value: str) -> None:
+    os.environ["KLINT_ANSWER_CACHE"] = value
+
+    settings = AppSettings.from_env(_create_project(tmp_path), None)
+
+    assert settings.answer_cache_folder is None
+    assert "answer cache" not in settings.describe_judge()
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_answer_cache_folder_in_klint_json_is_taken_from_its_folder(
+    tmp_path: Path,
+) -> None:
+    os.environ.pop("KLINT_ANSWER_CACHE")
+    project = _create_project(tmp_path, {"KLINT_ANSWER_CACHE": "cache/answers"})
+
+    settings = AppSettings.from_env(project, None)
+
+    assert settings.answer_cache_folder == project / "cache" / "answers"
+    assert settings.describe_judge().endswith(
+        f"; answer cache at {project / 'cache' / 'answers'}"
+    )

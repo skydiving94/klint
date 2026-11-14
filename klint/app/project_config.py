@@ -25,6 +25,7 @@ KNOWN_SETTING_NAMES = frozenset(
         "KLINT_JUDGE_MODE",
         "KLINT_JUDGE_BASE_URL",
         "KLINT_JUDGE_API_KEY",
+        "KLINT_ANSWER_CACHE",
     }
 )
 _ENV_BLOCK_KEY = "env"
