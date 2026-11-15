@@ -127,7 +127,7 @@ implicit_reexport = true
 # Checked with `uv run lint-imports`. A layer may import from the layers listed
 # below it, never from one above. klint/resources holds data only. The front
 # ends, klint.cli and klint.mcp, are siblings: neither imports the other, and
-# what they share sits in klint.composition or below.
+# what they share sits in the klint.composition module or below.
 [tool.importlinter]
 root_package = "klint"
 include_external_packages = true

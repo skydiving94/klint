@@ -1,9 +1,10 @@
-"""Builds the injector every front end of klint runs its audits with.
+"""Composes the built-in suites with the app: the injector every front end runs.
 
 A command, the Stop hook or an MCP tool audits with the built-in suites, and
 the rule replacement setting of each kind of audit is the one its command
 takes. Files, classes and functions are cut at the budget of the judge in
-use.
+use. This sits between the front ends and klint.app, which the suites
+contract keeps from importing a named suite.
 """
 
 from collections.abc import Mapping
