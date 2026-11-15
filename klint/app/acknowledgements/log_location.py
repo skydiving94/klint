@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from klint.app.acknowledgements.matching import AcknowledgementScope
 from klint.catalog.domain_neutral.git.git_command import run_git
 from klint.infra.acknowledgement_log import FileAcknowledgementLog
 
@@ -26,3 +27,21 @@ async def find_repository_root(directory: Path) -> Path | None:
 def open_acknowledgement_log(repository_root: Path) -> FileAcknowledgementLog:
     """Return the log of the repository at ``repository_root``."""
     return FileAcknowledgementLog(repository_root / ACKNOWLEDGEMENTS_FOLDER)
+
+
+async def find_acknowledgement_scope(
+    directory: Path, working_directory: Path
+) -> AcknowledgementScope | None:
+    """Return the log of the repository ``directory`` is in; None outside one.
+
+    The findings matched against it name their paths from
+    ``working_directory``.
+    """
+    repository_root = await find_repository_root(directory)
+    if repository_root is None:
+        return None
+    return AcknowledgementScope(
+        log=open_acknowledgement_log(repository_root),
+        repository_root=repository_root,
+        working_directory=working_directory,
+    )

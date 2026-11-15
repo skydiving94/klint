@@ -11,10 +11,7 @@ from klint.app.acknowledgements.finding_identity import (
     identify_finding,
     relate_path_to_repository,
 )
-from klint.app.acknowledgements.matching import (
-    AcknowledgedFinding,
-    separate_acknowledged_findings,
-)
+from klint.app.acknowledgements.matching import AcknowledgedFinding
 from klint.core.models.acknowledgements import (
     AcknowledgementEntry,
     AcknowledgementStatus,
@@ -74,26 +71,26 @@ def format_timestamp_now() -> str:
 
 def reconcile_log(
     log: FileAcknowledgementLog,
-    findings: Sequence[AuditFinding],
+    open_findings: Sequence[AuditFinding],
+    acknowledged_findings: Sequence[AcknowledgedFinding],
     staged: StagedUnits,
     repository_root: Path,
     working_directory: Path,
     judge_model_version: str | None,
     flagged_at: str,
 ) -> LogReconciliation:
-    """Update ``log`` with ``findings``, the problems found on ``staged``.
+    """Update ``log`` with what the audit of ``staged`` found.
 
-    Only the entries of the staged change are touched: those on a unit the
-    audit judged, or on a unit its file no longer holds. Among them, an open
-    entry whose finding is gone is removed, and a finding with no entry gets
-    an open one, flagged at ``flagged_at`` by ``judge_model_version``.
-    Acknowledged entries stay as they are. Raises ValueError naming the
-    file when an entry cannot be read.
+    ``open_findings`` are the problems no acknowledged entry covers, and
+    ``acknowledged_findings`` those one does. Only the entries of the staged
+    change are touched: those on a unit the audit judged, or on a unit its
+    file no longer holds. Among them, an open entry whose finding is gone
+    is removed, and a finding with no entry gets an open one, flagged at
+    ``flagged_at`` by ``judge_model_version``. Acknowledged entries stay as
+    they are. Raises ValueError naming the file when an entry cannot be
+    read.
     """
     entries = log.list_entries()
-    separation = separate_acknowledged_findings(
-        findings, entries, repository_root, working_directory
-    )
     selected_keys = _build_unit_keys(
         staged.selected_units, repository_root, working_directory
     )
@@ -109,7 +106,7 @@ def reconcile_log(
 
     identity_to_finding = {
         identity: finding
-        for finding in separation.open_findings
+        for finding in open_findings
         if (identity := identify_finding(finding, repository_root, working_directory))
         is not None
     }
@@ -138,7 +135,7 @@ def reconcile_log(
     return LogReconciliation(
         added_entries=added,
         removed_entries=removed,
-        acknowledged_findings=separation.acknowledged_findings,
+        acknowledged_findings=tuple(acknowledged_findings),
         open_entries=tuple(
             entry
             for entry in (*kept, *added)

@@ -35,7 +35,9 @@ def convert_audit_outcome_to_dict(
     The audited units are listed under ``audited_units_json_key``. The keys
     present in every output come first; "answer_cache" is present only when
     the answer cache took part, "applied_rule_exclusions" only when the
-    project's klint.json turned a rule off, and "staged_change" only for an
+    project's klint.json turned a rule off, "applied_acknowledgements" only
+    when the project's acknowledgement log covered a finding, and
+    "staged_change" only for an
     audit of the staged change, so that a plain run gets the same JSON as
     before each was added.
     """
@@ -55,6 +57,11 @@ def convert_audit_outcome_to_dict(
     if outcome.applied_rule_exclusions:
         json_report["applied_rule_exclusions"] = [
             applied.convert_to_dict() for applied in outcome.applied_rule_exclusions
+        ]
+    if outcome.acknowledged_findings:
+        json_report["applied_acknowledgements"] = [
+            acknowledged.convert_to_dict()
+            for acknowledged in outcome.acknowledged_findings
         ]
     if staged is not None:
         json_report["staged_change"] = convert_staged_change_to_dict(

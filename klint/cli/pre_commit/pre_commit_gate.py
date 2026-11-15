@@ -14,6 +14,8 @@ from pathlib import Path
 
 from klint.app import AppSettings, BindingOverride
 from klint.app.acknowledgements import (
+    AcknowledgedFinding,
+    AcknowledgementScope,
     LogReconciliation,
     StagedUnits,
     format_timestamp_now,
@@ -99,11 +101,14 @@ class PreCommitGate:
                 "working tree, and the changed lines from the index",
             )
         listener = UnitFailureListener()
+        repository_root = staged.scope.audit_input.root
+        log = open_acknowledgement_log(repository_root)
         request = AuditRequest(
             audit_input=staged.scope.audit_input,
             audit_kind_id=command.audit_kind_id,
             min_confidence=min_confidence,
             unit_selector=staged.scope.unit_selector,
+            acknowledgements=AcknowledgementScope(log, repository_root, Path.cwd()),
             audit_progress_listener=listener,
         )
         try:
@@ -119,11 +124,11 @@ class PreCommitGate:
                 command, f"the staged change could not be checked: {unchecked}"
             )
             return ExitCode.RUN_ERROR
-        repository_root = staged.scope.audit_input.root
         try:
             reconciliation = reconcile_log(
-                open_acknowledgement_log(repository_root),
+                log,
                 outcome.report.select_findings(min_confidence=min_confidence),
+                _select_acknowledged(outcome, min_confidence),
                 _list_staged_units(staged, repository_root),
                 repository_root,
                 Path.cwd(),
@@ -150,6 +155,18 @@ def _choose_min_confidence(arguments: GateArguments, settings: AppSettings) -> f
     if settings.commit_min_confidence is not None:
         return settings.commit_min_confidence
     return find_default_commit_threshold(settings.model_name)
+
+
+def _select_acknowledged(
+    outcome: AuditOutcome, min_confidence: float
+) -> list[AcknowledgedFinding]:
+    """Return the acknowledged findings that would have blocked the commit."""
+    return [
+        acknowledged
+        for acknowledged in outcome.acknowledged_findings
+        if acknowledged.finding.is_problem()
+        and acknowledged.finding.does_meet_confidence(min_confidence)
+    ]
 
 
 def _list_staged_units(staged: StagedChangeScope, repository_root: Path) -> StagedUnits:

@@ -8,11 +8,13 @@ from klint.app.acknowledgements.finding_identity import (
 )
 from klint.app.acknowledgements.log_location import (
     ACKNOWLEDGEMENTS_FOLDER,
+    find_acknowledgement_scope,
     find_repository_root,
     open_acknowledgement_log,
 )
 from klint.app.acknowledgements.matching import (
     AcknowledgedFinding,
+    AcknowledgementScope,
     FindingSeparation,
     separate_acknowledged_findings,
 )
@@ -26,11 +28,13 @@ from klint.app.acknowledgements.reconciling import (
 __all__ = [
     "ACKNOWLEDGEMENTS_FOLDER",
     "AcknowledgedFinding",
+    "AcknowledgementScope",
     "FindingIdentity",
     "FindingSeparation",
     "LogReconciliation",
     "StagedUnits",
     "describe_unit_name",
+    "find_acknowledgement_scope",
     "find_repository_root",
     "format_timestamp_now",
     "identify_finding",

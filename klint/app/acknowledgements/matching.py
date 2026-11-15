@@ -7,6 +7,7 @@ from pathlib import Path
 from klint.app.acknowledgements.finding_identity import identify_finding
 from klint.core.models.acknowledgements import AcknowledgementEntry
 from klint.core.models.reports import AuditFinding, JsonValue
+from klint.infra.acknowledgement_log import FileAcknowledgementLog
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,34 @@ class AcknowledgedFinding:
             "acknowledged_at": self.entry.acknowledged_at,
             "note": self.entry.note,
         }
+
+
+@dataclass(frozen=True)
+class AcknowledgementScope:
+    """The log an audit reads, and how its findings' paths relate to the log's.
+
+    log is the repository's log, repository_root the folder its entries
+    name files from, and working_directory the folder the findings' paths
+    are from.
+    """
+
+    log: FileAcknowledgementLog
+    repository_root: Path
+    working_directory: Path
+
+    def separate_findings(
+        self, findings: Sequence[AuditFinding]
+    ) -> "FindingSeparation":
+        """Split ``findings`` by whether an acknowledged entry of the log matches.
+
+        Raises ValueError naming the file when an entry cannot be read.
+        """
+        return separate_acknowledged_findings(
+            findings,
+            self.log.list_entries(),
+            self.repository_root,
+            self.working_directory,
+        )
 
 
 @dataclass(frozen=True)
