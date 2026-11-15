@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from klint.core import KlintWarning
-from tests.support.builders import FILE_RULE, write_text
+from tests.support.builders import DIR_RULE, FILE_RULE, write_text
 from tests.support.rule_exclusions import REASON, audit_project, build_exclusion
 
 Capture = pytest.CaptureFixture[str]
@@ -177,6 +177,22 @@ def test_a_selector_outside_the_audited_folder_does_not_warn(
         RULES,
         [build_exclusion("short", "tools/till.py::Basket")],
         target=project / "shop",
+    )
+
+    assert _list_warnings(capsys) == []
+
+
+@pytest.mark.usefixtures("shell_env")
+def test_an_exclusion_of_a_rule_no_unit_is_asked_does_not_warn(
+    tmp_path: Path, capsys: Capture
+) -> None:
+    project = tmp_path / "project"
+    write_text(project / "shop.py", SHOP)
+
+    audit_project(
+        project,
+        {**RULES, "package_rule": DIR_RULE},
+        [build_exclusion("package_rule", "shop")],
     )
 
     assert _list_warnings(capsys) == []

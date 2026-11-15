@@ -47,9 +47,9 @@ class RuleSelection:
 
         ``full_audit_path``, when given, is the file or folder the units
         come from in full, as opposed to part of it, as a diff gives. Each
-        path of an exclusion that lies inside it, whose rule this audit
-        loads, and that kept its rule from no unit is then reported as a
-        KlintWarning, once per exclusion.
+        path of an exclusion that lies inside it, whose rule this audit asks
+        of some unit, and that kept its rule from no unit is then reported
+        as a KlintWarning, once per exclusion.
         """
         traits_of_units = list(dict.fromkeys(unit.traits for unit in units)) or [
             UnitTraits()
@@ -59,8 +59,8 @@ class RuleSelection:
             for traits in traits_of_units
         }
         all_rules = RuleSet(traits_to_rules)
-        loaded_rule_ids = {
-            rule.rule_id for rules in traits_to_rules.values() for rule in rules
+        asked_rule_ids = {
+            rule.rule_id for unit in units for rule in all_rules.select_rules_for(unit)
         }
         applied_exclusions: list[AppliedRuleExclusion] = []
         for exclusion in self._rule_exclusions:
@@ -77,7 +77,7 @@ class RuleSelection:
             )
             if unit_ids:
                 applied_exclusions.append(AppliedRuleExclusion(exclusion, unit_ids))
-            if full_audit_path is not None and exclusion.rule_id in loaded_rule_ids:
+            if full_audit_path is not None and exclusion.rule_id in asked_rule_ids:
                 _warn_of_unmatched_entries(
                     exclusion,
                     [
