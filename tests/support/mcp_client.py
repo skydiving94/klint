@@ -3,11 +3,12 @@
 import asyncio
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from mcp.client._memory import InMemoryTransport
 from mcp.client.session import ClientSession
 from mcp.server.mcpserver import MCPServer
-from mcp.types import CallToolResult, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,20 @@ class ToolCall:
 
     result: CallToolResult
     progress_reports: list[ProgressReport] = field(default_factory=list)
+
+    def read_content(self) -> dict[str, Any]:
+        """Return the structured content of a call that succeeded."""
+        assert not self.result.is_error, self.read_error()
+        content = self.result.structured_content
+        assert isinstance(content, dict)
+        return content
+
+    def read_error(self) -> str:
+        """Return the message of a call that failed."""
+        assert self.result.is_error
+        first = self.result.content[0]
+        assert isinstance(first, TextContent)
+        return first.text
 
 
 def call_tool(
