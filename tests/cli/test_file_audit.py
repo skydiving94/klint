@@ -28,6 +28,7 @@ from tests.support.builders import (
     FILE_RULE,
     MakeUnreadable,
     build_audit_command_app,
+    list_lines_before_judge_usage,
     make_settings,
     write_json,
     write_text,
@@ -124,6 +125,7 @@ def test_min_confidence_hides_low_confidence_findings(
         "examined_files": [str(target)],
         "unit_id_to_roll_up_status": {str(target): "no_problem"},
         "findings": [],
+        "judge_usage": {"requests": 1, "input_tokens": None},
     }
     assert below_confidence["findings"]
     assert below_confidence["unit_id_to_roll_up_status"] == {str(target): "own_problem"}
@@ -238,7 +240,7 @@ def test_tree_of_python_files_loads_no_pack_made_for_another_language(
 
     _run(_build_file_app(judge, settings), sources, "--json")
 
-    assert capsys.readouterr().err == ""
+    assert list_lines_before_judge_usage(capsys.readouterr().err) == []
     assert judge.list_asked_rule_ids() == [["for_python"]] * 2
 
     write_text(sources / "c.ts", "let z = 3;\n")
@@ -294,7 +296,7 @@ def test_file_that_cannot_be_read_is_left_out_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint] Warning: File '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
@@ -316,7 +318,7 @@ def test_directory_that_cannot_be_read_is_left_out_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.py")]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint] Warning: Directory '{locked}' is left out: "
         "it cannot be read (Permission denied)"
     ]
@@ -354,7 +356,7 @@ def test_file_an_extractor_fails_on_is_left_out_with_a_warning(
     assert exit_code == ExitCode.NO_PROBLEMS
     # The Go file is read by the language-neutral extractor, as before.
     assert json.loads(captured.out)["examined_files"] == [str(tmp_path / "a.go")]
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint] Warning: File '{broken}' is left out: "
         "it cannot be processed (the extractor is broken on b.py)"
     ]
@@ -375,6 +377,7 @@ def test_target_that_is_neither_a_file_nor_a_directory_holds_nothing_to_audit(
         "examined_files": [],
         "unit_id_to_roll_up_status": {},
         "findings": [],
+        "judge_usage": {"requests": 0, "input_tokens": 0},
     }
     assert judge.requests == []
 
@@ -552,7 +555,7 @@ def test_problem_in_one_rule_is_printed_as_a_warning_and_the_audit_goes_on(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out)["examined_files"] == [str(target)]
-    (warning_line,) = captured.err.splitlines()
+    (warning_line,) = list_lines_before_judge_usage(captured.err)
     assert warning_line.startswith("[klint] Warning: Rule 'typo'")
     assert "unknown languages ['pyhton']" in warning_line
 

@@ -18,15 +18,21 @@ class UnitFailureListener(BaseAuditProgressListener):
     def report_unit_failed(self, unit_id: str, error: Exception) -> None:
         self._unit_id_to_error[unit_id] = error
 
-    def describe_failures(self, unit_count: int) -> str | None:
+    def has_failures(self) -> bool:
+        return bool(self._unit_id_to_error)
+
+    def describe_failures(
+        self, unit_count: int, unit_noun: str = "units"
+    ) -> str | None:
         """Say how many of the ``unit_count`` units failed, and why the first did.
 
-        None when none failed.
+        ``unit_noun`` names the units, such as "summaries". None when none
+        failed.
         """
         if not self._unit_id_to_error:
             return None
         unit_id, error = next(iter(self._unit_id_to_error.items()))
         return (
-            f"{len(self._unit_id_to_error)} of the {unit_count} summaries could "
+            f"{len(self._unit_id_to_error)} of the {unit_count} {unit_noun} could "
             f"not be checked; {unit_id} because {error}"
         )

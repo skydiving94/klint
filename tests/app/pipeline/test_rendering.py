@@ -12,7 +12,7 @@ from injector import Binder
 from klint.app import AuditKindRegistry
 from klint.app.pipeline import AuditRequest
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.cli import create_command_injector
+from klint.composition import create_built_in_injector
 from klint.core.interfaces import AuditKind, BaseSuite
 from klint.core.models.audits import InMemoryBytesInput
 from klint.core.models.reports import JsonValue
@@ -83,7 +83,7 @@ def _read_left_out_count(trimming_line: str) -> int:
 def test_built_in_kinds_keep_what_the_judge_reads_within_2000_characters(
     audit_kind_id: str,
 ) -> None:
-    registry = create_command_injector(make_settings()).get(AuditKindRegistry)
+    registry = create_built_in_injector(make_settings()).get(AuditKindRegistry)
 
     assert registry.find_audit_kind(audit_kind_id).character_budget == 2000
 

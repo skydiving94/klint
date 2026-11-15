@@ -14,10 +14,10 @@ from kev.device import default_device
 from kev.serve import Server
 
 from klint.core.interfaces import BaseJudge
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeReply, JudgeRequest
 from klint.infra.system_one.system_one_format import (
     build_system_one_questions,
-    read_system_one_answers,
+    read_system_one_reply,
 )
 
 disable_progress_bars()
@@ -48,10 +48,27 @@ class InProcessSystemOneJudge(BaseJudge):
         tok, model = ck.load(dev, opts)
         self._server = Server(ck, tok, model, dev)
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def resolve_model_version(self) -> str | None:
+        """Return the checkpoint's resolved folder, which names its snapshot.
+
+        A Hugging Face repo id resolves to the snapshot of one commit; its
+        folder is named by that commit. A folder given as a path is used as
+        it is, so what it holds may change without the path: no version is
+        resolved for it.
+        """
+        if os.path.isdir(self._checkpoint):
+            return None
+        await self._load_server()
+        assert self._server is not None
+        return f"{self._checkpoint} at {self._server.checkpoint.path}"
+
+    async def _load_server(self) -> None:
         async with self._lock:
             if self._server is None:
                 await asyncio.to_thread(self._load_server_sync)
+
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
+        await self._load_server()
 
         from kev.api import SystemOneRequest
 
@@ -62,4 +79,4 @@ class InProcessSystemOneJudge(BaseJudge):
         )
         assert self._server is not None
         response: object = await self._server.answer_async(system_one_request)
-        return read_system_one_answers(response)
+        return read_system_one_reply(response)

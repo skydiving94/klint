@@ -124,7 +124,7 @@ def test_a_file_with_no_hunks_says_its_diff_changes_no_line() -> None:
     )
 
 
-def test_a_long_hunk_is_cut_in_its_code_and_keeps_its_summary_whole() -> None:
+def test_a_hunk_of_3000_characters_is_shown_whole() -> None:
     document = copy_greeting_document()
     added_lines = [
         f"    step_{number} = compute_step({number})" for number in range(90)
@@ -137,13 +137,31 @@ def test_a_long_hunk_is_cut_in_its_code_and_keeps_its_summary_whole() -> None:
     run_change_summary_audit(judge, document)
 
     subject = judge.find_subject(str(README_HUNK["summary"]))
+    assert len(subject) > 3_000
+    assert "left out" not in subject
+    assert f"+{added_lines[-1]}" in subject
+
+
+def test_a_long_hunk_is_cut_in_its_code_and_keeps_its_summary_whole() -> None:
+    document = copy_greeting_document()
+    added_lines = [
+        f"    step_{number} = compute_step({number})" for number in range(200)
+    ]
+    document["root_package"]["files"][0]["hunks"][0].update(
+        new_line_count=len(added_lines), added_lines=added_lines
+    )
+    judge = HypothesisJudge()
+
+    run_change_summary_audit(judge, document)
+
+    subject = judge.find_subject(str(README_HUNK["summary"]))
     premise, hypothesis = subject.split("\n\n")
-    assert len(subject) <= 2_000
+    assert len(subject) <= 4_000
     assert hypothesis == f"Hypothesis: {README_HUNK['summary']}"
     trimming_line = premise.splitlines()[-1]
     match = re.fullmatch(
         r"\[\.\.\. (\d+) more lines of the code change left out to stay within "
-        r"2000 characters\]",
+        r"4000 characters\]",
         trimming_line,
     )
     assert match is not None, trimming_line
@@ -153,7 +171,7 @@ def test_a_long_hunk_is_cut_in_its_code_and_keeps_its_summary_whole() -> None:
 
 def test_a_summary_too_long_for_its_code_is_shown_alone_and_cut() -> None:
     document = copy_greeting_document()
-    long_summary = "Adds a title. " + "It is a fine title. " * 120
+    long_summary = "Adds a title. " + "It is a fine title. " * 250
     document["root_package"]["files"][0]["hunks"][0]["summary"] = long_summary
     judge = HypothesisJudge()
 
@@ -164,9 +182,9 @@ def test_a_summary_too_long_for_its_code_is_shown_alone_and_cut() -> None:
         for request in judge.requests
         if request.subject.startswith("Premise: the code change, left out")
     ]
-    assert len(subject) <= 2_000
+    assert len(subject) <= 4_000
     assert subject.startswith(
-        "Premise: the code change, left out: the hypothesis takes up the 2000 "
+        "Premise: the code change, left out: the hypothesis takes up the 4000 "
         "characters there is room for.\n\nHypothesis: Adds a title."
     )
     assert re.search(r"left out to stay within \d+ characters\]$", subject)

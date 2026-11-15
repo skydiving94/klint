@@ -1,4 +1,4 @@
-"""Reads an audit input from disk as a tree of the directories and files it holds."""
+"""Reads an audit input from disk: the tree beneath a path, or a set of files."""
 
 import asyncio
 from pathlib import Path
@@ -10,7 +10,12 @@ from klint.core.interfaces import (
     BaseFileTraitsIdentifier,
     BaseScanProgressListener,
 )
-from klint.core.models.audits import AuditInput, DiskPathInput, InMemoryBytesInput
+from klint.core.models.audits import (
+    AuditInput,
+    DiskFileSetInput,
+    DiskPathInput,
+    InMemoryBytesInput,
+)
 from klint.core.models.scanning import IgnoredNames, ScannedTarget
 
 
@@ -42,8 +47,32 @@ class DirectoryTreeSource(BaseAuditSource[ScannedTarget]):
         return self._scanned_file_count
 
 
+class FileSetSource(BaseAuditSource[ScannedTarget]):
+    """Scans chosen files on disk, once, with a target scanner."""
+
+    def __init__(
+        self, target_scanner: TargetScanner, file_set: DiskFileSetInput
+    ) -> None:
+        self._target_scanner = target_scanner
+        self._file_set = file_set
+        self._scanned_file_count = 0
+
+    async def read_input(self) -> ScannedTarget:
+        """Return the files, those that exist and are not ignored."""
+        scanned_target = await asyncio.to_thread(
+            self._target_scanner.scan_file_set,
+            self._file_set.root,
+            self._file_set.paths,
+        )
+        self._scanned_file_count = len(scanned_target.files)
+        return scanned_target
+
+    def count_scanned_files(self) -> int:
+        return self._scanned_file_count
+
+
 class DirectoryTreeSourceFactory(BaseAuditSourceFactory[ScannedTarget]):
-    """Makes a directory tree source for each path on disk.
+    """Makes a source for each path on disk, and for each set of files on disk.
 
     The scan identifies each file's traits with ``file_traits_identifier``
     and leaves out ``ignored_names``.
@@ -60,12 +89,14 @@ class DirectoryTreeSourceFactory(BaseAuditSourceFactory[ScannedTarget]):
         self,
         audit_input: AuditInput,
         scan_progress_listener: BaseScanProgressListener | None = None,
-    ) -> DirectoryTreeSource:
+    ) -> BaseAuditSource[ScannedTarget]:
         match audit_input:
             case DiskPathInput(path=path):
                 return DirectoryTreeSource(
                     self._target_scanner, path, scan_progress_listener
                 )
+            case DiskFileSetInput():
+                return FileSetSource(self._target_scanner, audit_input)
             case InMemoryBytesInput():
                 raise ValueError(
                     "A directory tree is read from a path on disk, "

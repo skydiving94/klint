@@ -43,7 +43,7 @@ GIT_CHANGE_FIELD_NAME = "git_change"
 _DOCUMENT_FIELD_NAMES = frozenset(
     {"schema_version", GIT_CHANGE_FIELD_NAME, "summary", "packages", "files"}
 )
-_GIT_CHANGE_FIELD_NAMES = frozenset({"commit"})
+_GIT_CHANGE_FIELD_NAMES = frozenset({"commit", "base"})
 _PACKAGE_FIELD_NAMES = frozenset({"path", "summary"})
 _FILE_FIELD_NAMES = frozenset({"path", "summary", "hunks"})
 _HUNK_FIELD_NAMES = frozenset({"header", "summary"})
@@ -55,11 +55,13 @@ _MAX_LISTED_CHOICES = 10
 class GitChangeSelection:
     """The change a summaries-only document summarizes.
 
-    commit names a commit as git names one, such as "HEAD" or a hash; None
-    stands for the uncommitted change.
+    commit names a commit as git names one, such as "HEAD" or a hash. base
+    names the commit the change starts from, up to the working tree. Both
+    None stands for the uncommitted change.
     """
 
     commit: str | None
+    base: str | None = None
 
 
 def read_git_change_selection(raw_document: JsonValue) -> GitChangeSelection | None:
@@ -75,7 +77,13 @@ def read_git_change_selection(raw_document: JsonValue) -> GitChangeSelection | N
     git_change = read_object(
         raw_document[GIT_CHANGE_FIELD_NAME], pointer, _GIT_CHANGE_FIELD_NAMES
     )
-    return GitChangeSelection(commit=read_optional_text(git_change, "commit", pointer))
+    commit = read_optional_text(git_change, "commit", pointer)
+    base = read_optional_text(git_change, "base", pointer)
+    if commit is not None and base is not None:
+        raise build_document_error(
+            pointer, "names both a commit and a base; give one of them"
+        )
+    return GitChangeSelection(commit=commit, base=base)
 
 
 def read_summaries_of_git_change(

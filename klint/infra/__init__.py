@@ -3,6 +3,11 @@
 Each package exports its own names, and callers import them from it.
 """
 
-from klint.infra import rule_loader, system_one, table_loader
+from klint.infra import (
+    acknowledgement_log,
+    rule_loader,
+    system_one,
+    table_loader,
+)
 
-__all__ = ["rule_loader", "system_one", "table_loader"]
+__all__ = ["acknowledgement_log", "rule_loader", "system_one", "table_loader"]

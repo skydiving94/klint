@@ -1,7 +1,7 @@
 """A rule pack as a rule source reads it, before its rules are built."""
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from enum import Enum, auto
 
 from klint.core.models.judging import QuestionType
@@ -54,7 +54,8 @@ class RuleSpec:
     excluded_unit_tags those it is never asked about; each empty when it
     names none. question_with_layers is asked instead of question when the
     project lists its layers, with LAYERS_PLACEHOLDER where they go; None
-    when the rule has no such question.
+    when the rule has no such question. unit_type_to_question gives the
+    question asked instead of question about a unit of each type it names.
     """
 
     rule_id: str
@@ -66,6 +67,7 @@ class RuleSpec:
     unit_tags: tuple[str, ...] = ()
     excluded_unit_tags: tuple[str, ...] = ()
     question_with_layers: str | None = None
+    unit_type_to_question: Mapping[str, str] = field(default_factory=dict, hash=False)
 
 
 class RuleProblemSeverity(Enum):

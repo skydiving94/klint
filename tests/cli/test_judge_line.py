@@ -13,7 +13,7 @@ from klint.cli import (
     ExitCode,
     run_command_from_shell,
 )
-from tests.support.builders import write_text
+from tests.support.builders import list_lines_before_judge_usage, write_text
 from tests.support.stub_system_one_server import StubSystemOneServer
 
 SECRET_KEY = "sk-test-not-a-real-key"
@@ -43,7 +43,7 @@ def test_remote_judge_is_named_with_its_address_but_not_its_key(
 
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         f"[klint] Judge: jev-latest at {system_one_server.base_url} "
         f"(remote, {key_note})"
     ]

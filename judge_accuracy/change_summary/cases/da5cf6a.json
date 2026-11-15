@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "about": "Commit da5cf6a, \"Updating the proposed file structure.\": one new file whose single hunk, about 5,400 characters of code, is over the change-summary character budget, and one deleted file. Planted mistake 2 sits in the part of that hunk past the budget.",
+  "true_document": {
+    "schema_version": 1,
+    "git_change": {
+      "commit": "da5cf6a"
+    },
+    "summary": "Replaces proposed_structure.txt, the tree of the earlier kev_auditor/ layout, with proposed_structure.md: a refactoring plan for the domain models, units, extractors and a QuestionType enum, and the proposed src/ structure with each file's status.",
+    "packages": [],
+    "files": [
+      {
+        "path": "proposed_structure.md",
+        "summary": "Adds proposed_structure.md: a plan to split models.py into small domain modules, make AuditableUnit an ABC with get_content(), plan two tiers of extractors under BaseUnitExtractor and add a QuestionType enum; and the proposed src/ structure, marking each file unchanged, new, reworked, updated or planned.",
+        "hunks": [
+          {
+            "header": "@@ -0,0 +1,78 @@",
+            "summary": "Adds proposed_structure.md, with a Plan and a Proposed structure section. The plan splits src/core/domain/models.py into rule.py, report.py and a units/ subpackage, each file well under 100 lines; makes AuditableUnit a pure ABC that requires unit_id, unit_type and an abstract get_content(), moving the file fields to AuditableFileUnit, with composite units building get_content() from their children; keeps BaseUnitExtractor and WholeFileExtractor as the only active extractors, with a project structure tier and a code component tier planned under BaseUnitExtractor; and adds a QuestionType enum for AuditRule and JsonRuleLoader. The proposed structure lists each file under src/, from cli/ to rules/json_loader.py, as unchanged, new, reworked, updated (imports) or planned."
+          }
+        ]
+      },
+      {
+        "path": "proposed_structure.txt",
+        "summary": "Deletes proposed_structure.txt, the tree of the earlier kev_auditor/ layout.",
+        "hunks": [
+          {
+            "header": "@@ -1,38 +0,0 @@",
+            "summary": "Deletes proposed_structure.txt, a tree of the earlier kev_auditor/ layout: config/, core/ with domain, interfaces and services, infrastructure/ with extractors, kev evaluators and rules, entrypoints/ for the CLI and the API, main.py, and tests/."
+          }
+        ]
+      }
+    ]
+  },
+  "planted_mistakes": [
+    {
+      "summary_pointer": "#/files/0/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds proposed_structure.md, with a Plan and a Proposed structure section. The plan splits src/core/domain/models.py into rule.py, report.py and a units/ subpackage, each file well under 200 lines; makes AuditableUnit a pure ABC that requires unit_id, unit_type and an abstract get_content(), moving the file fields to AuditableFileUnit, with composite units building get_content() from their children; keeps BaseUnitExtractor and WholeFileExtractor as the only active extractors, with a project structure tier and a code component tier planned under BaseUnitExtractor; and adds a QuestionType enum for AuditRule and JsonRuleLoader. The proposed structure lists each file under src/, from cli/ to rules/json_loader.py, as unchanged, new, reworked, updated (imports) or planned.",
+      "why_wrong": "The plan keeps every file well under 100 lines."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Adds proposed_structure.md, with a Plan and a Proposed structure section. The plan splits src/core/domain/models.py into rule.py, report.py and a units/ subpackage, each file well under 100 lines; makes AuditableUnit a pure ABC that requires unit_id, unit_type and an abstract get_content(), moving the file fields to AuditableFileUnit, with composite units building get_content() from their children; keeps BaseUnitExtractor and WholeFileExtractor as the only active extractors, with a project structure tier and a code component tier planned under BaseUnitExtractor; and adds a QuestionType enum for AuditRule and JsonRuleLoader. The proposed structure lists each file under src/, from cli/ to rules/json_loader.py, as unchanged, new, reworked, updated (imports) or planned, and marks rules/json_loader.py unchanged.",
+      "why_wrong": "rules/json_loader.py is marked reworked, to parse the QuestionType enum."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/0/summary",
+      "mistake_kind": "unsupported_reason",
+      "summary": "Adds proposed_structure.md, to make audits faster, with a Plan and a Proposed structure section. The plan splits src/core/domain/models.py into rule.py, report.py and a units/ subpackage, each file well under 100 lines; makes AuditableUnit a pure ABC that requires unit_id, unit_type and an abstract get_content(), moving the file fields to AuditableFileUnit, with composite units building get_content() from their children; keeps BaseUnitExtractor and WholeFileExtractor as the only active extractors, with a project structure tier and a code component tier planned under BaseUnitExtractor; and adds a QuestionType enum for AuditRule and JsonRuleLoader. The proposed structure lists each file under src/, from cli/ to rules/json_loader.py, as unchanged, new, reworked, updated (imports) or planned.",
+      "why_wrong": "Nothing in the file says the plan makes audits faster."
+    },
+    {
+      "summary_pointer": "#/files/0/hunks/0/summary",
+      "mistake_kind": "omission",
+      "summary": "Adds proposed_structure.md, with a Plan and a Proposed structure section. The plan splits src/core/domain/models.py into rule.py, report.py and a units/ subpackage, each file well under 100 lines; makes AuditableUnit a pure ABC that requires unit_id, unit_type and an abstract get_content(), moving the file fields to AuditableFileUnit, with composite units building get_content() from their children; keeps BaseUnitExtractor and WholeFileExtractor as the only active extractors, with a project structure tier and a code component tier planned under BaseUnitExtractor. The proposed structure lists each file under src/, from cli/ to rules/json_loader.py, as unchanged, new, reworked, updated (imports) or planned.",
+      "why_wrong": "It leaves out the QuestionType enum, the plan's fourth step."
+    },
+    {
+      "summary_pointer": "#/files/1/hunks/0/summary",
+      "mistake_kind": "false_statement",
+      "summary": "Deletes proposed_structure.txt, a tree of the earlier kev_auditor/ layout: config/, core/ with domain, interfaces and services, infrastructure/ with extractors, kev evaluators and rules, entrypoints/ for the CLI and a web dashboard, main.py, and tests/.",
+      "why_wrong": "entrypoints/ holds cli.py and api.py, an API router, not a web dashboard."
+    },
+    {
+      "summary_pointer": "#/files/0/summary",
+      "mistake_kind": "omission",
+      "summary": "Adds proposed_structure.md: a plan to split models.py into small domain modules, make AuditableUnit an ABC with get_content(), plan two tiers of extractors under BaseUnitExtractor and add a QuestionType enum.",
+      "why_wrong": "It leaves out the proposed src/ structure."
+    },
+    {
+      "summary_pointer": "#/files/0/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Adds proposed_structure.md: a plan to split models.py into small domain modules, make AuditableUnit an ABC with get_content(), plan two tiers of extractors under BaseUnitExtractor and add a QuestionType enum; and the proposed src/ structure, in which every file is new.",
+      "why_wrong": "The hunk summary says each file is marked unchanged, new, reworked, updated (imports) or planned."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "contradiction",
+      "summary": "Replaces proposed_structure.md with proposed_structure.txt, the tree of the earlier kev_auditor/ layout: a refactoring plan for the domain models, units, extractors and a QuestionType enum, and the proposed src/ structure with each file's status.",
+      "why_wrong": "The file summaries say proposed_structure.md is added and proposed_structure.txt deleted."
+    },
+    {
+      "summary_pointer": "#/summary",
+      "mistake_kind": "omission",
+      "summary": "Adds proposed_structure.md: a refactoring plan for the domain models, units, extractors and a QuestionType enum, and the proposed src/ structure with each file's status.",
+      "why_wrong": "It leaves out that proposed_structure.txt is deleted."
+    }
+  ]
+}

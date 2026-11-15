@@ -53,14 +53,18 @@ The cases are in `judge_accuracy/change_summary/cases/`, one file per commit of 
 ~~~text
 klint/
 ├── cli/                     # The console scripts, their options, exit codes and terminal report
-│   └── change_summary_stop_hook/  # The Claude Code Stop hook: the Stop event, the decision to block, the per-session block count
-├── app/                     # What runs an audit: settings (environment, klint.json), the injector, the kinds of audit on offer
+│   ├── change_summary_stop_hook/  # The Claude Code Stop hook: the hook events, the decision to block, the session's start commit and block count
+│   └── pre_commit/          # The commit gate: klint-pre-commit, klint-ack, and how audits report acknowledged findings
+├── mcp/                     # klint-mcp: every audit, and the rules, as MCP tools for one agent over stdio
+├── composition.py           # The injector every front end runs: the built-in suites, each kind's rule replacement, the judge's character budget
+├── app/                     # What runs an audit: settings (environment, klint.json), the injector, the kinds of audit on offer, the staged change, each judge's character budget and commit threshold, JSON output
+│   ├── acknowledgements/    # The acknowledgement log as an audit uses it: a finding's identity, matching, reconciling with the staged change
 │   └── pipeline/            # One audit run, in stages: acquisition, rule selection, auditing, roll-up
 ├── catalog/                 # The built-in suites
 │   ├── domain_neutral/      # What fits any content: whole files, JSON documents, a change read from git, file traits (extension, tags, a project's overrides)
 │   │   ├── extraction/
 │   │   ├── file_traits_identifiers/
-│   │   └── git/             # A commit, or the uncommitted change, read hunk by hunk
+│   │   └── git/             # A commit, a change since a base commit, the uncommitted change or the staged one, read hunk by hunk
 │   ├── code/                # The code suite: file contents (klint) and project structure (klint-structure)
 │   │   ├── language_neutral/  # Units, renderers and extractors shared by every programming language
 │   │   │   └── extraction/
@@ -70,6 +74,8 @@ klint/
 │       ├── units/           # One unit for each hunk, file and package summary
 │       └── renderers/       # What the judge reads about each summary
 ├── infra/                   # What the core is wired to
+│   ├── acknowledgement_log/ # The acknowledgement log on disk: .klint/acknowledgements/, one JSON file per entry
+│   ├── answer_cache/        # The answer cache: a judge that reuses the answers another judge gave in earlier runs
 │   ├── rule_loader/         # JSON rule packs, checked against the registered unit types
 │   ├── table_loader/        # JSON tables: each language's file extensions, and tag detection
 │   └── system_one/          # Judges in the System One format: over HTTP (remote) or in this process (local)
@@ -85,13 +91,15 @@ klint/
     │   └── change_summary/          # summary_checks.json
     └── change_summary_stop_hook/    # The instructions the Stop hook gives the agent for writing summaries
 judge_accuracy/              # Not installed with klint: scores a judge on labelled cases
-└── change_summary/          # The scoring command, and cases/: true and planted summaries of real commits
+├── change_summary/          # The scoring command, and cases/: true and planted summaries of real commits
+└── code_units/              # Backend modules with true units and planted problems, scored by length to set each judge's character budget
 tests/                       # Mirrors klint/; tests/support holds the fake judge, builders and a stub System One server
 examples/                    # Deliberately bad code, a mock project and change-summary documents to run the commands on
 ~~~
 
 `uv run lint-imports` checks the boundaries between packages:
-* **Layers**: `cli` > `app` > `catalog` > `infra` > `core`. A layer imports only from the layers below it. The repository's `klint.json` lists the same layers, so that `klint-structure` shows them to the judge; change the two together.
+* **Layers**: `cli` and `mcp` > `composition` > `app` > `catalog` > `infra` > `core`. A layer imports only from the layers below it; `cli` and `mcp`, the front ends, do not import each other. The repository's `klint.json` lists the same layers, so that `klint-structure` shows them to the judge, with `cli` before `mcp` since its list has one package per layer; change the two together.
+* **MCP**: only `klint.mcp` imports the MCP SDK.
 * **Core**: `klint.core` imports the standard library only.
 * **Suites**: `app` and `core` import no named suite (`catalog.code`, `catalog.change_summary`); the caller chooses the suites an audit draws on. `catalog.domain_neutral` imports no named suite, and the named suites do not import one another: what two suites share belongs in `catalog.domain_neutral`.
 * **Languages**: `catalog.code.language_neutral` does not import `catalog.code.python`.
@@ -127,8 +135,13 @@ examples/                    # Deliberately bad code, a mock project and change-
 
 1. Create a branch, commit, push it, and open a pull request against `main`.
 2. Make sure the checks above pass.
-3. **Self-Audit**: on each pull request into `main` and each push to `main`, the "klint Self-Audit" workflow runs `klint-structure` and `klint` on `klint/` at minimum confidence 0.8, asking Jev with the repository's `KLINT_JUDGE_API_KEY` secret. It lists the findings in the job summary, each as open or rebutted. It fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded (below). A run without the secret, such as one for a pull request from a fork, skips the audits and says so. A maintainer can also run it on a branch of this repository from the Actions tab ("Run workflow").
+3. **Self-Audit**: on each pull request into `main` and each push to `main`, the "klint Self-Audit" workflow runs `klint-structure` and `klint` on `klint/` at minimum confidence 0.8, asking Jev with the repository's `KLINT_JUDGE_API_KEY` secret. It lists the findings in the job summary, each as open or rebutted. It fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded (below). A run without the secret, such as one for a pull request from a fork, skips the audits and says so. A maintainer can also run it on a branch of this repository from the Actions tab ("Run workflow"). The workflow keeps klint's answer cache between runs with `actions/cache`, keyed by the klint version and the branch and falling back to `main`'s, so a run asks Jev only about the units the branch changed; its `Answer cache:` line in the log says how many questions came from the cache.
 4. **Merge rule**: before a pull request into `main` merges, each self-audit finding is fixed. A finding that is not valid is rebutted instead, in a comment on the pull request that says why, and excluded in the repository's `klint.json` under `rule_exclusions`: its `rule_id`, the `paths` it doesn't apply to, and the comment's link as the `reason`, so the check passes. An exclusion whose finding is fixed is removed. Each audit's report lists the exclusions it applied.
+
+### `rule_exclusions` or `klint-ack`?
+Both keep a finding judged wrong from failing a check, and Self-Audit and the commit gate read both.
+* **`rule_exclusions` in `klint.json`**: the rule never applies to these paths, whatever the code there says, such as a package-structure rule on a command-line tool's root package. It is matched by path and survives code changes. Rebut the finding in a comment on the pull request and link it as the `reason`.
+* **`klint-ack <id> --note "<why>"`**: this one finding on this code is wrong, such as a `god_component` on a long but single-purpose function. It is matched by the unit's code hash, so the judge is asked again once the code changes. The entry in `.klint/acknowledgements/` is committed with the code; the note is the rebuttal.
 
 To reproduce the Self-Audit locally, export your `KLINT_JUDGE_API_KEY` as the README's "Using Jev" shows, then:
 ~~~bash

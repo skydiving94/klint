@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "about": "Customer sign-up, sign-in and password reset in one service class over injected store, hasher and mailer; the endpoint handlers check each field's type and never show internal errors.",
+  "planted_problems": [
+    {
+      "rule_id": "hardcoded_secrets",
+      "old_text": "TOKEN_SIGNING_KEY = os.environ[\"ACCOUNT_TOKEN_SIGNING_KEY\"].encode()\n",
+      "new_text": "TOKEN_SIGNING_KEY = b\"3f9c1e7a5b2d8f4e6a0c9b7d1e3f5a2c\"\n",
+      "why_wrong": "The key that signs every session token is written into the source."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "        email = check_email(request.email)\n        check_password(request.password, email)\n        name = check_name(request.name)\n        if await self._store.find_by_email(email) is not None:",
+      "new_text": "        email = request.email\n        name = request.name\n        if await self._store.find_by_email(email) is not None:",
+      "why_wrong": "sign_up stores the email and name from the request without checking them, and never checks the password's strength."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "    except Exception:\n        logger.exception(\"Sign-up failed\")\n        return 500, {\"error\": \"Something went wrong; please try again\"}",
+      "new_text": "    except Exception as error:\n        return 500, {\n            \"error\": repr(error),\n            \"trace\": traceback.format_exc(),\n            \"request\": body,\n        }",
+      "why_wrong": "handle_sign_up answers an unexpected failure with the raw exception, the stack trace and the request body, password included."
+    },
+    {
+      "rule_id": "improper_error_handling",
+      "old_text": "        if account is None:\n            raise AccountError(\"The email or the password is wrong\")\n        locked_until",
+      "new_text": "        if account is None:\n            raise AccountError(f\"No account is registered for {email}\")\n        locked_until",
+      "why_wrong": "sign_in tells the caller that an email is not registered, so anyone can find out who has an account."
+    },
+    {
+      "rule_id": "sync_blocking_io",
+      "old_text": "        token = secrets.token_urlsafe(32)\n        await self._store.save_reset_token(",
+      "new_text": "        token = secrets.token_urlsafe(32)\n        smtplib.SMTP(\"mail.internal\", 25).sendmail(\n            \"security@shop.example\", [normalized], f\"Reset requested at {now}\"\n        )\n        await self._store.save_reset_token(",
+      "why_wrong": "request_password_reset, an async method, sends a mail over a blocking smtplib connection."
+    },
+    {
+      "rule_id": "god_component",
+      "old_text": "    async def change_password(\n        self, account_id: int, email: str, old_password: str, new_password: str\n    ) -> None:",
+      "new_text": "    async def export_sales_report(self, month: str) -> str:\n        \"\"\"Write the month's sales report as CSV and return its path.\"\"\"\n        ...\n\n    async def restock_products(self, sku_to_quantity: dict[str, int]) -> None:\n        \"\"\"Order more of each product from the supplier.\"\"\"\n        ...\n\n    async def recalculate_shipping_rates(self, carrier: str) -> None:\n        \"\"\"Download the carrier's rate table and store it.\"\"\"\n        ...\n\n    async def change_password(\n        self, account_id: int, email: str, old_password: str, new_password: str\n    ) -> None:",
+      "why_wrong": "AccountService also exports sales reports, restocks products and loads shipping rates: concerns unrelated to accounts in one class."
+    },
+    {
+      "rule_id": "missing_input_validation",
+      "old_text": "    email = body.get(\"email\")\n    password = body.get(\"password\")\n    if not isinstance(email, str) or not isinstance(password, str):\n        return 400, {\"error\": \"'email' and 'password' must be strings\"}\n    try:",
+      "new_text": "    email = body[\"email\"]\n    password = body[\"password\"]\n    try:",
+      "why_wrong": "handle_sign_in passes the request's email and password on without checking they are present or strings."
+    }
+  ]
+}

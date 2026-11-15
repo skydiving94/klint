@@ -22,6 +22,7 @@ from tests.support.builders import (
     DIR_RULE,
     FILE_RULE,
     build_audit_command_app,
+    list_lines_before_judge_usage,
     make_settings,
     write_json,
     write_text,
@@ -69,6 +70,7 @@ def test_both_commands_take_the_same_options(
         command.audited_units_json_key: [audited],
         "unit_id_to_roll_up_status": {audited: "no_problem"},
         "findings": [],
+        "judge_usage": {"requests": 1, "input_tokens": None},
     }
 
 
@@ -87,7 +89,7 @@ def test_old_all_flag_still_shows_every_answer_with_a_warning(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert captured.out == every_answer
-    assert captured.err.splitlines() == [
+    assert list_lines_before_judge_usage(captured.err) == [
         "[klint] Warning: '--all' is deprecated and stops working in the next "
         "release; use '--all-answers' instead"
     ]
@@ -265,7 +267,7 @@ def test_rules_flag_adds_to_the_rules_of_the_project_klint_json(
     exit_code = asyncio.run(run_command_from_shell(FILE_AUDIT_COMMAND))
 
     assert exit_code == ExitCode.NO_PROBLEMS
-    warning_line, judge_line = capsys.readouterr().err.splitlines()
+    warning_line, judge_line = list_lines_before_judge_usage(capsys.readouterr().err)
     assert warning_line.startswith(f"[klint] Warning: The 'env' key in '{rules_file}'")
     assert judge_line.startswith("[klint] Judge: from-klint-json at ")
     # Settings come from klint.json only; the rules of both files are asked,

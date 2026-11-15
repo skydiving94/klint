@@ -89,6 +89,7 @@ def test_finding_dict_has_the_finding_keys_with_the_unit_context_apart() -> None
         "question": "?",
         "tags": ["style"],
         "location": {"path": "a.py", "start_line": 1, "end_line": 9},
+        "cut_at_characters": None,
         "evidence_location": None,
         "context": {"rule_id": "from the unit"},
     }

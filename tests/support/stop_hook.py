@@ -1,4 +1,4 @@
-"""Feeding Stop events to klint's change-summary stop hook, and reading its answer."""
+"""Feeding SessionStart and Stop events to klint's stop hook, and reading its answer."""
 
 import asyncio
 import json
@@ -9,6 +9,7 @@ from pathlib import Path
 from klint.cli import ChangeSummaryStopHook
 from klint.cli.change_summary_stop_hook import SUMMARIES_PATH
 from klint.core.interfaces import BaseJudge
+from tests.support.change_summary import HypothesisJudge
 from tests.support.fakes import JudgeBindingOverride
 from tests.support.git_summaries import GREETER_SUMMARIES
 
@@ -53,6 +54,22 @@ def feed_stop_event(
     hook = ChangeSummaryStopHook(JudgeBindingOverride(judge))
     output = asyncio.run(hook.respond(list(options), json.dumps(event)))
     return read_hook_answer(output)
+
+
+def feed_session_start_event(
+    project: Path, *, session_id: str = "session-1", source: str = "startup"
+) -> str:
+    """Feed the hook a SessionStart event of ``project``; return what it printed."""
+    event = {
+        "session_id": session_id,
+        "transcript_path": str(project / "transcript.jsonl"),
+        "cwd": str(project),
+        "permission_mode": "default",
+        "hook_event_name": "SessionStart",
+        "source": source,
+    }
+    hook = ChangeSummaryStopHook(JudgeBindingOverride(HypothesisJudge()))
+    return asyncio.run(hook.respond([], json.dumps(event)))
 
 
 def read_hook_answer(output: str) -> HookAnswer:

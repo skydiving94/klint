@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,8 @@ from klint.catalog.domain_neutral import TargetScanner
 from klint.catalog.domain_neutral.file_traits_identifiers import (
     ExtensionFileTraitsIdentifier,
 )
-from klint.cli import AuditCommand, AuditCommandApp, create_command_injector
+from klint.cli import AuditCommand, AuditCommandApp
+from klint.composition import create_built_in_injector
 from klint.core import UnitRegistry
 from klint.core.interfaces import BaseJudge
 from klint.core.models.audits import DiskPathInput
@@ -49,7 +51,7 @@ DIR_RULE: RuleSpec = {**FILE_RULE, "unit_types": ["project_directory"]}
 
 def build_unit_registry() -> UnitRegistry:
     """Return a registry holding the unit types of every built-in suite."""
-    return create_command_injector(make_settings()).get(UnitRegistry)
+    return create_built_in_injector(make_settings()).get(UnitRegistry)
 
 
 # The four answers of the default scale, for building and checking findings.
@@ -130,7 +132,7 @@ def build_audit_pipeline(
     ``judge`` stands in for the model, and ``settings`` default to those of
     make_settings. ``binding_overrides`` replace or add further bindings.
     """
-    injector = create_command_injector(
+    injector = create_built_in_injector(
         settings or make_settings(), JudgeBindingOverride(judge), *binding_overrides
     )
     return injector.get(AuditPipeline)
@@ -179,7 +181,7 @@ def build_target_scanner() -> TargetScanner:
 
 def build_directory_tree_extractor() -> DirectoryTreeExtractor:
     """Return klint's directory tree extractor, built the way the commands build it."""
-    return create_command_injector(make_settings()).get(DirectoryTreeExtractor)
+    return create_built_in_injector(make_settings()).get(DirectoryTreeExtractor)
 
 
 def extract_directory_tree(target: Path) -> AuditableDirectoryUnit:
@@ -222,3 +224,13 @@ def build_rule_pack(
         ),
         rule_problems=(),
     )
+
+
+def list_lines_before_judge_usage(stderr: str) -> list[str]:
+    """Return the lines of a command's ``stderr`` before its judge usage line.
+
+    Fails when the last line is not the judge usage line every audit ends on.
+    """
+    *lines, last_line = stderr.splitlines()
+    assert re.fullmatch(r"\[[\w-]+\] Judge usage: .+", last_line), last_line
+    return lines

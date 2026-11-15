@@ -27,6 +27,7 @@ RULE_FIELD_NAMES = frozenset(
         "unit_tags",
         "excluded_unit_tags",
         "question_with_layers",
+        "unit_type_to_question",
     }
 )
 # Each old rule field name, and the name that replaces it. An old name still
@@ -202,6 +203,7 @@ def _read_rule(
                 if "question_with_layers" in raw_rule
                 else None
             ),
+            unit_type_to_question=_read_unit_type_to_question(raw_rule, rule_id, path),
         )
     except ValueError as error:
         rule_problems.append(RuleProblem(RuleProblemSeverity.ERROR, str(error)))
@@ -217,7 +219,33 @@ def _read_rule(
                 f"{LAYERS_PLACEHOLDER}, so it does not show the project's layers",
             )
         )
+    unasked_unit_types = sorted(set(spec.unit_type_to_question) - set(spec.unit_types))
+    if unasked_unit_types:
+        rule_problems.append(
+            RuleProblem(
+                RuleProblemSeverity.WARNING,
+                f"Rule '{rule_id}' in '{path}' has a unit_type_to_question for "
+                f"{unasked_unit_types}, which are not among its unit_types, so "
+                "those questions are never asked",
+            )
+        )
     return spec
+
+
+def _read_unit_type_to_question(
+    raw_rule: dict[object, object], rule_id: str, path: Path
+) -> dict[str, str]:
+    """Return the questions for some unit types; empty when the rule has none."""
+    raw_value = raw_rule.get("unit_type_to_question", {})
+    if not isinstance(raw_value, dict) or not all(
+        isinstance(unit_type, str) and isinstance(question, str)
+        for unit_type, question in raw_value.items()
+    ):
+        raise ValueError(
+            f"Rule '{rule_id}' has invalid unit_type_to_question {raw_value!r} in "
+            f"'{path}'; expected an object of unit types and their questions"
+        )
+    return dict(raw_value)
 
 
 def _read_question(raw_question: object, rule_id: str, path: Path) -> str:

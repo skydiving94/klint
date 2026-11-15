@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from judge_accuracy.change_summary.scoring_command import ScoringExitCode
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import JudgeReply, JudgeRequest
 from tests.judge_accuracy.scoring import (
     FALSE_IMPORT_MISTAKE,
     FALSE_IMPORT_SUMMARY,
@@ -19,7 +19,7 @@ from tests.support.change_summary import (
     HypothesisJudge,
     copy_greeting_document,
 )
-from tests.support.fakes import CountingJudge
+from tests.support.fakes import CountingJudge, build_unreported_reply
 
 Capture = pytest.CaptureFixture[str]
 _FLAG_FALSE_IMPORT = {"import of sys": {"no_false_statement": "inaccurate"}}
@@ -199,9 +199,9 @@ class _SilentJudge(HypothesisJudge):
         super().__init__()
         self.silent_phrase = silent_phrase
 
-    async def answer(self, request: JudgeRequest) -> list[JudgeAnswer]:
+    async def answer(self, request: JudgeRequest) -> JudgeReply:
         if self.silent_phrase in request.subject.rsplit(HYPOTHESIS_PREFIX, 1)[-1]:
-            return []
+            return build_unreported_reply([])
         return await super().answer(request)
 
 

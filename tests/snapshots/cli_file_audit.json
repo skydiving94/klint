@@ -21,6 +21,7 @@
         "start_line": 1,
         "end_line": 36
       },
+      "cut_at_characters": null,
       "evidence_location": null,
       "context": {}
     },
@@ -39,8 +40,13 @@
         "start_line": 1,
         "end_line": 36
       },
+      "cut_at_characters": null,
       "evidence_location": null,
       "context": {}
     }
-  ]
+  ],
+  "judge_usage": {
+    "requests": 1,
+    "input_tokens": null
+  }
 }

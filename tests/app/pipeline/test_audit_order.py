@@ -4,7 +4,7 @@ import pytest
 
 from klint.app import AuditKindRegistry
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
-from klint.cli import create_command_injector
+from klint.composition import create_built_in_injector
 from klint.core.models.audits import AuditOrder
 from klint.core.models.reports import JsonValue
 from tests.support.builders import make_settings
@@ -42,7 +42,7 @@ def test_children_first_judges_every_child_before_its_parent(
     "audit_kind_id", [FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID]
 )
 def test_built_in_kinds_judge_all_their_units_at_once(audit_kind_id: str) -> None:
-    registry = create_command_injector(make_settings()).get(AuditKindRegistry)
+    registry = create_built_in_injector(make_settings()).get(AuditKindRegistry)
 
     audit_kind = registry.find_audit_kind(audit_kind_id)
 

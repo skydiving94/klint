@@ -53,9 +53,9 @@ class ChangeSummarySource(BaseAuditSource[ChangeSummaryInput]):
         selection = read_git_change_selection(document)
         if selection is None:
             return ChangeSummaryInput(document)
-        git_source = GitChangeSourceFactory(selection.commit).create_source(
-            DiskPathInput(Path.cwd())
-        )
+        git_source = GitChangeSourceFactory(
+            selection.commit, selection.base
+        ).create_source(DiskPathInput(Path.cwd()))
         git_change = self._leave_out_document(await git_source.read_input())
         self._scanned_file_count += len(git_change.files)
         return ChangeSummaryInput(document, git_change)

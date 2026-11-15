@@ -102,6 +102,20 @@ def test_summaries_that_all_pass_let_the_agent_stop(greeter: Path) -> None:
     assert len(judge.requests) == len(GREETER_UNIT_IDS)
 
 
+def test_the_hook_logs_the_judge_usage_of_its_audit(
+    greeter: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_summaries(greeter)
+
+    feed_stop_event(greeter, HypothesisJudge())
+
+    # On stderr, which Claude Code keeps in its debug log.
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        "[klint-change-summary-stop-hook] Judge usage: "
+        f"{len(GREETER_UNIT_IDS)} requests, input tokens not reported"
+    )
+
+
 def test_flagged_summaries_block_listing_each_one_and_its_failed_checks(
     greeter: Path,
 ) -> None:

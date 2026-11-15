@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from klint.core.models.judging.judge_usage import JudgeUsage
 from klint.core.models.judging.question_type import QuestionType
 
 
@@ -40,3 +41,15 @@ class JudgeAnswer:
     choice_key: str
     confidence: float | None = None
     choice_key_to_probability: dict[str, float] | None = None
+
+
+@dataclass(frozen=True)
+class JudgeReply:
+    """The judge's answers to one request, and the usage the request took.
+
+    A question the judge gives no answer to has no entry in answers. usage
+    counts one request for a request sent to the judge.
+    """
+
+    answers: tuple[JudgeAnswer, ...]
+    usage: JudgeUsage

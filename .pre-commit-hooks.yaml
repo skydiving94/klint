@@ -1,0 +1,10 @@
+# The hook a project adds to its .pre-commit-config.yaml to gate its commits
+# on klint; the README's "Pre-commit gate" section shows how. It runs the
+# klint-pre-commit on the PATH, so klint is installed once, not per project.
+- id: klint-pre-commit
+  name: klint pre-commit gate
+  description: Audits the staged change with klint and blocks the commit while a finding is neither fixed nor acknowledged in .klint/acknowledgements/.
+  entry: klint-pre-commit
+  language: system
+  pass_filenames: false
+  always_run: true

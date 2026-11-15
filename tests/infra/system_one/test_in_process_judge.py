@@ -125,7 +125,7 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
 ) -> None:
     request = build_judge_request("x = 1", "rule_a", "rule_b")
 
-    answers = asyncio.run(_build_in_process_judge().answer(request))
+    answers = asyncio.run(_build_in_process_judge().answer(request)).answers
 
     # The keys and values kev has always been sent.
     criteria = PRACTICE_SCALE.map_choice_key_to_criterion()
@@ -138,10 +138,10 @@ def test_answer_sends_model_state_and_questions_and_returns_the_answers(
         for rule_id in ("rule_a", "rule_b")
     }
     assert runtime.requests == [FakeRequest("org/model", "x = 1", expected_questions)]
-    assert answers == [
+    assert answers == (
         JudgeAnswer(question_id="rule_a", choice_key="fail"),
         JudgeAnswer(question_id="rule_b", choice_key="fail"),
-    ]
+    )
 
 
 def test_model_is_loaded_once_and_reused(runtime: FakeRuntime) -> None:
@@ -184,6 +184,8 @@ def test_load_options_depend_on_the_device(
 def test_response_without_answers_gives_no_answers(runtime: FakeRuntime) -> None:
     runtime.response_has_answers = False
     assert (
-        asyncio.run(_build_in_process_judge().answer(build_judge_request("x", "r")))
-        == []
+        asyncio.run(
+            _build_in_process_judge().answer(build_judge_request("x", "r"))
+        ).answers
+        == ()
     )

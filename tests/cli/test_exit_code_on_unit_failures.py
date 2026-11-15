@@ -14,7 +14,12 @@ from klint.cli import (
     ExitCode,
 )
 from klint.core.interfaces import BaseJudge
-from tests.support.builders import build_audit_command_app, make_settings, write_text
+from tests.support.builders import (
+    build_audit_command_app,
+    list_lines_before_judge_usage,
+    make_settings,
+    write_text,
+)
 from tests.support.fakes import FakeJudge, PickyJudge
 
 Capture = pytest.CaptureFixture[str]
@@ -88,7 +93,7 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
     captured = capsys.readouterr()
     assert exit_code == expected_exit_code
     assert len(json.loads(captured.out)[command.audited_units_json_key]) == 1
-    (skipping_line,) = captured.err.splitlines()
+    (skipping_line,) = list_lines_before_judge_usage(captured.err)
     assert skipping_line.startswith(f"[{command.name}] Skipping ")
     assert skipping_line.endswith(": judge is down")
 
@@ -114,6 +119,7 @@ def test_run_with_no_unit_to_audit_exits_0(
         command.audited_units_json_key: [],
         "unit_id_to_roll_up_status": {},
         "findings": [],
+        "judge_usage": {"requests": 0, "input_tokens": 0},
     }
-    assert captured.err == ""
+    assert list_lines_before_judge_usage(captured.err) == []
     assert judge.requests == []

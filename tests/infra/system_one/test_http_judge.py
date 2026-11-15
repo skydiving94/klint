@@ -6,7 +6,12 @@ import urllib.error
 import pytest
 
 from klint.catalog.code.language_neutral import PRACTICE_SCALE
-from klint.core.models.judging import JudgeAnswer, JudgeRequest
+from klint.core.models.judging import (
+    JudgeAnswer,
+    JudgeReply,
+    JudgeRequest,
+    JudgeUsage,
+)
 from klint.infra.system_one import HttpSystemOneJudge
 from tests.support.builders import build_judge_request
 from tests.support.stub_system_one_server import StubSystemOneServer
@@ -14,9 +19,7 @@ from tests.support.stub_system_one_server import StubSystemOneServer
 REQUEST = build_judge_request("x = 1\n", "first", "second")
 
 
-def _ask(
-    server: StubSystemOneServer, request: JudgeRequest = REQUEST
-) -> list[JudgeAnswer]:
+def _ask(server: StubSystemOneServer, request: JudgeRequest = REQUEST) -> JudgeReply:
     judge = HttpSystemOneJudge(model_name="kev-latest", base_url=server.base_url)
     return asyncio.run(judge.answer(request))
 
@@ -80,9 +83,9 @@ def test_answers_are_read_from_the_response(
         }
     }
 
-    answers = _ask(system_one_server)
+    answers = _ask(system_one_server).answers
 
-    assert answers == [
+    assert answers == (
         JudgeAnswer(
             question_id="first",
             choice_key="fail",
@@ -90,7 +93,7 @@ def test_answers_are_read_from_the_response(
             choice_key_to_probability={"fail": 0.6, "pass": 0.4},
         ),
         JudgeAnswer(question_id="second", choice_key="pass"),
-    ]
+    )
 
 
 @pytest.mark.parametrize(
@@ -107,7 +110,39 @@ def test_answer_that_names_no_choice_is_left_out(
 ) -> None:
     system_one_server.response_body = response_body
 
-    assert _ask(system_one_server) == []
+    assert _ask(system_one_server).answers == ()
+
+
+@pytest.mark.parametrize(
+    ("usage", "expected_input_token_count"),
+    [
+        ({"input_tokens": 412, "output_tokens": 3}, 412),
+        ({"input_tokens": 0}, 0),
+        (None, None),
+        ({}, None),
+        ({"input_tokens": "412"}, None),
+        ({"input_tokens": -1}, None),
+        ({"input_tokens": True}, None),
+        ([412], None),
+    ],
+)
+def test_reply_counts_one_request_with_the_input_tokens_the_response_reports(
+    system_one_server: StubSystemOneServer,
+    usage: object,
+    expected_input_token_count: int | None,
+) -> None:
+    response_body: dict[str, object] = {"answers": {"first": {"choice": "pass"}}}
+    if usage is not None:
+        response_body["usage"] = usage
+    system_one_server.response_body = response_body
+
+    reply = _ask(system_one_server)
+
+    # A usage the judge did not report as a count leaves the answers as read.
+    assert reply.answers == (JudgeAnswer(question_id="first", choice_key="pass"),)
+    assert reply.usage == JudgeUsage(
+        request_count=1, input_token_count=expected_input_token_count
+    )
 
 
 @pytest.mark.parametrize(

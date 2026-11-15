@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from injector import inject
 
+from klint.app.acknowledgements import AcknowledgedFinding, AcknowledgementScope
 from klint.app.audit_kind_registry import AuditKindRegistry
 from klint.app.pipeline.audit_preparer import AuditPreparer
 from klint.app.pipeline.auditing import UnitAuditing
@@ -13,6 +14,7 @@ from klint.core.interfaces import (
     BaseAuditProgressListener,
     BaseRuleSource,
     BaseScanProgressListener,
+    BaseUnitSelector,
 )
 from klint.core.models.audits import AuditInput
 from klint.core.models.reports import AuditReport
@@ -28,6 +30,10 @@ class AuditRequest:
     The rules of custom_rule_source, when given, merge over the loaded
     ones. A problem counts in the roll-up statuses only with at least
     min_confidence, as for the findings a report selects.
+    unit_selector, when given, chooses the units to audit among those the
+    input holds; without one, every unit is audited. acknowledgements, when
+    given, is the repository's acknowledgement log: a finding it has
+    acknowledged is left out of the report.
     scan_progress_listener is told about each directory as it is scanned.
     audit_progress_listener is told when the audit of the units starts, and
     about each unit as its audit ends.
@@ -37,6 +43,8 @@ class AuditRequest:
     audit_kind_id: str
     custom_rule_source: BaseRuleSource | None = None
     min_confidence: float = 0.0
+    unit_selector: BaseUnitSelector | None = None
+    acknowledgements: AcknowledgementScope | None = None
     scan_progress_listener: BaseScanProgressListener | None = None
     audit_progress_listener: BaseAuditProgressListener | None = None
 
@@ -51,21 +59,29 @@ class AuditOutcome:
     selected_unit_ids lists, in audit order, every unit at least one rule
     applies to; a unit listed here and missing from the report is one whose
     audit failed. applied_rule_exclusions are the project's exclusions that
-    kept a rule from at least one unit.
+    kept a rule from at least one unit. extracted_unit_count is the number
+    of units the input held, and selected_unit_count the number the
+    request's unit selector kept among them: every one without a selector.
+    acknowledged_findings are the findings the acknowledgement log covers,
+    left out of the report.
     """
 
     report: AuditReport
     scanned_file_count: int
     selected_unit_ids: tuple[str, ...]
     applied_rule_exclusions: tuple[AppliedRuleExclusion, ...] = ()
+    extracted_unit_count: int = 0
+    selected_unit_count: int = 0
+    acknowledged_findings: tuple[AcknowledgedFinding, ...] = ()
 
 
 class AuditPipeline:
     """Runs an audit end to end, stage by stage.
 
     The kind of audit the request names is looked up first. The units are
-    then acquired and their rules selected, the units audited, the findings
-    rolled up, and last ranked in report order.
+    then acquired and their rules selected, the units audited, the
+    acknowledged findings left out, the rest rolled up, and last ranked in
+    report order.
     """
 
     @inject
@@ -87,9 +103,9 @@ class AuditPipeline:
         """Audit what ``request`` names and return the outcome.
 
         Raises ValueError when no suite offers the kind of audit or the kind
-        does not take that form of input, and raises when the input or a
-        rule source cannot be used. A unit whose audit fails is left out of
-        the report and the others go on.
+        does not take that form of input, and raises when the input, a
+        rule source or the acknowledgement log cannot be used. A unit whose
+        audit fails is left out of the report and the others go on.
         """
         audit_kind = self._audit_kind_registry.find_audit_kind(request.audit_kind_id)
         portfolio = await self._audit_preparer.prepare_audit(
@@ -97,10 +113,18 @@ class AuditPipeline:
             audit_kind,
             custom_rule_source=request.custom_rule_source,
             scan_progress_listener=request.scan_progress_listener,
+            unit_selector=request.unit_selector,
         )
         report = await self._unit_auditing.audit_units(
             portfolio, audit_kind, request.audit_progress_listener
         )
+        acknowledged_findings: tuple[AcknowledgedFinding, ...] = ()
+        if request.acknowledgements is not None:
+            separation = request.acknowledgements.separate_findings(
+                report.list_findings()
+            )
+            report = report.copy_with_findings(separation.open_findings)
+            acknowledged_findings = separation.acknowledged_findings
         report = self._finding_roll_up.roll_up(
             report, portfolio.units, request.min_confidence
         )
@@ -109,4 +133,7 @@ class AuditPipeline:
             scanned_file_count=portfolio.scanned_file_count,
             selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
             applied_rule_exclusions=portfolio.rule_set.list_applied_rule_exclusions(),
+            extracted_unit_count=portfolio.extracted_unit_count,
+            selected_unit_count=portfolio.selected_unit_count,
+            acknowledged_findings=acknowledged_findings,
         )

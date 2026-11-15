@@ -10,6 +10,7 @@ class AuditInputKind(Enum):
     """The forms an audit input can come in."""
 
     DISK_PATH = "disk_path"
+    DISK_FILE_SET = "disk_file_set"
     IN_MEMORY_BYTES = "in_memory_bytes"
 
 
@@ -20,6 +21,22 @@ class DiskPathInput:
     input_kind: ClassVar[AuditInputKind] = AuditInputKind.DISK_PATH
 
     path: Path
+
+
+@dataclass(frozen=True)
+class DiskFileSetInput:
+    """Chosen files on disk, at ``paths``, beneath the directory ``root``.
+
+    The files are audited as they are listed: nothing else beneath root is
+    looked at. root is the directory the files are told apart from, as the
+    target of a disk path is; each path is given as the audit should name
+    the file, relative to the working directory or absolute.
+    """
+
+    input_kind: ClassVar[AuditInputKind] = AuditInputKind.DISK_FILE_SET
+
+    root: Path
+    paths: tuple[Path, ...]
 
 
 @dataclass(frozen=True)
@@ -35,4 +52,4 @@ class InMemoryBytesInput:
     media_type: str
 
 
-AuditInput: TypeAlias = DiskPathInput | InMemoryBytesInput
+AuditInput: TypeAlias = DiskPathInput | DiskFileSetInput | InMemoryBytesInput

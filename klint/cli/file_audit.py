@@ -4,7 +4,7 @@ import asyncio
 import sys
 
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
-from klint.cli.runner import AuditCommand
+from klint.cli.audit_command import AuditCommand
 from klint.cli.shell_invocation import run_command_from_shell
 
 FILE_AUDIT_COMMAND = AuditCommand(
@@ -14,6 +14,7 @@ FILE_AUDIT_COMMAND = AuditCommand(
     target_argument_help="Path to the code file or directory to audit",
     audit_kind_id=FILE_CONTENTS_KIND_ID,
     audited_units_json_key="examined_files",
+    does_offer_diff=True,
 )
 
 

@@ -69,7 +69,8 @@ class CodeSuite(BaseSuite):
         project_structure_extractor: ProjectStructureExtractor,
         rule_loader_provider: ProviderOf[BaseRuleLoader],
     ) -> None:
-        # Both kinds read a file or directory on disk.
+        # Both kinds read a file or directory on disk; the file contents
+        # audit reads chosen files too.
         self._directory_tree_source_factory = DirectoryTreeSourceFactory(
             file_traits_identifier, CODE_IGNORED_NAMES
         )
@@ -84,7 +85,9 @@ class CodeSuite(BaseSuite):
         return [
             AuditKind(
                 kind_id=FILE_CONTENTS_KIND_ID,
-                accepted_input_kinds=frozenset({AuditInputKind.DISK_PATH}),
+                accepted_input_kinds=frozenset(
+                    {AuditInputKind.DISK_PATH, AuditInputKind.DISK_FILE_SET}
+                ),
                 unit_source=UnitSource(
                     self._directory_tree_source_factory, self._file_contents_extractor
                 ),
