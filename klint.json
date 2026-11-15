@@ -1,6 +1,8 @@
 {
   "layers": [
     "klint.cli",
+    "klint.mcp",
+    "klint.composition",
     "klint.app",
     "klint.catalog",
     "klint.infra",
