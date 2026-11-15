@@ -432,7 +432,7 @@ jobs:
    claude mcp add --scope project klint -- klint-mcp
    ~~~
    This writes a `.mcp.json` at the project's root that Claude Code reads when it starts there; commit it. To add the server for every project instead, use `--scope user`.
-4. **Start Claude Code** in the project and check `/mcp` lists `klint` as connected. The agent then calls the tools as it needs them, such as "audit the staged change with klint", and each call shows in the session.
+4. **Start Claude Code** in the project, approve the project's `klint` server when it asks (until then, `claude mcp list` shows it as pending approval), and check `/mcp` lists `klint` as connected. The agent then calls the tools as it needs them, such as "audit the staged change with klint", and each call shows in the session.
 
 The server audits paths inside the directory Claude Code started it in, the project's root, and refuses any other.
 
@@ -460,12 +460,13 @@ A long audit sends progress notifications, one per unit audited. When the judge 
      ~~~
    * With the [pre-commit](https://pre-commit.com) framework, in `.pre-commit-config.yaml`, then `pre-commit install`:
      ~~~yaml
-     - repo: https://github.com/skydiving94/klint
-       rev: main
-       hooks:
-         - id: klint-pre-commit
+     repos:
+       - repo: https://github.com/skydiving94/klint
+         rev: main
+         hooks:
+           - id: klint-pre-commit
      ~~~
-     The hook runs the `klint-pre-commit` on the `PATH`, so the framework installs nothing for it.
+     The hook runs the `klint-pre-commit` on the `PATH`, so the framework installs nothing for it. The framework warns that `main` is a branch, which it does not update after the first install; `pre-commit autoupdate --bleeding-edge` pins it to `main`'s latest commit.
 3. **Commit** the `klint.json` and, with the framework, `.pre-commit-config.yaml`.
 
 ### What the hook does
