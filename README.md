@@ -394,6 +394,37 @@ jobs:
   ~~~
   The Stop prints a `"decision": "block"` with its reason, a `systemMessage` warning, or nothing when the agent may stop; the SessionStart prints nothing. Both always exit 0.
 
+## MCP Server (`klint-mcp`)
+
+`klint-mcp` offers every klint audit to one coding agent as MCP tools, over stdio. The agent runs an audit when it wants to, and reads the findings as `--json` prints them, with the judge's usage. The server expects the judge to be running already and never starts one.
+
+### Setting it up in a Claude Code project
+1. **Install klint** (see [Install](#install)) so that `klint-mcp` is on the `PATH` Claude Code starts with. Otherwise, give the command's full path in step 3, such as `/path/to/klint/.venv/bin/klint-mcp`.
+2. **Choose a served judge** for the project, as for any `klint` command (see [Judges](#judges)), in a `klint.json` at the project's root. For a `kev.serve` server on the default port:
+   ~~~json
+   {"env": {"KLINT_JUDGE_MODE": "remote"}}
+   ~~~
+   Keep a Jev API key in the shell's environment, not in `klint.json`. The server refuses the local mode, which would load the model in its own process on every call.
+3. **Add the server** to the project, from its root:
+   ~~~bash
+   claude mcp add --scope project klint -- klint-mcp
+   ~~~
+   This writes a `.mcp.json` at the project's root that Claude Code reads when it starts there; commit it. To add the server for every project instead, use `--scope user`.
+4. **Start Claude Code** in the project and check `/mcp` lists `klint` as connected. The agent then calls the tools as it needs them, such as "audit the staged change with klint", and each call shows in the session.
+
+The server audits paths inside the directory Claude Code started it in, the project's root, and refuses any other.
+
+### The tools
+| Tool | Arguments | What it returns |
+| :--- | :--- | :--- |
+| `audit_files` | `path`, or `diff` (true) with `diff_units` (`units`, `file`, `all`); `min_confidence`, `all_answers`, `rules_path` | What `klint --json` prints: `examined_files`, `unit_id_to_roll_up_status`, `findings`, `judge_usage`, and `staged_change` with `diff`. |
+| `audit_structure` | `path`; `min_confidence`, `all_answers`, `rules_path` | What `klint-structure --json` prints. |
+| `check_change_summary` | `path` of a change-summary document; `min_confidence`, `all_answers`, `rules_path` | What `klint-change-summary --json` prints. |
+| `list_rules` | `path`; `rules_path` | Each rule an audit of the path would ask, with the units it would be asked about, and the project's exclusions that applied. No judge is asked. |
+| `explain_rule` | `rule_id` | Each pack that defines the rule: its question, unit types, languages, unit tags and the tool that asks it. |
+
+A long audit sends progress notifications, one per unit audited. When the judge cannot be reached, or the audit cannot run, the tool returns an error with the reason and the server keeps serving.
+
 ## Renamed in This Release
 
 These names changed. Each old name still works until the next release and prints a warning naming its replacement.
