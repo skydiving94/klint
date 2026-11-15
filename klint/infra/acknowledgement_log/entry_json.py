@@ -48,6 +48,9 @@ def read_entry_text(text: str) -> AcknowledgementEntry:
     if not isinstance(raw, dict):
         raise ValueError("must be a JSON object")
     entry = _Reader(raw)
+    entry_id = entry.read_string("id")
+    rule_id = entry.read_string("rule_id")
+    file = entry.read_string("file")
     unit = _Reader(entry.read_object("unit"), "unit.")
     finding = _Reader(entry.read_object("finding"), "finding.")
     status = entry.read_string("status")
@@ -59,10 +62,10 @@ def read_entry_text(text: str) -> AcknowledgementEntry:
             f"not {status!r}"
         ) from None
     return AcknowledgementEntry(
-        entry_id=entry.read_string("id"),
-        rule_id=entry.read_string("rule_id"),
+        entry_id=entry_id,
+        rule_id=rule_id,
         unit=FlaggedUnit(
-            file=entry.read_string("file"),
+            file=file,
             kind=unit.read_string("kind"),
             name=unit.read_string("name", may_be_empty=True),
             start_line=unit.read_optional_int("start_line"),

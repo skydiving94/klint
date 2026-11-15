@@ -189,8 +189,7 @@ class AppSettings:
     # Settings built in code keep none unless they ask to, so that only a
     # run from the shell, or the hook, writes to the user's cache folder.
     answer_cache_folder: Path | None = None
-    # The least confidence a failure needs to block a commit; None leaves it
-    # to the judge in use.
+    # The least confidence a failure needs to block a commit; None: the judge's.
     commit_min_confidence: float | None = None
 
     @classmethod

@@ -60,10 +60,8 @@ from klint.cli.change_summary_stop_hook.stop_decision import StopDecision, StopV
 from klint.cli.change_summary_stop_hook.summary_coverage import (
     compare_summaries_with_change,
 )
-from klint.cli.change_summary_stop_hook.unit_failure_listener import (
-    UnitFailureListener,
-)
 from klint.cli.judge_usage_description import describe_judge_usage
+from klint.cli.unit_failure_listener import UnitFailureListener
 from klint.composition import create_built_in_injector
 from klint.core.models.audits import DiskPathInput
 
@@ -179,7 +177,9 @@ class ChangeSummaryStopHook:
             f"Judge usage: {describe_judge_usage(outcome.report.get_judge_usage())}"
         )
         failures = outcome.report.select_findings(min_confidence=min_confidence)
-        unchecked = listener.describe_failures(len(outcome.selected_unit_ids))
+        unchecked = listener.describe_failures(
+            len(outcome.selected_unit_ids), "summaries"
+        )
         if failures:
             reason = describe_flagged_summaries(failures)
             return StopDecision.block(

@@ -48,6 +48,10 @@ klint-change-summary = "klint.cli:run_change_summary_audit"
 klint-change-summary-stop-hook = "klint.cli:run_change_summary_stop_hook"
 # The MCP server that offers every audit to one agent over stdio.
 klint-mcp = "klint.mcp:run_mcp_server"
+# The git pre-commit hook that gates a commit on the staged change, and the
+# command that acknowledges one of its findings as wrong.
+klint-pre-commit = "klint.cli:run_pre_commit_gate"
+klint-ack = "klint.cli:run_acknowledge"
 
 [tool.setuptools.packages.find]
 where = ["."]
