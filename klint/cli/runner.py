@@ -5,7 +5,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from klint.app.audit_json import convert_audit_outcome_to_dict
 from klint.app.pipeline import AuditPipeline, AuditRequest
+from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
 from klint.cli.audit_command import AuditCommand
 from klint.cli.command_arguments import CommandArguments, parse_command_arguments
 from klint.cli.console import (
@@ -20,17 +22,8 @@ from klint.cli.formatter import (
     format_applied_rule_exclusions,
     format_audit_report,
 )
-from klint.cli.judge_usage_description import (
-    convert_answer_cache_to_dict,
-    convert_judge_usage_to_dict,
-    print_judge_usage_lines,
-)
-from klint.cli.staged_diff import (
-    StagedChangeScope,
-    convert_staged_change_to_dict,
-    describe_staged_change,
-    read_staged_change_scope,
-)
+from klint.cli.judge_usage_description import print_judge_usage_lines
+from klint.cli.staged_diff import describe_staged_change
 from klint.core.interfaces import BaseAuditProgressListener
 from klint.core.models.audits import AuditInput, DiskPathInput
 from klint.infra.rule_loader import JsonFileRuleSource
@@ -141,35 +134,9 @@ class AuditCommandApp:
             min_confidence=arguments.min_confidence,
         )
         if arguments.should_print_json:
-            json_report: dict[str, object] = {
-                command.audited_units_json_key: report.list_audited_unit_ids(),
-                "unit_id_to_roll_up_status": {
-                    unit_id: status.value
-                    for unit_id, status in (
-                        report.map_unit_id_to_roll_up_status().items()
-                    )
-                },
-                "findings": [finding.convert_to_dict() for finding in findings],
-                "judge_usage": convert_judge_usage_to_dict(report.get_judge_usage()),
-            }
-            # Present only when the answer cache took part, so a run without
-            # one gets the same JSON as before.
-            if report.get_judge_usage().did_cache_take_part():
-                json_report["answer_cache"] = convert_answer_cache_to_dict(
-                    report.get_judge_usage()
-                )
-            # Present only when the project's klint.json turned a rule off, so
-            # a project without exclusions gets the same JSON as before.
-            if outcome.applied_rule_exclusions:
-                json_report["applied_rule_exclusions"] = [
-                    applied.convert_to_dict()
-                    for applied in outcome.applied_rule_exclusions
-                ]
-            # Present only with --diff.
-            if staged is not None:
-                json_report["staged_change"] = convert_staged_change_to_dict(
-                    staged, outcome.extracted_unit_count, outcome.selected_unit_count
-                )
+            json_report = convert_audit_outcome_to_dict(
+                outcome, findings, command.audited_units_json_key, staged
+            )
             print(json.dumps(json_report, indent=2))
         else:
             print(
