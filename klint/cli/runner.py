@@ -21,7 +21,6 @@ from klint.cli.formatter import (
 )
 from klint.cli.judge_usage_description import print_judge_usage_lines
 from klint.cli.pre_commit import format_acknowledged_findings
-from klint.cli.staged_diff import describe_staged_change
 from klint.core.interfaces import BaseAuditProgressListener
 from klint.infra.rule_loader import JsonFileRuleSource
 
@@ -142,7 +141,11 @@ def _print_report(
     )
     if arguments.should_print_json:
         json_report = convert_audit_outcome_to_dict(
-            outcome, findings, command.audited_units_json_key, chosen.staged
+            outcome,
+            findings,
+            command.audited_units_json_key,
+            chosen.staged,
+            chosen.diff_change,
         )
         print(json.dumps(json_report, indent=2))
     else:
@@ -162,9 +165,9 @@ def _print_report(
     # The report is flushed first, so that the lines on stderr come after
     # it where both streams go to one place, such as a CI log.
     sys.stdout.flush()
-    if chosen.staged is not None:
-        description = describe_staged_change(
-            chosen.staged, outcome.extracted_unit_count, outcome.selected_unit_count
-        )
-        print(f"[{command.name}] Staged change: {description}", file=sys.stderr)
+    change_description = chosen.describe_change(
+        outcome.extracted_unit_count, outcome.selected_unit_count
+    )
+    if change_description is not None:
+        print(f"[{command.name}] {change_description}", file=sys.stderr)
     print_judge_usage_lines(command.name, report.get_judge_usage())
