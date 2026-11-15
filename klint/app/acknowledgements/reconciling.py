@@ -12,13 +12,13 @@ from klint.app.acknowledgements.finding_identity import (
     relate_path_to_repository,
 )
 from klint.app.acknowledgements.matching import AcknowledgedFinding
-from klint.core.models.acknowledgements import (
+from klint.core.models.reports import (
     AcknowledgementEntry,
     AcknowledgementStatus,
+    AuditFinding,
     FlaggedFinding,
     FlaggedUnit,
 )
-from klint.core.models.reports import AuditFinding
 from klint.core.models.units import AuditableUnit
 from klint.infra.acknowledgement_log import FileAcknowledgementLog
 

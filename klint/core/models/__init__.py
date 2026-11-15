@@ -5,7 +5,6 @@ from it.
 """
 
 from klint.core.models import (
-    acknowledgements,
     audits,
     judging,
     reports,
@@ -15,7 +14,6 @@ from klint.core.models import (
 )
 
 __all__ = [
-    "acknowledgements",
     "audits",
     "judging",
     "reports",

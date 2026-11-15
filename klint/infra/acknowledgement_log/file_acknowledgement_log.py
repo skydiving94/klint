@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from klint.core.models.acknowledgements import AcknowledgementEntry
+from klint.core.models.reports import AcknowledgementEntry
 from klint.infra.acknowledgement_log.entry_json import (
     read_entry_text,
     write_entry_text,

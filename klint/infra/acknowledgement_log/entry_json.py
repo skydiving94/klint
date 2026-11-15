@@ -2,7 +2,7 @@
 
 import json
 
-from klint.core.models.acknowledgements import (
+from klint.core.models.reports import (
     AcknowledgementEntry,
     AcknowledgementStatus,
     FlaggedFinding,

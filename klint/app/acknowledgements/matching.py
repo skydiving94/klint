@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from klint.app.acknowledgements.finding_identity import identify_finding
-from klint.core.models.acknowledgements import AcknowledgementEntry
-from klint.core.models.reports import AuditFinding, JsonValue
+from klint.core.models.reports import AcknowledgementEntry, AuditFinding, JsonValue
 from klint.infra.acknowledgement_log import FileAcknowledgementLog
 
 

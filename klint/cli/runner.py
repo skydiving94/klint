@@ -9,7 +9,6 @@ from klint.app.acknowledgements import find_acknowledgement_scope
 from klint.app.audit_json import convert_audit_outcome_to_dict
 from klint.app.pipeline import AuditPipeline, AuditRequest
 from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
-from klint.cli.acknowledged_findings import format_acknowledged_findings
 from klint.cli.audit_command import AuditCommand
 from klint.cli.command_arguments import CommandArguments, parse_command_arguments
 from klint.cli.console import (
@@ -25,6 +24,7 @@ from klint.cli.formatter import (
     format_audit_report,
 )
 from klint.cli.judge_usage_description import print_judge_usage_lines
+from klint.cli.pre_commit import format_acknowledged_findings
 from klint.cli.staged_diff import describe_staged_change
 from klint.core.interfaces import BaseAuditProgressListener
 from klint.core.models.audits import AuditInput, DiskPathInput

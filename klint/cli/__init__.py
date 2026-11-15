@@ -1,6 +1,5 @@
 """klint's commands: one entry point per console script, and what they share."""
 
-from klint.cli.acknowledge import acknowledge_entry, run_acknowledge
 from klint.cli.audit_command import AuditCommand
 from klint.cli.change_summary_audit import (
     CHANGE_SUMMARY_COMMAND,
@@ -14,7 +13,13 @@ from klint.cli.command_arguments import parse_command_arguments
 from klint.cli.exit_code import ExitCode
 from klint.cli.file_audit import FILE_AUDIT_COMMAND, run_file_audit
 from klint.cli.klint_project_alias import run_klint_project_alias
-from klint.cli.pre_commit import PRE_COMMIT_COMMAND, PreCommitGate, run_pre_commit_gate
+from klint.cli.pre_commit import (
+    PRE_COMMIT_COMMAND,
+    PreCommitGate,
+    acknowledge_entry,
+    run_acknowledge,
+    run_pre_commit_gate,
+)
 from klint.cli.runner import AuditCommandApp
 from klint.cli.shell_invocation import run_command_from_shell
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND, run_structure_audit

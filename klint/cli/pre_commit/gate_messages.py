@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 from klint.app.acknowledgements import ACKNOWLEDGEMENTS_FOLDER, LogReconciliation
-from klint.core.models.acknowledgements import AcknowledgementEntry
+from klint.core.models.reports import AcknowledgementEntry
 
 ACKNOWLEDGE_COMMAND_NAME = "klint-ack"
 
