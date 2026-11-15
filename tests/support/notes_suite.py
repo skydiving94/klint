@@ -25,7 +25,7 @@ from klint.core.interfaces import (
 from klint.core.models.audits import AuditInputKind, RenderInput
 from klint.core.models.judging import AnswerChoice, AnswerScale, QuestionType
 from klint.core.models.reports import JsonValue
-from klint.core.models.rules import AuditRule
+from klint.core.models.rules import AuditRule, RulePackSpec
 from klint.core.models.scanning import IgnoredNames, ScannedTarget
 from klint.core.models.units import AuditableUnit, UnitTraits
 
@@ -109,6 +109,9 @@ class FixedRuleLoader(BaseRuleLoader):
     ) -> list[AuditRule]:
         del traits, custom_rule_source
         return list(self._rules)
+
+    def read_rule_packs(self) -> list[RulePackSpec]:
+        return []
 
 
 class NotesSuite(BaseSuite):

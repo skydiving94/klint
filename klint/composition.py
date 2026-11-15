@@ -1,8 +1,10 @@
-"""Builds the injector the commands run with.
+"""Composes the built-in suites with the app: the injector every front end runs.
 
-The commands audit with the built-in suites, and each command's rule
-replacement setting is the one for its kind of audit. Files, classes and
-functions are cut at the budget of the judge in use.
+A command, the Stop hook or an MCP tool audits with the built-in suites, and
+the rule replacement setting of each kind of audit is the one its command
+takes. Files, classes and functions are cut at the budget of the judge in
+use. This sits between the front ends and klint.app, which the suites
+contract keeps from importing a named suite.
 """
 
 from collections.abc import Mapping
@@ -16,12 +18,12 @@ from klint.catalog import BuiltInSuitesModule
 from klint.catalog.code import FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID
 
 
-def create_command_injector(
+def create_built_in_injector(
     settings: AppSettings,
     *binding_overrides: BindingOverride,
     code_character_budget: int | None = None,
 ) -> Injector:
-    """Return the injector of a command for ``settings``.
+    """Return the injector of a front end for ``settings``.
 
     Binding overrides add or replace bindings, as for create_injector.
     File, class and function units are cut at ``code_character_budget``
@@ -43,7 +45,7 @@ def create_command_injector(
 
 
 def _map_kind_id_to_rule_replacement(settings: AppSettings) -> Mapping[str, Path]:
-    """Return the rule replacement each command's kind of audit is set to."""
+    """Return the rule replacement each kind of audit is set to."""
     kind_id_to_rule_replacement = {
         FILE_CONTENTS_KIND_ID: settings.file_rule_replacement,
         PROJECT_STRUCTURE_KIND_ID: settings.project_rule_replacement,

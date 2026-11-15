@@ -34,14 +34,6 @@ def describe_judge_usage(usage: JudgeUsage) -> str:
     return f"{requests}, {usage.input_token_count:,} input tokens"
 
 
-def convert_judge_usage_to_dict(usage: JudgeUsage) -> dict[str, int | None]:
-    """Return the judge's usage as --json writes it.
-
-    input_tokens is null when the judge did not report them.
-    """
-    return {"requests": usage.request_count, "input_tokens": usage.input_token_count}
-
-
 def describe_answer_cache(usage: JudgeUsage) -> str:
     """Say how many questions the answer cache answered and how many it passed on."""
     cached_noun = "question" if usage.cached_question_count == 1 else "questions"
@@ -49,11 +41,3 @@ def describe_answer_cache(usage: JudgeUsage) -> str:
         f"{usage.cached_question_count:,} {cached_noun} answered from the cache, "
         f"{usage.asked_question_count:,} asked"
     )
-
-
-def convert_answer_cache_to_dict(usage: JudgeUsage) -> dict[str, int]:
-    """Return the answer cache's counts as --json writes them."""
-    return {
-        "questions_from_cache": usage.cached_question_count,
-        "questions_asked": usage.asked_question_count,
-    }

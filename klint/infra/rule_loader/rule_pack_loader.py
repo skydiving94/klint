@@ -65,6 +65,17 @@ class RulePackLoader(BaseRuleLoader):
                 self._load_rules_sync, traits, custom_rule_source
             )
 
+    def read_rule_packs(self) -> list[RulePackSpec]:
+        """Return the packs of every source, each once, in the order they merge."""
+        packs: dict[RulePackSpec, None] = {}
+        for source in (
+            *self._rule_sources,
+            *self._fallback_rule_sources,
+            *self._project_rule_sources,
+        ):
+            packs.update(dict.fromkeys(self._read_packs(source)))
+        return list(packs)
+
     def _load_rules_sync(
         self, traits: UnitTraits, custom_rule_source: BaseRuleSource | None
     ) -> list[AuditRule]:

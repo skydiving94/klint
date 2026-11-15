@@ -64,7 +64,7 @@ from klint.cli.change_summary_stop_hook.unit_failure_listener import (
     UnitFailureListener,
 )
 from klint.cli.judge_usage_description import describe_judge_usage
-from klint.cli.wiring import create_command_injector
+from klint.composition import create_built_in_injector
 from klint.core.models.audits import DiskPathInput
 
 # The most stops in a row the hook blocks in one session; it lets the next
@@ -152,7 +152,7 @@ class ChangeSummaryStopHook:
     async def _audit_summaries(self, min_confidence: float) -> StopDecision:
         try:
             settings = await asyncio.to_thread(AppSettings.from_env, SUMMARIES_PATH)
-            injector = create_command_injector(settings, *self._binding_overrides)
+            injector = create_built_in_injector(settings, *self._binding_overrides)
             audit_pipeline = injector.get(AuditPipeline)
         except (OSError, ValueError) as error:
             return StopDecision.allow(describe_unverified(str(error), None))

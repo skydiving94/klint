@@ -32,3 +32,7 @@ class AuditKindRegistry:
                 f"{sorted(self._kind_id_to_audit_kind)}"
             )
         return audit_kind
+
+    def list_audit_kinds(self) -> list[AuditKind]:
+        """Return every kind offered, in the order the suites offer them."""
+        return list(self._kind_id_to_audit_kind.values())
