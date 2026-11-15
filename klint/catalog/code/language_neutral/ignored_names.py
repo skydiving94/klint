@@ -6,6 +6,8 @@ CODE_IGNORED_NAMES = IgnoredNames(
     directory_names=frozenset(
         {
             ".git",
+            # klint's own folder: the acknowledgement log and the hooks' files.
+            ".klint",
             "__pycache__",
             ".venv",
             "venv",

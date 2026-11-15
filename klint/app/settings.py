@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import assert_never
 
 from klint.app.answer_cache_folder import read_answer_cache_folder
+from klint.app.commit_threshold import read_commit_min_confidence
 from klint.app.deprecated_setting_names import (
     DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
     translate_deprecated_setting_names,
@@ -135,6 +136,13 @@ def _read_answer_cache_folder(setting: _SettingValue | None) -> Path | None:
     return read_answer_cache_folder(setting.value, setting.source.base_folder)
 
 
+def _read_commit_min_confidence(setting: _SettingValue | None) -> float | None:
+    """Return the commit threshold ``setting`` gives; None when unset."""
+    if setting is None:
+        return None
+    return read_commit_min_confidence(setting.value, setting.source.description)
+
+
 def _resolve_setting_path(setting: _SettingValue | None) -> Path | None:
     """Return the path ``setting`` names; a relative one is taken from its source."""
     if setting is None:
@@ -181,6 +189,8 @@ class AppSettings:
     # Settings built in code keep none unless they ask to, so that only a
     # run from the shell, or the hook, writes to the user's cache folder.
     answer_cache_folder: Path | None = None
+    # The least confidence a failure needs to block a commit; None: the judge's.
+    commit_min_confidence: float | None = None
 
     @classmethod
     def from_env(
@@ -263,6 +273,9 @@ class AppSettings:
             rule_exclusions=() if config is None else config.rule_exclusions,
             answer_cache_folder=_read_answer_cache_folder(
                 _find_setting("KLINT_ANSWER_CACHE", sources)
+            ),
+            commit_min_confidence=_read_commit_min_confidence(
+                _find_setting("KLINT_COMMIT_MIN_CONFIDENCE", sources)
             ),
         )
 

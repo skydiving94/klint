@@ -45,8 +45,8 @@ class ChangedUnitSelector(BaseUnitSelector):
 
     path_to_changed_spans gives, for each changed file by its resolved path,
     the spans of its lines the change touches. A unit is matched to its file
-    by the path of its location. selected_units holds what the last
-    selection kept.
+    by the path of its location. offered_units holds the units the last
+    selection was given, and selected_units what it kept.
     """
 
     def __init__(
@@ -58,9 +58,11 @@ class ChangedUnitSelector(BaseUnitSelector):
             path: tuple(spans) for path, spans in path_to_changed_spans.items()
         }
         self._diff_units = diff_units
+        self.offered_units: list[AuditableUnit] = []
         self.selected_units: list[AuditableUnit] = []
 
     def select_units(self, units: Sequence[AuditableUnit]) -> list[AuditableUnit]:
+        self.offered_units = list(units)
         self.selected_units = [unit for unit in units if self._does_keep(unit)]
         return list(self.selected_units)
 

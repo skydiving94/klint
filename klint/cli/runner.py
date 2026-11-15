@@ -5,6 +5,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from klint.app.acknowledgements import find_acknowledgement_scope
 from klint.app.audit_json import convert_audit_outcome_to_dict
 from klint.app.pipeline import AuditPipeline, AuditRequest
 from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
@@ -23,6 +24,7 @@ from klint.cli.formatter import (
     format_audit_report,
 )
 from klint.cli.judge_usage_description import print_judge_usage_lines
+from klint.cli.pre_commit import format_acknowledged_findings
 from klint.cli.staged_diff import describe_staged_change
 from klint.core.interfaces import BaseAuditProgressListener
 from klint.core.models.audits import AuditInput, DiskPathInput
@@ -89,8 +91,11 @@ class AuditCommandApp:
                     "working tree, and the changed lines from the index",
                 )
             audit_input = staged.scope.audit_input
+            log_directory = Path.cwd()
         elif arguments.target is not None:
             audit_input = DiskPathInput(path=arguments.target)
+            target = arguments.target
+            log_directory = target.parent if target.is_file() else target
         else:
             raise ValueError("A path to audit, or --diff, is required")
         request = AuditRequest(
@@ -105,6 +110,10 @@ class AuditCommandApp:
             ),
             min_confidence=arguments.min_confidence,
             unit_selector=None if staged is None else staged.scope.unit_selector,
+            # The repository's acknowledgement log, when the target is in one.
+            acknowledgements=await find_acknowledgement_scope(
+                log_directory, Path.cwd()
+            ),
             scan_progress_listener=TerminalScanProgressListener(
                 enabled=should_show_progress
             ),
@@ -150,6 +159,8 @@ class AuditCommandApp:
             )
             if outcome.applied_rule_exclusions:
                 print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
+            if outcome.acknowledged_findings:
+                print(format_acknowledged_findings(outcome.acknowledged_findings))
         # The report is flushed first, so that the lines on stderr come after
         # it where both streams go to one place, such as a CI log.
         sys.stdout.flush()
