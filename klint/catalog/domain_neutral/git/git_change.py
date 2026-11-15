@@ -81,7 +81,9 @@ class GitFileChange:
     path is the path after the change, or before it for a deleted file.
     old_path is the path before a rename, and None for any other change. A
     binary file has no hunks, nor has a rename without edits or a file whose
-    mode alone changed.
+    mode alone changed. new_blob_hash is the hash, as git names the file's
+    content, that the diff's index line gives the file after the change; None
+    when the diff has no index line for it. It may be abbreviated.
     """
 
     path: str
@@ -89,6 +91,7 @@ class GitFileChange:
     hunks: tuple[GitHunk, ...] = ()
     old_path: str | None = None
     is_binary: bool = False
+    new_blob_hash: str | None = None
 
 
 @dataclass(frozen=True)
