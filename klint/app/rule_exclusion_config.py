@@ -4,7 +4,11 @@ import warnings
 from pathlib import Path
 
 from klint.core import KlintWarning
-from klint.core.models.rules import RuleExclusion
+from klint.core.models.rules import (
+    UNIT_SELECTOR_SEPARATOR,
+    RuleExclusion,
+    RuleExclusionSelector,
+)
 
 # The key of a klint.json that turns rules off for some paths.
 RULE_EXCLUSIONS_KEY = "rule_exclusions"
@@ -17,7 +21,8 @@ def load_rule_exclusions(
     """Return the "rule_exclusions" entries of the config file, in file order.
 
     Each entry is an object with exactly a "rule_id", "paths", a list of
-    globs matched from the folder of the config file, and a "reason". A
+    globs matched from the folder of the config file, each of which may
+    name a class or function after "::", and a "reason". A
     value that is not a list is ignored and an entry that cannot be used is
     left out; each is reported as a KlintWarning.
     """
@@ -58,6 +63,15 @@ def _read_rule_exclusion(
         and all(isinstance(glob, str) and glob for glob in paths)
     ):
         _warn(f"{description} is left out: its 'paths' must be a list of globs")
+        return None
+    incomplete_selectors = [
+        glob for glob in paths if not RuleExclusionSelector.parse(glob).is_complete()
+    ]
+    if incomplete_selectors:
+        _warn(
+            f"{description} is left out: {incomplete_selectors[0]!r} must name a "
+            f"path before '{UNIT_SELECTOR_SEPARATOR}' and a unit after it"
+        )
         return None
     if not isinstance(reason, str) or not reason.strip():
         _warn(f"{description} is left out: its 'reason' must say why")

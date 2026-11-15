@@ -1,7 +1,12 @@
 """The rules a judge is asked, as packs declare them and as one run selects them."""
 
 from klint.core.models.rules.rule import DEFAULT_UNIT_TYPES, AuditRule
-from klint.core.models.rules.rule_exclusion import AppliedRuleExclusion, RuleExclusion
+from klint.core.models.rules.rule_exclusion import (
+    UNIT_SELECTOR_SEPARATOR,
+    AppliedRuleExclusion,
+    RuleExclusion,
+    RuleExclusionSelector,
+)
 from klint.core.models.rules.rule_pack import (
     LAYERS_PLACEHOLDER,
     PackScope,
@@ -15,10 +20,12 @@ from klint.core.models.rules.rule_set import RuleSet
 __all__ = [
     "DEFAULT_UNIT_TYPES",
     "LAYERS_PLACEHOLDER",
+    "UNIT_SELECTOR_SEPARATOR",
     "AppliedRuleExclusion",
     "AuditRule",
     "PackScope",
     "RuleExclusion",
+    "RuleExclusionSelector",
     "RulePackSpec",
     "RuleProblem",
     "RuleProblemSeverity",
