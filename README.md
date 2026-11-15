@@ -93,6 +93,21 @@ klint examples/ --json
 klint-structure examples/mock_bad_project/ --min-confidence 0.25 --json
 ~~~
 
+### Auditing the staged change (`--diff`)
+`klint --diff` audits only what the staged change touches, for a quick check before a commit. It takes no path: the repository is that of the current directory, and the change is the index against `HEAD`, as `git diff --cached` shows it.
+
+~~~bash
+git add -A
+klint --diff --min-confidence 0.5
+klint --diff --diff-units all --json
+~~~
+
+* **The units**: `--diff-units` chooses which units of each changed file are judged. `units` (the default) takes the file unit, plus every function and class whose lines overlap a changed line, so a changed method brings its class along. `file` takes the file units only; `all` takes every unit of the changed files. A new file counts as changed on every line, a deleted file is skipped and a renamed file is audited under its new path. A file in a language klint does not cut into units, such as Go, gets its file unit.
+* **What it says**: the report is a full audit's, limited to those units, and a line on stderr counts them, for example `[klint] Staged change: 2 files, 3 of 9 units selected (--diff-units units); 1 deleted file skipped`. With `--json`, a `staged_change` object adds the `files`, the `deleted_files`, the `unit_count` and `selected_unit_count`, and the `selected_units` with each one's `unit_id`, `unit_type`, `location` and `context`. Unit IDs are relative to the current directory, as for a path given on the command line.
+* **Nothing staged**: `[klint] No staged change to audit`, exit 0. Outside a git repository: exit 2.
+* **With the answer cache**, a unit whose code has not changed costs no request, so a second `klint --diff` on the same change is free.
+* **Unstaged edits**: the changed lines come from the index, and the code of each unit from the working tree. When a staged file also has unstaged edits, klint says so with a warning; stage the whole file for an exact result.
+
 ### Change-summary documents
 `klint-change-summary` takes a JSON document in one of two forms. Both hold a summary for each hunk, each file, each package you choose to summarize, and the whole commit.
 
