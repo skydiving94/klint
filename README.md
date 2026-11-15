@@ -425,6 +425,41 @@ The server audits paths inside the directory Claude Code started it in, the proj
 
 A long audit sends progress notifications, one per unit audited. When the judge cannot be reached, or the audit cannot run, the tool returns an error with the reason and the server keeps serving.
 
+## Pre-commit gate
+
+`klint-pre-commit` is a git pre-commit hook: it audits the staged change as `klint --diff` does and blocks the commit while a finding is neither fixed nor acknowledged. Findings and acknowledgements are kept in the repository, in `.klint/acknowledgements/`, one JSON file per entry, so that a false positive is recorded once and reviewed with the code.
+
+### Setting it up
+1. **Install klint** (see [Install](#install)) so that `klint-pre-commit` and `klint-ack` are on the `PATH`, and **choose the judge** as for any `klint` command (see [Judges](#judges)), for example with a `klint.json` at the project's root: `{"env": {"KLINT_JUDGE_MODE": "remote"}}` for a `kev.serve` server on the default port.
+2. **Turn the hook on**, either way:
+   * As a plain git hook:
+     ~~~bash
+     printf '#!/bin/sh\nexec klint-pre-commit\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+     ~~~
+   * With the [pre-commit](https://pre-commit.com) framework, in `.pre-commit-config.yaml`, then `pre-commit install`:
+     ~~~yaml
+     - repo: https://github.com/skydiving94/klint
+       rev: main
+       hooks:
+         - id: klint-pre-commit
+     ~~~
+     The hook runs the `klint-pre-commit` on the `PATH`, so the framework installs nothing for it.
+3. **Commit** the `klint.json` and, with the framework, `.pre-commit-config.yaml`.
+
+### What the hook does
+| When you commit | The hook |
+| :--- | :--- |
+| Nothing is staged, or no finding reaches the threshold | Lets the commit through. |
+| A finding reaches the threshold | Blocks: lists each finding with its ID and the `klint-ack` command for it, logs it as `open` in `.klint/acknowledgements/` and stages the log. |
+| A finding matches an `acknowledged` entry: same rule, file, unit and code | Lets the commit through, saying how many findings were acknowledged. |
+| An open entry's finding is gone, because the code was fixed or the unit removed | Removes the entry and stages the removal. |
+| The judge is down, klint cannot run, or an entry file cannot be read | Blocks, saying why. `git commit --no-verify` skips the check. |
+
+* **Threshold**: a failure blocks from the confidence of the judge in use, 0.8 for Jev and 0.5 for Kev. `KLINT_COMMIT_MIN_CONFIDENCE`, in the environment or the `"env"` block of `klint.json`, sets the project's own; `klint-pre-commit --min-confidence 0.7` wins over both. `--diff-units` chooses the units as for [`--diff`](#auditing-the-staged-change---diff).
+* **Acknowledging a finding that is wrong**: `klint-ack <id> --note "<why it is wrong>"`, with the ID the hook printed. The note is required and recorded. The entry is staged with the commit. The finding stays acknowledged while the unit's code hashes the same; once the code changes, the judge's finding on it is a new entry, and the old one stays as history.
+* **The log**: each entry records the rule, the file, the unit's kind, name and lines, a hash of the unit's code, the finding and its confidence, the judge's model version, when it was first flagged, its status, and, once acknowledged, when and the note. klint writes it: the hook adds and removes entries for the staged change only, and `klint-ack` acknowledges. The same staged change and the same answers give the same entries, apart from the timestamps. Every `klint` audit of the repository leaves out the findings an acknowledged entry covers and lists them, as `applied_acknowledgements` in `--json`; a `rule_exclusions` entry in `klint.json` turns a rule off for some paths whatever the code, while an acknowledgement covers one finding on one version of the code.
+* **A commit made with `--no-verify`** can leave open entries behind; the next gated commit that stages those files brings them up to date.
+
 ## Renamed in This Release
 
 These names changed. Each old name still works until the next release and prints a warning naming its replacement.
