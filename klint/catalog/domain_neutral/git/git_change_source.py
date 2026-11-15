@@ -1,14 +1,12 @@
-"""Reads a change from a git repository: one commit, or the change since a commit."""
+"""Reads a change from a git repository: a commit, what follows one, or the index."""
 
 import asyncio
-import os
 import shutil
 import tempfile
-from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 
 from klint.catalog.domain_neutral.git.git_change import GitChange
+from klint.catalog.domain_neutral.git.git_command import run_git, run_git_or_raise
 from klint.catalog.domain_neutral.git.git_diff_parser import parse_git_diff
 from klint.core.interfaces import (
     BaseAuditSource,
@@ -35,36 +33,35 @@ _DIFF_ARGUMENTS = (
 )
 
 
-@dataclass(frozen=True)
-class _GitOutput:
-    """What one git command gave back: its exit status and what it printed."""
-
-    return_code: int
-    stdout: str
-    stderr: str
-
-
 class GitChangeSource(BaseAuditSource[GitChange]):
     """Reads the change of the repository a directory is in.
 
     With a commit, the change is that commit, against its first parent. With
     a base, it is everything since that commit, committed or not, up to the
-    working tree. With neither, it is the uncommitted change against HEAD.
-    The last two take the working tree staged or not, untracked files
-    included and ignored files left out. The repository itself is left as
-    it is.
+    working tree. With is_staged, it is the staged change: the index against
+    HEAD, whatever the working tree holds. With none of them, it is the
+    uncommitted change against HEAD. The last one and the base take the
+    working tree staged or not, untracked files included and ignored files
+    left out. The repository itself is left as it is.
     """
 
     def __init__(
-        self, directory: Path, commit: str | None = None, base: str | None = None
+        self,
+        directory: Path,
+        commit: str | None = None,
+        base: str | None = None,
+        *,
+        is_staged: bool = False,
     ) -> None:
-        if commit is not None and base is not None:
+        if sum([commit is not None, base is not None, is_staged]) > 1:
             raise ValueError(
-                "A git change is read from a commit or since a base, not both"
+                "A git change is read from a commit, since a base or from the "
+                "index: one of them"
             )
         self._directory = directory
         self._commit = commit
         self._base = base
+        self._is_staged = is_staged
         self._scanned_file_count = 0
 
     async def read_input(self) -> GitChange:
@@ -74,7 +71,9 @@ class GitChangeSource(BaseAuditSource[GitChange]):
         git repository, or the commit or base is not known.
         """
         repository_path = await self._find_repository_path()
-        if self._commit is None:
+        if self._is_staged:
+            diff_command, diff_text = await _diff_index(repository_path)
+        elif self._commit is None:
             diff_command, diff_text = await _diff_working_tree(
                 repository_path, self._base
             )
@@ -90,8 +89,20 @@ class GitChangeSource(BaseAuditSource[GitChange]):
         """Return the number of changed files read."""
         return self._scanned_file_count
 
+    async def list_paths_with_unstaged_edits(self) -> list[str]:
+        """Return the path of each tracked file edited in the working tree, not staged.
+
+        The paths are relative to the repository's top directory. Raises
+        ValueError as read_input does.
+        """
+        repository_path = await self._find_repository_path()
+        output = await run_git_or_raise(
+            ["diff", "--name-only", "-z", "--no-renames"], repository_path
+        )
+        return [path for path in output.split("\0") if path]
+
     async def _find_repository_path(self) -> Path:
-        output = await _run_git(["rev-parse", "--show-toplevel"], self._directory)
+        output = await run_git(["rev-parse", "--show-toplevel"], self._directory)
         if output.return_code != 0:
             raise ValueError(
                 f"'{self._directory}' is not in a git repository: "
@@ -105,12 +116,20 @@ class GitChangeSourceFactory(BaseAuditSourceFactory[GitChange]):
 
     commit names the commit to read, as git names one, such as "HEAD" or a
     hash. base names the commit the change starts from, up to the working
-    tree. With neither, the uncommitted change is read.
+    tree. is_staged asks for the staged change. With none of them, the
+    uncommitted change is read.
     """
 
-    def __init__(self, commit: str | None = None, base: str | None = None) -> None:
+    def __init__(
+        self,
+        commit: str | None = None,
+        base: str | None = None,
+        *,
+        is_staged: bool = False,
+    ) -> None:
         self._commit = commit
         self._base = base
+        self._is_staged = is_staged
 
     def create_source(
         self,
@@ -124,7 +143,9 @@ class GitChangeSourceFactory(BaseAuditSourceFactory[GitChange]):
         del scan_progress_listener
         if not isinstance(audit_input, DiskPathInput):
             raise ValueError("A git change is read from a directory on disk")
-        return GitChangeSource(audit_input.path, self._commit, self._base)
+        return GitChangeSource(
+            audit_input.path, self._commit, self._base, is_staged=self._is_staged
+        )
 
 
 async def _diff_commit(repository_path: Path, commit: str) -> tuple[str, str]:
@@ -134,11 +155,24 @@ async def _diff_commit(repository_path: Path, commit: str) -> tuple[str, str]:
         raise ValueError(f"The repository '{repository_path}' has no commit '{commit}'")
     parent_hash = await _resolve_commit(repository_path, f"{commit_hash}^1^{{commit}}")
     base = parent_hash or await _find_empty_tree(repository_path)
-    diff_text = await _run_git_or_raise(
+    diff_text = await run_git_or_raise(
         [*_DIFF_ARGUMENTS, base, commit_hash], repository_path
     )
     base_name = f"{commit}^" if parent_hash else base
     return f"git diff -U0 {base_name} {commit}", diff_text
+
+
+async def _diff_index(repository_path: Path) -> tuple[str, str]:
+    """Return the command diffing the index with HEAD, and its output.
+
+    A repository with no commit yet is diffed against the empty tree.
+    """
+    head_hash = await _resolve_commit(repository_path, "HEAD^{commit}")
+    base = head_hash or await _find_empty_tree(repository_path)
+    diff_text = await run_git_or_raise(
+        [*_DIFF_ARGUMENTS, "--cached", base], repository_path
+    )
+    return "git diff -U0 --cached", diff_text
 
 
 async def _diff_working_tree(
@@ -164,12 +198,12 @@ async def _diff_working_tree(
     diff_command = f"git diff -U0 {base_name}, untracked files included"
     untracked_paths = await _list_untracked_paths(repository_path)
     if not untracked_paths:
-        diff_text = await _run_git_or_raise([*_DIFF_ARGUMENTS, base], repository_path)
+        diff_text = await run_git_or_raise([*_DIFF_ARGUMENTS, base], repository_path)
         return diff_command, diff_text
     with tempfile.TemporaryDirectory() as temporary_directory:
         index_path = Path(temporary_directory) / "index"
         await _copy_index(repository_path, index_path)
-        await _run_git_or_raise(
+        await run_git_or_raise(
             [
                 "--literal-pathspecs",
                 "add",
@@ -181,7 +215,7 @@ async def _diff_working_tree(
             stdin_text="\0".join(untracked_paths),
             index_path=index_path,
         )
-        diff_text = await _run_git_or_raise(
+        diff_text = await run_git_or_raise(
             [*_DIFF_ARGUMENTS, base], repository_path, index_path=index_path
         )
     return diff_command, diff_text
@@ -189,7 +223,7 @@ async def _diff_working_tree(
 
 async def _resolve_commit(repository_path: Path, revision: str) -> str | None:
     """Return the hash ``revision`` names; None when it names no commit."""
-    output = await _run_git(
+    output = await run_git(
         ["rev-parse", "--verify", "--quiet", "--end-of-options", revision],
         repository_path,
     )
@@ -199,7 +233,7 @@ async def _resolve_commit(repository_path: Path, revision: str) -> str | None:
 async def _find_empty_tree(repository_path: Path) -> str:
     """Return the hash of the empty tree, what a first commit is diffed against."""
     return (
-        await _run_git_or_raise(
+        await run_git_or_raise(
             ["hash-object", "-t", "tree", "--stdin"], repository_path, stdin_text=""
         )
     ).strip()
@@ -207,7 +241,7 @@ async def _find_empty_tree(repository_path: Path) -> str:
 
 async def _list_untracked_paths(repository_path: Path) -> list[str]:
     """Return the path of each untracked file that is not ignored."""
-    output = await _run_git_or_raise(
+    output = await run_git_or_raise(
         ["ls-files", "--others", "--exclude-standard", "-z"], repository_path
     )
     return [path for path in output.split("\0") if path]
@@ -217,7 +251,7 @@ async def _copy_index(repository_path: Path, index_path: Path) -> None:
     """Copy the repository's index, if it has one, to ``index_path``."""
     git_index_path = Path(
         (
-            await _run_git_or_raise(
+            await run_git_or_raise(
                 ["rev-parse", "--path-format=absolute", "--git-path", "index"],
                 repository_path,
             )
@@ -225,59 +259,3 @@ async def _copy_index(repository_path: Path, index_path: Path) -> None:
     )
     if git_index_path.exists():
         await asyncio.to_thread(shutil.copyfile, git_index_path, index_path)
-
-
-async def _run_git_or_raise(
-    arguments: Sequence[str],
-    directory: Path,
-    *,
-    stdin_text: str | None = None,
-    index_path: Path | None = None,
-) -> str:
-    """Return what the git command printed. Raises ValueError when it fails."""
-    output = await _run_git(
-        arguments, directory, stdin_text=stdin_text, index_path=index_path
-    )
-    if output.return_code != 0:
-        raise ValueError(
-            f"git {' '.join(arguments)} failed in '{directory}': "
-            f"{output.stderr.strip()}"
-        )
-    return output.stdout
-
-
-async def _run_git(
-    arguments: Sequence[str],
-    directory: Path,
-    *,
-    stdin_text: str | None = None,
-    index_path: Path | None = None,
-) -> _GitOutput:
-    """Run git with ``arguments`` in ``directory``, on ``index_path`` when given."""
-    environment = None
-    if index_path is not None:
-        environment = {**os.environ, "GIT_INDEX_FILE": str(index_path)}
-    try:
-        process = await asyncio.create_subprocess_exec(
-            "git",
-            *arguments,
-            cwd=directory,
-            env=environment,
-            stdin=asyncio.subprocess.DEVNULL
-            if stdin_text is None
-            else asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-    except FileNotFoundError as error:
-        raise ValueError("git cannot be run: it is not on the PATH") from error
-    except NotADirectoryError as error:
-        raise ValueError(f"'{directory}' is not a directory") from error
-    stdout, stderr = await process.communicate(
-        None if stdin_text is None else stdin_text.encode("utf-8")
-    )
-    return _GitOutput(
-        return_code=process.returncode or 0,
-        stdout=stdout.decode("utf-8", errors="replace"),
-        stderr=stderr.decode("utf-8", errors="replace"),
-    )

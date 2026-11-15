@@ -3,6 +3,7 @@
 from klint.core.models.audits.audit_input import (
     AuditInput,
     AuditInputKind,
+    DiskFileSetInput,
     DiskPathInput,
     InMemoryBytesInput,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "AuditInput",
     "AuditInputKind",
     "AuditOrder",
+    "DiskFileSetInput",
     "DiskPathInput",
     "InMemoryBytesInput",
     "RenderInput",

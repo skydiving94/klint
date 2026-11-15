@@ -1,5 +1,6 @@
 """Scans an audit target once and records the directories and files it holds."""
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from klint.core import warn_about_unreadable_directory
@@ -19,7 +20,8 @@ class TargetScanner:
     are identified from the outside. An entry with an ignored name is left
     out wherever it sits beneath the target. The folders above the target are
     not looked at. A link to a directory is not followed. A directory that
-    cannot be read is left out, with a warning.
+    cannot be read is left out, with a warning. A set of chosen files is
+    scanned as one target too.
     """
 
     def __init__(
@@ -57,6 +59,26 @@ class TargetScanner:
             path=file_path,
             traits=self._file_traits_identifier.identify(file_path, file_path.parent),
         )
+
+    def scan_file_set(self, root: Path, file_paths: Sequence[Path]) -> ScannedTarget:
+        """Return the files of ``file_paths``, beneath ``root``, as one target.
+
+        The traits of each file are identified from its path beneath root.
+        A path that is not a file, such as one deleted since it was listed,
+        is left out, and so is a file an ignored name would keep out of a
+        scan of root. Nothing else beneath root is looked at.
+        """
+        files = tuple(
+            ScannedFile(
+                path=file_path,
+                traits=self._file_traits_identifier.identify(
+                    file_path.resolve(), root.resolve()
+                ),
+            )
+            for file_path in file_paths
+            if file_path.is_file() and not self._is_ignored_path(file_path, root)
+        )
+        return ScannedTarget(path=root, directory=None, files=files)
 
     def scan_directory(
         self,
@@ -127,6 +149,18 @@ class TargetScanner:
         return (
             directory.is_symlink()
             or directory.name in self._ignored_names.directory_names
+        )
+
+    def _is_ignored_path(self, file_path: Path, root: Path) -> bool:
+        """Return True when the file, or a folder over it under ``root``, is ignored."""
+        if self._is_ignored_file(file_path):
+            return True
+        try:
+            parents = file_path.resolve().relative_to(root.resolve()).parents
+        except ValueError:
+            return False
+        return any(
+            parent.name in self._ignored_names.directory_names for parent in parents
         )
 
     def _is_ignored_file(self, file_path: Path) -> bool:

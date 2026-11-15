@@ -11,6 +11,7 @@ from klint.core.interfaces.rule_source import BaseRuleSource
 from klint.core.interfaces.scan_progress_listener import BaseScanProgressListener
 from klint.core.interfaces.source import BaseAuditSource, BaseAuditSourceFactory
 from klint.core.interfaces.suite import BaseSuite
+from klint.core.interfaces.unit_selector import BaseUnitSelector
 
 __all__ = [
     "AuditKind",
@@ -25,5 +26,6 @@ __all__ = [
     "BaseSuite",
     "BaseUnitExtractor",
     "BaseUnitRenderer",
+    "BaseUnitSelector",
     "UnitSource",
 ]

@@ -200,10 +200,14 @@ def test_unknown_kind_of_audit_is_raised_with_the_known_ones(
 
 
 @pytest.mark.parametrize(
-    "audit_kind_id", [FILE_CONTENTS_KIND_ID, PROJECT_STRUCTURE_KIND_ID]
+    ("audit_kind_id", "accepted_input_kinds"),
+    [
+        (FILE_CONTENTS_KIND_ID, "['disk_file_set', 'disk_path']"),
+        (PROJECT_STRUCTURE_KIND_ID, "['disk_path']"),
+    ],
 )
 def test_content_in_memory_is_refused_by_a_kind_that_reads_disk_paths(
-    fake_judge: type[FakeJudge], audit_kind_id: str
+    fake_judge: type[FakeJudge], audit_kind_id: str, accepted_input_kinds: str
 ) -> None:
     judge = fake_judge()
     request = AuditRequest(
@@ -211,10 +215,11 @@ def test_content_in_memory_is_refused_by_a_kind_that_reads_disk_paths(
         audit_kind_id=audit_kind_id,
     )
 
-    with pytest.raises(ValueError, match="takes \\['disk_path'\\] input") as raised:
+    with pytest.raises(ValueError, match=r"takes \[.*'disk_path'\] input") as raised:
         _run_audit(judge, request)
 
     assert str(raised.value) == (
-        f"The '{audit_kind_id}' audit takes ['disk_path'] input, not 'in_memory_bytes'"
+        f"The '{audit_kind_id}' audit takes {accepted_input_kinds} input, "
+        "not 'in_memory_bytes'"
     )
     assert judge.requests == []
