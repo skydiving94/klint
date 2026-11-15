@@ -144,8 +144,9 @@ def create_mcp_server(
     @server.tool(
         description=(
             "Explain one rule: each pack that defines it, with its question, the "
-            "unit types it is asked about, the languages and unit tags it is "
-            "limited to, and the tool that asks it."
+            "unit types it is asked about, and the languages and unit tags it is "
+            "limited to. A later pack's definition replaces an earlier one's for "
+            "the units both are for."
         ),
     )
     async def explain_rule(rule_id: str) -> dict[str, object]:

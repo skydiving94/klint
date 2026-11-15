@@ -421,7 +421,7 @@ The server audits paths inside the directory Claude Code started it in, the proj
 | `audit_structure` | `path`; `min_confidence`, `all_answers`, `rules_path` | What `klint-structure --json` prints. |
 | `check_change_summary` | `path` of a change-summary document; `min_confidence`, `all_answers`, `rules_path` | What `klint-change-summary --json` prints. |
 | `list_rules` | `path`; `rules_path` | Each rule an audit of the path would ask, with the units it would be asked about, and the project's exclusions that applied. No judge is asked. |
-| `explain_rule` | `rule_id` | Each pack that defines the rule: its question, unit types, languages, unit tags and the tool that asks it. |
+| `explain_rule` | `rule_id` | Each pack that defines the rule: its question, unit types, and the languages and unit tags it is limited to. |
 
 A long audit sends progress notifications, one per unit audited. When the judge cannot be reached, or the audit cannot run, the tool returns an error with the reason and the server keeps serving.
 

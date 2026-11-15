@@ -10,18 +10,12 @@ from klint.app.rule_lookup import AskedRule, RuleDefinition, RuleLookup
 from klint.composition import create_built_in_injector
 from klint.core.models.audits import DiskPathInput
 from klint.infra.rule_loader import JsonFileRuleSource
-from klint.mcp.audit_tool import (
-    CHANGE_SUMMARY_TOOL,
-    FILE_AUDIT_TOOL,
-    STRUCTURE_AUDIT_TOOL,
-    AuditTool,
-)
+from klint.mcp.audit_tool import FILE_AUDIT_TOOL, STRUCTURE_AUDIT_TOOL, AuditTool
 from klint.mcp.working_directory import resolve_path_inside
 
 # The tools in the order their rules are listed; a directory is asked the
 # rules of both code audits, a file those of the file audit alone.
 _CODE_AUDIT_TOOLS = (FILE_AUDIT_TOOL, STRUCTURE_AUDIT_TOOL)
-_AUDIT_TOOLS = (*_CODE_AUDIT_TOOLS, CHANGE_SUMMARY_TOOL)
 
 
 class RuleToolRunner:
@@ -123,12 +117,8 @@ def _convert_asked_rule_to_dict(tool: AuditTool, asked: AskedRule) -> dict[str, 
 
 
 def _convert_definition_to_dict(definition: RuleDefinition) -> dict[str, object]:
-    tool = next(
-        tool for tool in _AUDIT_TOOLS if tool.audit_kind_id == definition.audit_kind_id
-    )
     pack, rule = definition.pack, definition.rule
     return {
-        "tool": tool.name,
         "pack": pack.origin,
         "pack_languages": None
         if pack.scope.languages is None

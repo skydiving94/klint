@@ -35,9 +35,8 @@ class AskedRules:
 
 @dataclass(frozen=True)
 class RuleDefinition:
-    """One rule as a pack defines it, for one kind of audit."""
+    """One rule as a pack defines it."""
 
-    audit_kind_id: str
     pack: RulePackSpec
     rule: RuleSpec
 
@@ -84,16 +83,18 @@ class RuleLookup:
         )
 
     def find_rule_definitions(self, rule_id: str) -> list[RuleDefinition]:
-        """Return each definition of ``rule_id``, kind by kind, in pack merge order.
+        """Return each definition of ``rule_id``, in the order the packs merge.
 
-        A rule may be defined in several packs, each for its own units; and
-        a pack may serve several kinds of audit. Empty when no pack defines
-        the rule.
+        A rule may be defined in several packs, each for its own units. A
+        pack that serves several kinds of audit is read once. Empty when no
+        pack defines the rule.
         """
+        packs: dict[RulePackSpec, None] = {}
+        for audit_kind in self._audit_kind_registry.list_audit_kinds():
+            packs.update(dict.fromkeys(audit_kind.rule_loader.read_rule_packs()))
         return [
-            RuleDefinition(audit_kind.kind_id, pack, rule)
-            for audit_kind in self._audit_kind_registry.list_audit_kinds()
-            for pack in audit_kind.rule_loader.read_rule_packs()
+            RuleDefinition(pack, rule)
+            for pack in packs
             for rule in pack.rules
             if rule.rule_id == rule_id
         ]

@@ -100,12 +100,11 @@ def test_explain_rule_gives_its_question_unit_types_scope_and_pack(
 
     call = call_tool(server, "explain_rule", {"rule_id": "tidy_directory"})
 
-    assert not call.result.is_error
+    # The pack serves both code audits, and is listed once.
     assert call.read_content() == {
         "rule_id": "tidy_directory",
         "definitions": [
             {
-                "tool": "audit_files",
                 "pack": str(project.parent / "rules.json"),
                 "pack_languages": None,
                 "question": "Is it tidy?",
@@ -116,20 +115,7 @@ def test_explain_rule_gives_its_question_unit_types_scope_and_pack(
                 "unit_tags": [],
                 "excluded_unit_tags": [],
                 "tags": [],
-            },
-            {
-                "tool": "audit_structure",
-                "pack": str(project.parent / "rules.json"),
-                "pack_languages": None,
-                "question": "Is it tidy?",
-                "question_with_layers": None,
-                "unit_type_to_question": {},
-                "unit_types": ["project_directory"],
-                "languages": [],
-                "unit_tags": [],
-                "excluded_unit_tags": [],
-                "tags": [],
-            },
+            }
         ],
     }
 
@@ -139,11 +125,14 @@ def test_explain_rule_finds_a_change_summary_check(project: Path) -> None:
 
     call = call_tool(server, "explain_rule", {"rule_id": "no_false_statement"})
 
-    content = call.read_content()
-    assert [definition["tool"] for definition in content["definitions"]] == [
-        "check_change_summary"
+    definitions = call.read_content()["definitions"]
+    assert len(definitions) == 1
+    assert definitions[0]["pack"].endswith("summary_checks.json")
+    assert definitions[0]["unit_types"] == [
+        "hunk_summary",
+        "file_summary",
+        "package_summary",
     ]
-    assert content["definitions"][0]["pack"].endswith("summary_checks.json")
 
 
 def test_explain_rule_names_an_unknown_rule(project: Path) -> None:
