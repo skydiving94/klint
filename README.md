@@ -118,6 +118,19 @@ klint --diff --diff-units all --json
 * **With the answer cache**, a unit whose code has not changed costs no request, so a second `klint --diff` on the same change is free.
 * **Unstaged edits**: the changed lines come from the index, and the code of each unit from the working tree. When a staged file also has unstaged edits, klint says so with a warning; stage the whole file for an exact result.
 
+#### Any diff (`--diff-from`)
+`klint --diff-from <file>` audits what a unified diff in git's format touches, read from a file, or from stdin with `-`. Any such diff works, so a pull request's change is one pipe away:
+
+~~~bash
+git diff main...HEAD | klint --diff-from -
+gh pr diff 123 | klint --diff-from - --diff-units file
+~~~
+
+* **The same audit**: `--diff-units`, the units chosen and the report are those of `--diff`. On stderr the count reads `[klint] Change in the diff: …`, and with `--json` the same fields come under `diff_change`. `--diff` itself is the staged change, `git diff --cached`, put through the same reading.
+* **The files are read from disk**: the diff's paths are taken as relative to the current directory, so run it where the diff was made, usually the repository's top. Where the diff has `index <old>..<new>` lines, each changed file must hash to `<new>`, as `git hash-object` hashes it; a file that doesn't, or is missing, stops the run with exit 2, naming it. Check out the diff's head first, as a pull request's CI does. A diff with no `index` lines is taken as it is, with a warning.
+* **What it reads**: diffs with or without lines of context, with the `a/` and `b/` prefixes, others such as `--no-prefix`, quoted paths and paths with spaces. A combined diff of a merge, a diff in another format such as `diff -u`'s, and a file outside the current directory are refused with exit 2; a diff that can't be read names its line.
+* **An empty diff**: `[klint] No change in the diff to audit`, exit 0.
+
 ### Change-summary documents
 `klint-change-summary` takes a JSON document in one of two forms. Both hold a summary for each hunk, each file, each package you choose to summarize, and the whole commit.
 
