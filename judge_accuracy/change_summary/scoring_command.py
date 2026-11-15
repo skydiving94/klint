@@ -32,7 +32,7 @@ from judge_accuracy.change_summary.scores import score_judged_summaries
 from klint.app import AppSettings, AuditKindRegistry, BindingOverride
 from klint.app.pipeline import AuditPipeline
 from klint.catalog.change_summary import CHANGE_SUMMARY_KIND_ID
-from klint.cli import create_command_injector
+from klint.composition import create_built_in_injector
 from klint.core import Auditor
 from klint.core.interfaces import BaseJudge
 
@@ -112,7 +112,7 @@ async def run_scoring(
     try:
         case_files = read_case_set(arguments.case_set)
         settings = AppSettings.from_env(arguments.case_set)
-        injector = create_command_injector(
+        injector = create_built_in_injector(
             settings, *binding_overrides, _CachingJudgeBinding()
         )
         judge = injector.get(CachingJudge)

@@ -10,7 +10,7 @@ from klint.cli.command_arguments import parse_command_arguments
 from klint.cli.console import print_error_line, print_klint_warnings_raised_inside
 from klint.cli.exit_code import ExitCode
 from klint.cli.runner import AuditCommandApp
-from klint.cli.wiring import create_command_injector
+from klint.composition import create_built_in_injector
 
 
 async def run_command_from_shell(command: AuditCommand) -> ExitCode:
@@ -35,7 +35,7 @@ async def _run_command(command: AuditCommand) -> ExitCode:
             settings = await asyncio.to_thread(
                 AppSettings.from_env, arguments.target, arguments.custom_rules_path
             )
-            injector = create_command_injector(settings)
+            injector = create_built_in_injector(settings)
             audit_pipeline = injector.get(AuditPipeline)
     except (OSError, ValueError) as error:
         # The command cannot be set up, for example a config or data file is

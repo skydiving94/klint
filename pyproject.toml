@@ -115,16 +115,19 @@ ignore_missing_imports = true
 implicit_reexport = true
 
 # Checked with `uv run lint-imports`. A layer may import from the layers listed
-# below it, never from one above. klint/resources holds data only.
+# below it, never from one above. klint/resources holds data only. The front
+# ends, klint.cli and klint.mcp, are siblings: neither imports the other, and
+# what they share sits in klint.composition or below.
 [tool.importlinter]
 root_package = "klint"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Layers: cli > app > catalog > infra > core"
+name = "Layers: cli > composition > app > catalog > infra > core"
 type = "layers"
 layers = [
     "klint.cli",
+    "klint.composition",
     "klint.app",
     "klint.catalog",
     "klint.infra",
