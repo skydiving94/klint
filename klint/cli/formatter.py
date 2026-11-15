@@ -259,7 +259,8 @@ def format_applied_rule_exclusions(
     """Write the project's exclusions that kept a rule from some units.
 
     Each line names the rule, the globs, how many units it was not asked
-    about, and the reason the project gives.
+    about, and the reason the project gives. An exclusion that selects
+    classes or functions lists the units it covered beneath its line.
     """
     lines = [f"{_ANSI.BOLD}Rules excluded by the project's klint.json:{_ANSI.RESET}"]
     for applied in applied_rule_exclusions:
@@ -269,4 +270,6 @@ def format_applied_rule_exclusions(
             f"on {', '.join(exclusion.paths)} ({len(applied.unit_ids)} unit(s)): "
             f"{exclusion.reason}"
         )
+        if exclusion.does_select_units():
+            lines.extend(f"      {unit_id}" for unit_id in applied.unit_ids)
     return "\n".join(lines) + "\n"

@@ -140,7 +140,7 @@ examples/                    # Deliberately bad code, a mock project and change-
 
 ### `rule_exclusions` or `klint-ack`?
 Both keep a finding judged wrong from failing a check, and Self-Audit and the commit gate read both.
-* **`rule_exclusions` in `klint.json`**: the rule never applies to these paths, whatever the code there says, such as a package-structure rule on a command-line tool's root package. It is matched by path and survives code changes. Rebut the finding in a comment on the pull request and link it as the `reason`.
+* **`rule_exclusions` in `klint.json`**: the rule never applies to these paths, whatever the code there says, such as a package-structure rule on a command-line tool's root package. It is matched by path and survives code changes. Rebut the finding in a comment on the pull request and link it as the `reason`. When the rule is wrong for one class or function rather than a whole file, name the unit, as in `klint/app/settings.py::AppSettings`: the selector covers that unit and its methods, and is reviewed in the pull request like any change. There are no inline suppression comments, so a finding can't be silenced in the commit that causes it. A selector that stops matching, such as after a rename, lets its finding back and warns on the next full audit; fix or remove it.
 * **`klint-ack <id> --note "<why>"`**: this one finding on this code is wrong, such as a `god_component` on a long but single-purpose function. It is matched by the unit's code hash, so the judge is asked again once the code changes. The entry in `.klint/acknowledgements/` is committed with the code; the note is the rebuttal.
 
 To reproduce the Self-Audit locally, export your `KLINT_JUDGE_API_KEY` as the README's "Using Jev" shows, then:

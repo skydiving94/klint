@@ -12,7 +12,7 @@ from klint.core.interfaces import (
     BaseScanProgressListener,
     BaseUnitSelector,
 )
-from klint.core.models.audits import AuditInput
+from klint.core.models.audits import AuditInput, DiskPathInput
 from klint.core.models.rules import RuleSet
 from klint.core.models.units import AuditableUnit
 
@@ -66,7 +66,9 @@ class AuditPreparer:
         ``custom_rule_source``, when given, merge over the loaded ones. The
         listener, when given, is told about each directory as it is scanned.
         ``unit_selector``, when given, chooses the units among those
-        extracted, before their rules are selected.
+        extracted, before their rules are selected. A disk path audited with
+        no unit selector is audited in full, so a project's exclusion there
+        that matches nothing is reported.
         """
         acquired_units = await self._unit_acquisition.acquire_units(
             audit_input, audit_kind, scan_progress_listener
@@ -76,8 +78,13 @@ class AuditPreparer:
             if unit_selector is None
             else unit_selector.select_units(acquired_units.units)
         )
+        full_audit_path = (
+            audit_input.path
+            if isinstance(audit_input, DiskPathInput) and unit_selector is None
+            else None
+        )
         rule_set = await self._rule_selection.select_rules(
-            selected_units, audit_kind, custom_rule_source
+            selected_units, audit_kind, custom_rule_source, full_audit_path
         )
         return PendingAuditPortfolio(
             units=[unit for unit in selected_units if rule_set.select_rules_for(unit)],
