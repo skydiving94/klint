@@ -44,6 +44,26 @@ async def read_diff_change_scope(
     read, names a file outside ``working_directory``, or names a file whose
     content on disk is not the one its index line gives.
     """
+    files = await read_files_checked_against_disk(diff_text, working_directory)
+    change = GitChange(
+        repository_path=working_directory, diff_command="--diff-from", files=files
+    )
+    return DiffChangeScope(
+        scope=scope_audit_to_change(change, diff_units, working_directory),
+        diff_units=diff_units,
+        is_unchecked_against_disk=is_unchecked_against_disk(files),
+    )
+
+
+async def read_files_checked_against_disk(
+    diff_text: str, working_directory: Path
+) -> tuple[GitFileChange, ...]:
+    """Return the files ``diff_text`` changes, each checked against the disk.
+
+    Raises ValueError when the diff cannot be read, names a file outside
+    ``working_directory``, or names a file whose content on disk is not the
+    one its index line gives.
+    """
     files = tuple(parse_git_diff(diff_text))
     for file_change in files:
         _check_path_is_inside(file_change, working_directory)
@@ -54,14 +74,13 @@ async def read_diff_change_scope(
             "The diff does not match the files on disk, so its changed lines "
             f"cannot be found in them: {described}"
         )
-    change = GitChange(
-        repository_path=working_directory, diff_command="--diff-from", files=files
-    )
-    return DiffChangeScope(
-        scope=scope_audit_to_change(change, diff_units, working_directory),
-        diff_units=diff_units,
-        is_unchecked_against_disk=bool(files)
-        and all(file_change.new_blob_hash is None for file_change in files),
+    return files
+
+
+def is_unchecked_against_disk(files: tuple[GitFileChange, ...]) -> bool:
+    """Return True when no file of the diff has an index line to check it by."""
+    return bool(files) and all(
+        file_change.new_blob_hash is None for file_change in files
     )
 
 
