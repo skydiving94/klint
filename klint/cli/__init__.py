@@ -12,7 +12,6 @@ from klint.cli.change_summary_stop_hook import (
 from klint.cli.command_arguments import parse_command_arguments
 from klint.cli.exit_code import ExitCode
 from klint.cli.file_audit import FILE_AUDIT_COMMAND, run_file_audit
-from klint.cli.klint_project_alias import run_klint_project_alias
 from klint.cli.pre_commit import (
     PRE_COMMIT_COMMAND,
     PreCommitGate,
@@ -41,7 +40,6 @@ __all__ = [
     "run_change_summary_stop_hook",
     "run_command_from_shell",
     "run_file_audit",
-    "run_klint_project_alias",
     "run_pre_commit_gate",
     "run_structure_audit",
 ]

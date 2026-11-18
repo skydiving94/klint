@@ -8,7 +8,7 @@ from pathlib import Path
 from klint.catalog.domain_neutral.git import DiffUnits
 from klint.cli.audit_command import AuditCommand
 from klint.cli.exit_code import ExitCode
-from klint.core import warn_about_deprecated_name
+from klint.core import describe_removed_name
 
 
 @dataclass(frozen=True)
@@ -70,8 +70,8 @@ def parse_command_arguments(
     parser.add_argument(
         "--all",
         action="store_true",
-        dest="all_answers_under_old_name",
-        help="Old name of --all-answers, deprecated",
+        dest="is_removed_all_given",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--min-confidence",
@@ -85,8 +85,9 @@ def parse_command_arguments(
         help="Output raw JSON instead of formatted terminal report",
     )
     namespace = parser.parse_args(argv)
-    if namespace.all_answers_under_old_name:
-        warn_about_deprecated_name("--all", "--all-answers")
+    if namespace.is_removed_all_given:
+        # Defined only to refuse it: argparse would take it as --all-answers.
+        parser.error(describe_removed_name("--all", "--all-answers"))
     diff_units = None
     diff_from = None
     if command.does_offer_diff:
@@ -95,9 +96,7 @@ def parse_command_arguments(
     return CommandArguments(
         target=namespace.target,
         custom_rules_path=namespace.rules,
-        should_show_all_answers=(
-            namespace.all_answers or namespace.all_answers_under_old_name
-        ),
+        should_show_all_answers=namespace.all_answers,
         min_confidence=namespace.min_confidence,
         should_print_json=namespace.json,
         diff_units=diff_units,

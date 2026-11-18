@@ -5,7 +5,7 @@ import warnings
 from pathlib import Path
 from typing import TypeGuard
 
-from klint.core import KlintWarning, describe_deprecated_name
+from klint.core import KlintWarning, describe_removed_name
 from klint.core.models.judging import QuestionType
 from klint.core.models.rules import (
     DEFAULT_UNIT_TYPES,
@@ -30,9 +30,9 @@ RULE_FIELD_NAMES = frozenset(
         "unit_type_to_question",
     }
 )
-# Each old rule field name, and the name that replaces it. An old name still
-# works, with a warning, for one release.
-DEPRECATED_FIELD_NAME_TO_FIELD_NAME = {
+# Each removed rule field name, and the name that replaces it. A removed name
+# is ignored, with a warning.
+REMOVED_FIELD_NAME_TO_FIELD_NAME = {
     "instructions": "question",
     "target_unit_types": "unit_types",
 }
@@ -47,8 +47,8 @@ def read_rule_pack(path: Path) -> RulePackSpec:
     Raises ValueError naming the file when it is not a JSON object or its
     header is malformed; an unknown header field is reported as a
     KlintWarning. A rule with a field of the wrong kind is an ERROR problem.
-    A rule without a type or question, an unknown rule field, and each old
-    field name the file uses, are WARNING problems.
+    A rule without a type or question, an unknown rule field, and each
+    removed field name the file uses, are WARNING problems.
     """
     try:
         raw_data: object = json.loads(path.read_text(encoding="utf-8"))
@@ -63,24 +63,23 @@ def read_rule_pack(path: Path) -> RulePackSpec:
     )
     rules: list[RuleSpec] = []
     rule_problems: list[RuleProblem] = []
-    used_old_field_names: set[str] = set()
+    used_removed_field_names: set[str] = set()
     for rule_id, raw_rule in _select_raw_rules(raw_data).items():
-        rule = _read_rule(
-            str(rule_id),
-            _translate_deprecated_field_names(raw_rule, used_old_field_names),
-            path,
-            rule_problems,
-        )
+        if isinstance(raw_rule, dict):
+            used_removed_field_names.update(
+                REMOVED_FIELD_NAME_TO_FIELD_NAME.keys() & raw_rule.keys()
+            )
+        rule = _read_rule(str(rule_id), raw_rule, path, rule_problems)
         if rule is not None:
             rules.append(rule)
     rule_problems.extend(
         RuleProblem(
             RuleProblemSeverity.WARNING,
-            describe_deprecated_name(
-                old_name, DEPRECATED_FIELD_NAME_TO_FIELD_NAME[old_name], f"in '{path}'"
+            describe_removed_name(
+                old_name, REMOVED_FIELD_NAME_TO_FIELD_NAME[old_name], f"in '{path}'"
             ),
         )
-        for old_name in sorted(used_old_field_names)
+        for old_name in sorted(used_removed_field_names)
     )
     return RulePackSpec(
         origin=str(path),
@@ -101,29 +100,6 @@ def _select_raw_rules(raw_data: dict[object, object]) -> dict[object, object]:
     if isinstance(raw_rules, dict) and "type" not in raw_rules:
         return raw_rules
     return {key: value for key, value in raw_data.items() if key != HEADER_KEY}
-
-
-def _translate_deprecated_field_names(
-    raw_rule: object, used_old_field_names: set[str]
-) -> object:
-    """Return ``raw_rule`` with each old field name replaced by its new one.
-
-    Each old name found is added to ``used_old_field_names``. When the new
-    name is set as well, its value is kept. Anything but an object is
-    returned as it is.
-    """
-    if not isinstance(raw_rule, dict):
-        return raw_rule
-    translated = {
-        key: value
-        for key, value in raw_rule.items()
-        if key not in DEPRECATED_FIELD_NAME_TO_FIELD_NAME
-    }
-    for old_name, new_name in DEPRECATED_FIELD_NAME_TO_FIELD_NAME.items():
-        if old_name in raw_rule:
-            used_old_field_names.add(old_name)
-            translated.setdefault(new_name, raw_rule[old_name])
-    return translated
 
 
 def _read_scope(raw_header: object, path: Path) -> PackScope:
@@ -173,7 +149,11 @@ def _read_rule(
             )
         )
         return None
-    unknown_fields = sorted(str(key) for key in set(raw_rule) - RULE_FIELD_NAMES)
+    unknown_fields = sorted(
+        str(key)
+        for key in set(raw_rule) - RULE_FIELD_NAMES
+        if key not in REMOVED_FIELD_NAME_TO_FIELD_NAME
+    )
     if unknown_fields:
         rule_problems.append(
             RuleProblem(

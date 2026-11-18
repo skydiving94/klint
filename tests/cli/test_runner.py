@@ -74,25 +74,23 @@ def test_both_commands_take_the_same_options(
     }
 
 
-def test_old_all_flag_still_shows_every_answer_with_a_warning(
+def test_the_removed_all_flag_is_refused_naming_its_replacement(
     tmp_path: Path,
     fake_judge: type[FakeJudge],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     target = write_text(tmp_path / "a.py", "x = 1\n")
-    app = build_audit_command_app(FILE_AUDIT_COMMAND, fake_judge())
-    asyncio.run(app.run([str(target), "--json", "--all-answers"]))
-    every_answer = capsys.readouterr().out
+    judge = fake_judge()
+    app = build_audit_command_app(FILE_AUDIT_COMMAND, judge)
 
-    exit_code = asyncio.run(app.run([str(target), "--json", "--all"]))
+    with pytest.raises(SystemExit) as stopped:
+        asyncio.run(app.run([str(target), "--json", "--all"]))
 
-    captured = capsys.readouterr()
-    assert exit_code == ExitCode.NO_PROBLEMS
-    assert captured.out == every_answer
-    assert list_lines_before_judge_usage(captured.err) == [
-        "[klint] Warning: '--all' is deprecated and stops working in the next "
-        "release; use '--all-answers' instead"
-    ]
+    assert stopped.value.code == ExitCode.RUN_ERROR
+    assert "'--all' was removed; use '--all-answers' instead" in (
+        capsys.readouterr().err
+    )
+    assert judge.requests == []
 
 
 @pytest.mark.parametrize(

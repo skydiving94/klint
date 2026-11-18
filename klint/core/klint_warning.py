@@ -40,21 +40,18 @@ def warn_about_unparseable_file(path: Path, error: Exception) -> None:
     )
 
 
-def describe_deprecated_name(old_name: str, new_name: str, place: str = "") -> str:
-    """Return the message saying ``old_name`` still works, for now, as ``new_name``.
+def describe_removed_name(old_name: str, new_name: str, place: str = "") -> str:
+    """Return the message saying ``old_name`` was removed in favour of ``new_name``.
 
     ``place`` says where the old name was found, such as "in 'klint.json'".
     """
     found_at = f" {place}" if place else ""
-    return (
-        f"'{old_name}'{found_at} is deprecated and stops working in the next "
-        f"release; use '{new_name}' instead"
-    )
+    return f"'{old_name}'{found_at} was removed; use '{new_name}' instead"
 
 
-def warn_about_deprecated_name(old_name: str, new_name: str, place: str = "") -> None:
-    """Warn that ``old_name`` was used; it still works, for now, as ``new_name``."""
-    _warn(describe_deprecated_name(old_name, new_name, place))
+def warn_about_removed_name(old_name: str, new_name: str, place: str = "") -> None:
+    """Warn that ``old_name`` was used and is ignored; ``new_name`` replaces it."""
+    _warn(describe_removed_name(old_name, new_name, place))
 
 
 @contextmanager

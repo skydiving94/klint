@@ -498,19 +498,18 @@ A long audit sends progress notifications, one per unit audited. When the judge 
 * **The log**: each entry records the rule, the file, the unit's kind, name and lines, a hash of the unit's code, the finding and its confidence, the judge's model version, when it was first flagged, its status, and, once acknowledged, when and the note. klint writes it: the hook adds and removes entries for the staged change only, and `klint-ack` acknowledges. The same staged change and the same answers give the same entries, apart from the timestamps. Every `klint` audit of the repository leaves out the findings an acknowledged entry covers and lists them, as `applied_acknowledgements` in `--json`; a `rule_exclusions` entry in `klint.json` turns a rule off for some paths whatever the code, while an acknowledgement covers one finding on one version of the code.
 * **A commit made with `--no-verify`** can leave open entries behind; the next gated commit that stages those files brings them up to date.
 
-## Renamed in This Release
+## Removed Names
 
-These names changed. Each old name still works until the next release and prints a warning naming its replacement.
+The old names kept for one release after the renames are gone. Use each replacement:
+* `klint-project`: `klint-structure`.
+* `--all`: `--all-answers`. klint refuses `--all`.
+* `KEV_MODE`, `KEV_MODEL_NAME`, `KEV_BASE_URL`, `KEV_API_KEY`: `KLINT_JUDGE_MODE`, `KLINT_JUDGE_MODEL`, `KLINT_JUDGE_BASE_URL`, `KLINT_JUDGE_API_KEY`.
+* `KEV_DEFAULT_RULES_PATH`, `KEV_DEFAULT_PROJECT_RULES_PATH`: `KLINT_REPLACE_FILE_RULES`, `KLINT_REPLACE_PROJECT_RULES`.
+* Rule fields `instructions`, `target_unit_types`: `question`, `unit_types`.
+* Action inputs `kev_mode`, `kev_model_name`, `kev_base_url`, `kev_api_key`: `judge_mode`, `judge_model`, `judge_base_url`, `judge_api_key`.
+* Action input `mode: "project"`: `mode: "structure"`. The Action fails on it.
 
-| Old name | New name |
-| :--- | :--- |
-| `klint-project` | `klint-structure` |
-| `--all` | `--all-answers` |
-| `KEV_MODE`, `KEV_MODEL_NAME`, `KEV_BASE_URL`, `KEV_API_KEY` | `KLINT_JUDGE_MODE`, `KLINT_JUDGE_MODEL`, `KLINT_JUDGE_BASE_URL`, `KLINT_JUDGE_API_KEY` |
-| `KEV_DEFAULT_RULES_PATH`, `KEV_DEFAULT_PROJECT_RULES_PATH` | `KLINT_REPLACE_FILE_RULES`, `KLINT_REPLACE_PROJECT_RULES` |
-| Rule fields `instructions`, `target_unit_types` | `question`, `unit_types` |
-| Action inputs `kev_mode`, `kev_model_name`, `kev_base_url`, `kev_api_key` | `judge_mode`, `judge_model`, `judge_base_url`, `judge_api_key` |
-| Action input `mode: "project"` | `mode: "structure"` |
+klint ignores an old setting or rule field with a warning naming its replacement, and GitHub warns about an old Action input.
 
 The source moved from `src/` to the `klint/` package, with no alias for code that imports it.
 
@@ -547,7 +546,7 @@ Upcoming:
 5. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings, and packing several small units into one request.
 6. **Non-Code Files**: Auditing text documents, LaTeX and other writing.
 7. **More Accurate Local Judges**: A hosted Kev-27B and a Kev-4B fine-tuned on labelled change summaries, scored on the same test set.
-8. **Removing the Old Names**: the names in [Renamed in This Release](#renamed-in-this-release) stop working.
+8. **Removing the Old Names**: the names in [Removed Names](#removed-names) stop working.
 
 ## Contributing
 

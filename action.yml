@@ -6,7 +6,7 @@ inputs:
     required: false
     default: "."
   mode:
-    description: "'file' runs klint on each file's contents; 'structure' runs klint-structure on the project's directories. 'project' is the old name of 'structure', deprecated."
+    description: "'file' runs klint on each file's contents; 'structure' runs klint-structure on the project's directories."
     required: false
     default: "file"
   min_confidence:
@@ -37,22 +37,6 @@ inputs:
     description: "'true' fails the step when klint finds problems (exit 1); 'false' reports them and passes. A run that cannot audit (exit 2) fails the step either way."
     required: false
     default: "true"
-  kev_mode:
-    description: "Deprecated: use judge_mode. Works until the next release, with a warning."
-    required: false
-    default: ""
-  kev_model_name:
-    description: "Deprecated: use judge_model. Works until the next release, with a warning."
-    required: false
-    default: ""
-  kev_base_url:
-    description: "Deprecated: use judge_base_url. Works until the next release, with a warning."
-    required: false
-    default: ""
-  kev_api_key:
-    description: "Deprecated: use judge_api_key. Works until the next release, with a warning."
-    required: false
-    default: ""
 outputs:
   exit_code:
     description: "klint's exit code: 0 when no problem is found, 1 when one is, 2 when the audit cannot run"
@@ -72,18 +56,7 @@ runs:
         JUDGE_MODE: ${{ inputs.judge_mode }}
         JUDGE_MODEL: ${{ inputs.judge_model }}
         JUDGE_BASE_URL: ${{ inputs.judge_base_url }}
-        KEV_MODE: ${{ inputs.kev_mode }}
-        KEV_MODEL_NAME: ${{ inputs.kev_model_name }}
-        KEV_BASE_URL: ${{ inputs.kev_base_url }}
-        # Whether a key is given, never the key itself.
-        IS_KEV_API_KEY_SET: ${{ inputs.kev_api_key != '' }}
       run: |
-        # Warns that the old name $2 was used when its value $1 is set.
-        warn_about_old_name() {
-          if [ -n "$1" ]; then
-            echo "::warning title=klint::'$2' is deprecated and stops working in the next release; use '$3' instead"
-          fi
-        }
         # Prints the first of its arguments that is set.
         pick_first_set() {
           for value in "$@"; do
@@ -93,15 +66,9 @@ runs:
             fi
           done
         }
-        warn_about_old_name "$KEV_MODE" kev_mode judge_mode
-        warn_about_old_name "$KEV_MODEL_NAME" kev_model_name judge_model
-        warn_about_old_name "$KEV_BASE_URL" kev_base_url judge_base_url
-        if [ "$IS_KEV_API_KEY_SET" = "true" ]; then
-          warn_about_old_name set kev_api_key judge_api_key
-        fi
-        judge_mode=$(pick_first_set "$JUDGE_MODE" "$KEV_MODE" local | tr '[:upper:]' '[:lower:]')
-        judge_model=$(pick_first_set "$JUDGE_MODEL" "$KEV_MODEL_NAME" jaredpalmer/kev-0.8b)
-        judge_base_url=$(pick_first_set "$JUDGE_BASE_URL" "$KEV_BASE_URL" http://127.0.0.1:8009)
+        judge_mode=$(pick_first_set "$JUDGE_MODE" local | tr '[:upper:]' '[:lower:]')
+        judge_model=$(pick_first_set "$JUDGE_MODEL" jaredpalmer/kev-0.8b)
+        judge_base_url=$(pick_first_set "$JUDGE_BASE_URL" http://127.0.0.1:8009)
         case "$judge_mode" in
           local|remote) ;;
           *) echo "::error title=klint::judge_mode must be 'local' or 'remote', not '$judge_mode'"; exit 2 ;;
@@ -109,9 +76,7 @@ runs:
         case "$MODE" in
           file) command=klint ;;
           structure) command=klint-structure ;;
-          project)
-            warn_about_old_name "$MODE" "mode: project" "mode: structure"
-            command=klint-structure ;;
+          project) echo "::error title=klint::mode 'project' was removed; use 'structure' instead"; exit 2 ;;
           *) echo "::error title=klint::mode must be 'file' or 'structure', not '$MODE'"; exit 2 ;;
         esac
         case "$FAIL_ON_PROBLEMS" in
@@ -164,7 +129,7 @@ runs:
         KLINT_JUDGE_MODE: ${{ steps.settings.outputs.judge_mode }}
         KLINT_JUDGE_MODEL: ${{ steps.settings.outputs.judge_model }}
         KLINT_JUDGE_BASE_URL: ${{ steps.settings.outputs.judge_base_url }}
-        KLINT_JUDGE_API_KEY: ${{ inputs.judge_api_key || inputs.kev_api_key }}
+        KLINT_JUDGE_API_KEY: ${{ inputs.judge_api_key }}
       run: |
         if [ -n "$KLINT_JUDGE_API_KEY" ]; then
           echo "::add-mask::$KLINT_JUDGE_API_KEY"

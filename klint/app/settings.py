@@ -7,10 +7,6 @@ from typing import assert_never
 
 from klint.app.answer_cache_folder import read_answer_cache_folder
 from klint.app.commit_threshold import read_commit_min_confidence
-from klint.app.deprecated_setting_names import (
-    DEPRECATED_SETTING_NAME_TO_SETTING_NAME,
-    translate_deprecated_setting_names,
-)
 from klint.app.judge_mode import JudgeMode
 from klint.app.project_config import (
     KNOWN_SETTING_NAMES,
@@ -18,6 +14,7 @@ from klint.app.project_config import (
     read_project_config,
     warn_about_settings_in_rules_file,
 )
+from klint.app.removed_setting_names import warn_about_removed_setting_names
 from klint.core.models.rules import RuleExclusion
 from klint.core.models.scanning import FileTraitsOverride
 
@@ -214,20 +211,15 @@ class AppSettings:
             config_path is None or custom_rules_path.resolve() != config_path.resolve()
         ):
             warn_about_settings_in_rules_file(custom_rules_path)
+        warn_about_removed_setting_names(os.environ, "in the environment")
         sources = [
             _SettingSource(
                 description="the environment",
-                key_to_value=translate_deprecated_setting_names(
-                    {
-                        key: os.environ[key]
-                        for key in (
-                            KNOWN_SETTING_NAMES
-                            | DEPRECATED_SETTING_NAME_TO_SETTING_NAME.keys()
-                        )
-                        if key in os.environ
-                    },
-                    "in the environment",
-                ),
+                key_to_value={
+                    key: os.environ[key]
+                    for key in KNOWN_SETTING_NAMES
+                    if key in os.environ
+                },
                 base_folder=Path.cwd(),
             )
         ]
