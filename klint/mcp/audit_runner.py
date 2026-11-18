@@ -106,9 +106,7 @@ class AuditToolRunner:
             should_include_non_problems=arguments.should_show_all_answers,
             min_confidence=arguments.min_confidence,
         )
-        return convert_audit_outcome_to_dict(
-            outcome, findings, tool.audited_units_json_key, staged
-        )
+        return convert_audit_outcome_to_dict(outcome, findings, staged)
 
     async def _read_audit_input(
         self, target: Path | None, arguments: AuditToolArguments

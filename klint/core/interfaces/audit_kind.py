@@ -59,9 +59,10 @@ class AuditKind:
     and rule_loader loads the rules asked about them. The judge answers each
     rule on answer_scale. unit_class_to_renderer gives, for each class of
     unit, the renderer that writes what the judge reads about such units, in
-    at most character_budget characters. ranked_tags are the rule tags whose
-    findings a report lists first, most important first. audit_order is the
-    order in which the units are judged.
+    at most character_budget characters. audited_units_json_key is the key
+    the audited units are listed under in JSON output. ranked_tags are the
+    rule tags whose findings a report lists first, most important first.
+    audit_order is the order in which the units are judged.
     """
 
     kind_id: str
@@ -70,6 +71,7 @@ class AuditKind:
     rule_loader: BaseRuleLoader
     answer_scale: AnswerScale
     unit_class_to_renderer: Mapping[type[AuditableUnit], BaseUnitRenderer]
+    audited_units_json_key: str
     ranked_tags: tuple[str, ...] = ()
     audit_order: AuditOrder = AuditOrder.ALL_AT_ONCE
     character_budget: int = DEFAULT_CHARACTER_BUDGET

@@ -32,10 +32,10 @@ from tests.support.stub_system_one_server import StubSystemOneServer
 
 
 @pytest.mark.parametrize(
-    ("command", "audited_path_parts", "rule_id"),
+    ("command", "audited_units_key", "audited_path_parts", "rule_id"),
     [
-        (FILE_AUDIT_COMMAND, ("a.py",), "for_files"),
-        (STRUCTURE_AUDIT_COMMAND, (), "for_directories"),
+        (FILE_AUDIT_COMMAND, "examined_files", ("a.py",), "for_files"),
+        (STRUCTURE_AUDIT_COMMAND, "examined_directories", (), "for_directories"),
     ],
 )
 def test_both_commands_take_the_same_options(
@@ -43,6 +43,7 @@ def test_both_commands_take_the_same_options(
     fake_judge: type[FakeJudge],
     capsys: pytest.CaptureFixture[str],
     command: AuditCommand,
+    audited_units_key: str,
     audited_path_parts: tuple[str, ...],
     rule_id: str,
 ) -> None:
@@ -62,12 +63,12 @@ def test_both_commands_take_the_same_options(
     confident_answers = json.loads(capsys.readouterr().out)
 
     audited = str(target.joinpath(*audited_path_parts))
-    assert every_answer[command.audited_units_json_key] == [audited]
+    assert every_answer[audited_units_key] == [audited]
     assert [(i["rule_id"], i["answer"]) for i in every_answer["findings"]] == [
         (rule_id, "Pass")
     ]
     assert confident_answers == {
-        command.audited_units_json_key: [audited],
+        audited_units_key: [audited],
         "unit_id_to_roll_up_status": {audited: "no_problem"},
         "findings": [],
         "judge_usage": {"requests": 1, "input_tokens": None},

@@ -143,7 +143,6 @@ def _print_report(
         json_report = convert_audit_outcome_to_dict(
             outcome,
             findings,
-            command.audited_units_json_key,
             chosen.staged,
             chosen.diff_change,
         )

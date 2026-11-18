@@ -13,7 +13,6 @@ FILE_AUDIT_COMMAND = AuditCommand(
     target_argument_name="file",
     target_argument_help="Path to the code file or directory to audit",
     audit_kind_id=FILE_CONTENTS_KIND_ID,
-    audited_units_json_key="examined_files",
     does_offer_diff=True,
 )
 
