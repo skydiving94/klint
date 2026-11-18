@@ -29,7 +29,7 @@ from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
 from klint.app.wiring import AuditingJudge
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
 from klint.catalog.domain_neutral.git.git_command import run_git
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import KlintCommand
 from klint.cli.console import (
     print_error_line,
     print_klint_warnings_raised_inside,
@@ -46,18 +46,13 @@ from klint.cli.pre_commit.gate_messages import (
 from klint.cli.unit_failure_listener import UnitFailureListener
 from klint.composition import create_built_in_injector
 
-PRE_COMMIT_COMMAND = AuditCommand(
+PRE_COMMIT_COMMAND = KlintCommand(
     name="klint-pre-commit",
     description=(
         "klint - pre-commit hook: audits the staged change and blocks the commit "
         "while a finding is neither fixed nor acknowledged in the repository's "
         "acknowledgement log"
     ),
-    target_argument_name="",
-    target_argument_help="",
-    audit_kind_id=FILE_CONTENTS_KIND_ID,
-    audited_units_json_key="examined_files",
-    does_offer_diff=True,
 )
 
 
@@ -105,7 +100,7 @@ class PreCommitGate:
         log = open_acknowledgement_log(repository_root)
         request = AuditRequest(
             audit_input=staged.scope.audit_input,
-            audit_kind_id=command.audit_kind_id,
+            audit_kind_id=FILE_CONTENTS_KIND_ID,
             min_confidence=min_confidence,
             unit_selector=staged.scope.unit_selector,
             acknowledgements=AcknowledgementScope(log, repository_root, Path.cwd()),
@@ -189,7 +184,7 @@ def _list_staged_units(staged: StagedChangeScope, repository_root: Path) -> Stag
 
 
 async def _stage_log_changes(
-    command: AuditCommand, reconciliation: LogReconciliation, repository_root: Path
+    command: KlintCommand, reconciliation: LogReconciliation, repository_root: Path
 ) -> None:
     """Stage each entry file written or removed, so the commit carries the log."""
     if not reconciliation.did_change_log():
@@ -211,7 +206,7 @@ async def _stage_log_changes(
 
 
 def _report_decision(
-    command: AuditCommand,
+    command: KlintCommand,
     reconciliation: LogReconciliation,
     outcome: AuditOutcome,
     min_confidence: float,

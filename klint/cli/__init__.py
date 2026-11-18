@@ -1,6 +1,6 @@
 """klint's commands: one entry point per console script, and what they share."""
 
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import AuditCommand, KlintCommand
 from klint.cli.change_summary_audit import (
     CHANGE_SUMMARY_COMMAND,
     run_change_summary_audit,
@@ -32,6 +32,7 @@ __all__ = [
     "AuditCommandApp",
     "ChangeSummaryStopHook",
     "ExitCode",
+    "KlintCommand",
     "PreCommitGate",
     "acknowledge_entry",
     "parse_command_arguments",

@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from klint.catalog.domain_neutral.git import DiffUnits
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import KlintCommand
 from klint.cli.exit_code import ExitCode
 
 
@@ -23,7 +23,7 @@ class GateArguments:
 
 
 def parse_gate_arguments(
-    command: AuditCommand, argv: Sequence[str] | None = None
+    command: KlintCommand, argv: Sequence[str] | None = None
 ) -> GateArguments:
     """Parse the command line of klint-pre-commit."""
     parser = argparse.ArgumentParser(

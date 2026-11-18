@@ -1,13 +1,24 @@
-"""One klint command, as the entry points describe theirs."""
+"""The klint commands, as the entry points describe theirs."""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class AuditCommand:
-    """One klint command: its wording, its path argument and the audit it runs.
+class KlintCommand:
+    """One klint command that takes no path to audit, such as a hook.
 
-    name is what the user types and description is shown in the help.
+    name is what the user types, and what each line it prints on stderr
+    starts with; description is shown in the help.
+    """
+
+    name: str
+    description: str
+
+
+@dataclass(frozen=True)
+class AuditCommand(KlintCommand):
+    """One klint command that audits a path: its path argument and its audit.
+
     target_argument_name and target_argument_help describe the path to audit.
     audit_kind_id names the kind of audit the command asks for, and
     audited_units_json_key is the key the audited units are listed under in
@@ -17,8 +28,6 @@ class AuditCommand:
     of a target.
     """
 
-    name: str
-    description: str
     target_argument_name: str
     target_argument_help: str
     audit_kind_id: str
