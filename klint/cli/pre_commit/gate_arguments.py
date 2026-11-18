@@ -1,4 +1,4 @@
-"""The command line of klint-pre-commit."""
+"""klint-pre-commit's name and help, and its command line."""
 
 import argparse
 from collections.abc import Sequence
@@ -7,6 +7,15 @@ from dataclasses import dataclass
 from klint.catalog.domain_neutral.git import DiffUnits
 from klint.cli.audit_command import KlintCommand
 from klint.cli.exit_code import ExitCode
+
+PRE_COMMIT_COMMAND = KlintCommand(
+    name="klint-pre-commit",
+    description=(
+        "klint - pre-commit hook: audits the staged change and blocks the commit "
+        "while a finding is neither fixed nor acknowledged in the repository's "
+        "acknowledgement log"
+    ),
+)
 
 
 @dataclass(frozen=True)
