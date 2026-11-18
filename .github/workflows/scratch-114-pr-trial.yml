@@ -1,0 +1,26 @@
+name: scratch-114 PR-mode trial
+on:
+  pull_request:
+    branches: [scratch-114-base]
+permissions:
+  contents: read
+jobs:
+  klint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit the pull request
+        id: klint
+        uses: ./
+        with:
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+      - name: Show findings_json
+        if: ${{ !cancelled() && steps.klint.outputs.findings_json != '' }}
+        env:
+          FINDINGS: ${{ steps.klint.outputs.findings_json }}
+          EXIT_CODE: ${{ steps.klint.outputs.exit_code }}
+        run: |
+          python3 -c "import json,os;d=json.load(open(os.environ['FINDINGS']));print('FINDINGS exit', os.environ['EXIT_CODE'], 'threshold', d['min_confidence'], len(d['findings']));[print('FINDING', f['audit'], f['rule_id'], f['unit_id'], f['confidence'], f['acknowledge_command']) for f in d['findings']]"
