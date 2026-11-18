@@ -1,6 +1,9 @@
 """The suite of units that do not depend on what kind of content is audited."""
 
 from klint.catalog.domain_neutral.built_in_files import locate_built_in_catalog_file
+from klint.catalog.domain_neutral.changed_directory_selector import (
+    ChangedDirectorySelector,
+)
 from klint.catalog.domain_neutral.character_budget import join_lines_within_budget
 from klint.catalog.domain_neutral.directory_tree_source import (
     DirectoryTreeSourceFactory,
@@ -20,6 +23,7 @@ from klint.catalog.domain_neutral.whole_file_renderer import WholeFileRenderer
 
 __all__ = [
     "AuditableFileUnit",
+    "ChangedDirectorySelector",
     "DirectoryTreeSourceFactory",
     "DomainNeutralSuite",
     "DomainNeutralSuiteModule",

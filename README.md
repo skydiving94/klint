@@ -131,6 +131,17 @@ gh pr diff 123 | klint --diff-from - --diff-units file
 * **What it reads**: diffs with or without lines of context, with the `a/` and `b/` prefixes, others such as `--no-prefix`, quoted paths and paths with spaces. A combined diff of a merge, a diff in another format such as `diff -u`'s, and a file outside the current directory are refused with exit 2; a diff that can't be read names its line.
 * **An empty diff**: `[klint] No change in the diff to audit`, exit 0.
 
+#### The structure of a diff (`klint-structure --diff-from`)
+`klint-structure --diff-from <file or ->` audits each directory that holds a file the diff adds, changes, deletes or renames, and each of its parents up to the current directory, which is the project:
+
+~~~bash
+git diff main...HEAD | klint-structure --diff-from -
+~~~
+
+* **The same questions as a full audit**: each audited directory is summarized from all of its files and subpackages, not only the changed ones, so a finding means what it means in `klint-structure .`, and an unchanged directory's answer comes from the answer cache.
+* **Which directories**: a rename counts for its old and its new directory, and a deleted directory for its parent. A change only to files the structure audit leaves out, such as `node_modules/` or images, audits nothing: `Change in the diff: 2 files, in no directory the audit covers`, exit 0.
+* **The diff is read as for `klint --diff-from`**, with the same check against the files on disk. It takes no path and no `--diff-units`. On stderr the count reads `[klint-structure] Change in the diff: 1 file, 3 of 12 directories selected`, and `--json` adds `diff_change` with `files`, `deleted_files`, `unit_count`, `selected_unit_count` and `audited_directories`.
+
 ### Change-summary documents
 `klint-change-summary` takes a JSON document in one of two forms. Both hold a summary for each hunk, each file, each package you choose to summarize, and the whole commit.
 

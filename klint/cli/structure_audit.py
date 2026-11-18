@@ -4,7 +4,7 @@ import asyncio
 import sys
 
 from klint.catalog.code import PROJECT_STRUCTURE_KIND_ID
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import AuditCommand, DiffOptions
 from klint.cli.shell_invocation import run_command_from_shell
 
 STRUCTURE_AUDIT_COMMAND = AuditCommand(
@@ -13,6 +13,7 @@ STRUCTURE_AUDIT_COMMAND = AuditCommand(
     target_argument_name="directory",
     target_argument_help="Path to the project directory to audit",
     audit_kind_id=PROJECT_STRUCTURE_KIND_ID,
+    diff_options=DiffOptions.CHANGED_DIRECTORIES,
 )
 
 

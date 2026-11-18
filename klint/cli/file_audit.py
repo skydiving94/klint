@@ -4,7 +4,7 @@ import asyncio
 import sys
 
 from klint.catalog.code import FILE_CONTENTS_KIND_ID
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import AuditCommand, DiffOptions
 from klint.cli.shell_invocation import run_command_from_shell
 
 FILE_AUDIT_COMMAND = AuditCommand(
@@ -13,7 +13,7 @@ FILE_AUDIT_COMMAND = AuditCommand(
     target_argument_name="file",
     target_argument_help="Path to the code file or directory to audit",
     audit_kind_id=FILE_CONTENTS_KIND_ID,
-    does_offer_diff=True,
+    diff_options=DiffOptions.CHANGED_UNITS,
 )
 
 

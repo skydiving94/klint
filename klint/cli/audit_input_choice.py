@@ -4,13 +4,21 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from klint.app.changed_directories import (
+    ChangedDirectoriesScope,
+    read_changed_directories_scope,
+)
 from klint.app.diff_change import DiffChangeScope, read_diff_change_scope
 from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
+from klint.catalog.code.language_neutral import CODE_IGNORED_NAMES
 from klint.catalog.domain_neutral.git import DiffUnits
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import AuditCommand, DiffOptions
 from klint.cli.command_arguments import CommandArguments
 from klint.cli.console import print_warning_line
-from klint.cli.staged_diff import describe_change_scope
+from klint.cli.staged_diff import (
+    describe_change_scope,
+    describe_changed_directories,
+)
 from klint.core.interfaces import BaseUnitSelector
 from klint.core.models.audits import AuditInput, DiskPathInput
 
@@ -22,20 +30,23 @@ class ChosenAuditInput:
     """What one run audits, and where its acknowledgement log is looked for.
 
     staged is the staged change, when the run audits it, and diff_change the
-    change a diff describes, when the run audits that; both None for a path.
+    change a diff describes, when the run audits that: its units, or the
+    directories that hold it for a structure audit. Both None for a path.
     """
 
     audit_input: AuditInput
     log_directory: Path
     staged: StagedChangeScope | None = None
-    diff_change: DiffChangeScope | None = None
+    diff_change: DiffChangeScope | ChangedDirectoriesScope | None = None
 
     def find_unit_selector(self) -> BaseUnitSelector | None:
         """Return what keeps the units of the change; None for a path."""
         if self.staged is not None:
             return self.staged.scope.unit_selector
-        if self.diff_change is not None:
+        if isinstance(self.diff_change, DiffChangeScope):
             return self.diff_change.scope.unit_selector
+        if self.diff_change is not None:
+            return self.diff_change.unit_selector
         return None
 
     def describe_change(
@@ -54,6 +65,10 @@ class ChosenAuditInput:
                 selected_unit_count,
             )
             return f"Staged change: {description}"
+        if isinstance(self.diff_change, ChangedDirectoriesScope):
+            return (
+                f"Change in the diff: {describe_changed_directories(self.diff_change)}"
+            )
         if self.diff_change is not None:
             description = describe_change_scope(
                 self.diff_change.scope,
@@ -72,6 +87,11 @@ async def choose_audit_input(
 
     Raises ValueError when the staged change or the diff cannot be read.
     """
+    if (
+        command.diff_options is DiffOptions.CHANGED_DIRECTORIES
+        and arguments.diff_from is not None
+    ):
+        return await _choose_changed_directories(command, arguments.diff_from)
     if arguments.diff_units is not None and arguments.diff_from is not None:
         return await _choose_diff_change(
             command, arguments.diff_from, arguments.diff_units
@@ -115,15 +135,36 @@ async def _choose_diff_change(
     if not diff_change.has_files():
         print(f"[{command.name}] No change in the diff to audit", file=sys.stderr)
     if diff_change.is_unchecked_against_disk:
-        print_warning_line(
-            command,
-            "the diff has no index lines, so the files on disk are taken as "
-            "the ones it changes, unchecked",
-        )
+        _warn_about_unchecked_diff(command)
     return ChosenAuditInput(
         audit_input=diff_change.scope.audit_input,
         log_directory=Path.cwd(),
         diff_change=diff_change,
+    )
+
+
+async def _choose_changed_directories(
+    command: AuditCommand, diff_from: Path
+) -> ChosenAuditInput:
+    changed_directories = await read_changed_directories_scope(
+        _read_diff_text(diff_from), Path.cwd(), CODE_IGNORED_NAMES
+    )
+    if not changed_directories.has_files():
+        print(f"[{command.name}] No change in the diff to audit", file=sys.stderr)
+    if changed_directories.is_unchecked_against_disk:
+        _warn_about_unchecked_diff(command)
+    return ChosenAuditInput(
+        audit_input=changed_directories.audit_input,
+        log_directory=Path.cwd(),
+        diff_change=changed_directories,
+    )
+
+
+def _warn_about_unchecked_diff(command: AuditCommand) -> None:
+    print_warning_line(
+        command,
+        "the diff has no index lines, so the files on disk are taken as "
+        "the ones it changes, unchecked",
     )
 
 

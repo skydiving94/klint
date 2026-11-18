@@ -105,7 +105,7 @@ def test_each_command_names_its_path_argument_in_the_help(
         parse_command_arguments(command, ["--help"])
 
     help_text = capsys.readouterr().out
-    assert f" {argument_name}\n" in help_text
+    assert f"\n  {argument_name}  " in help_text
     assert command.description in help_text
 
 
