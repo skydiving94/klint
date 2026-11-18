@@ -1,13 +1,13 @@
+"""The total a customer has spent, from the orders database."""
+
 import sqlite3
 
-DB_PASSWORD = "super_secret_prod_password_123!"
 
-
-def find_order_total(customer_name: str) -> float:
-    connection = sqlite3.connect("production.db")
-    query = f"SELECT SUM(amount) FROM orders WHERE customer = '{customer_name}'"
-    try:
-        return float(connection.execute(query).fetchone()[0])
-    except Exception:
-        print("failed with password", DB_PASSWORD)
-        return 0.0
+def find_order_total(connection: sqlite3.Connection, customer_name: str) -> float:
+    """Return the sum of ``customer_name``'s orders; 0.0 when there are none."""
+    if not customer_name.strip():
+        raise ValueError("the customer's name must not be empty")
+    row = connection.execute(
+        "SELECT SUM(amount) FROM orders WHERE customer = ?", (customer_name,)
+    ).fetchone()
+    return 0.0 if row is None or row[0] is None else float(row[0])
