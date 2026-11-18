@@ -37,6 +37,10 @@ inputs:
     description: "The API key the remote server asks for; pass it from a secret. Sets KLINT_JUDGE_API_KEY."
     required: false
     default: ""
+  review_comments:
+    description: "When diff is 'pull_request': 'true' posts each finding as a review comment on its lines, once per finding across pushes, and replies when a finding is gone; 'false' posts nothing. Needs the 'pull-requests: write' permission. Default: true."
+    required: false
+    default: "true"
   fail_on_problems:
     description: "'true' fails the step when klint finds problems (exit 1); 'false' reports them and passes. A run that cannot audit (exit 2) fails the step either way."
     required: false
@@ -65,6 +69,7 @@ runs:
         REPOSITORY: ${{ github.repository }}
         HAS_API_KEY: ${{ inputs.judge_api_key != '' }}
         FAIL_ON_PROBLEMS: ${{ inputs.fail_on_problems }}
+        REVIEW_COMMENTS: ${{ inputs.review_comments }}
         JUDGE_MODE: ${{ inputs.judge_mode }}
         JUDGE_MODEL: ${{ inputs.judge_model }}
         JUDGE_BASE_URL: ${{ inputs.judge_base_url }}
@@ -94,6 +99,10 @@ runs:
         case "$FAIL_ON_PROBLEMS" in
           true|false) ;;
           *) echo "::error title=klint::fail_on_problems must be 'true' or 'false', not '$FAIL_ON_PROBLEMS'"; exit 2 ;;
+        esac
+        case "$REVIEW_COMMENTS" in
+          true|false) ;;
+          *) echo "::error title=klint::review_comments must be 'true' or 'false', not '$REVIEW_COMMENTS'"; exit 2 ;;
         esac
         if [ "$EVENT_NAME" = "pull_request" ]; then
           diff=$(pick_first_set "$DIFF" pull_request)
@@ -250,6 +259,24 @@ runs:
         else
           bash "$ACTION_PATH/action_scripts/audit_target.sh"
         fi
+
+    # The review never changes the check: a token that cannot write, as on
+    # a pull request from a fork, or an API error is noted in the job
+    # summary, and the next step passes or fails as the audit decides.
+    - name: Post review comments
+      if: steps.settings.outputs.diff == 'pull_request' && inputs.review_comments == 'true' && steps.audit.outputs.findings_json != ''
+      continue-on-error: true
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        FINDINGS_JSON: ${{ steps.audit.outputs.findings_json }}
+        DIFF_FILE: ${{ steps.diff.outputs.diff_file }}
+        PULL_REQUEST: ${{ github.event.pull_request.number }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        klint-pull-request review --findings-json "$FINDINGS_JSON" --diff-file "$DIFF_FILE" \
+          --repository "$GITHUB_REPOSITORY" --pull-request "$PULL_REQUEST" --commit "$HEAD_SHA" \
+          | tee -a "$GITHUB_STEP_SUMMARY"
 
     - name: Save the answer cache
       if: ${{ !cancelled() && steps.answer_cache.outputs.cache-primary-key != '' }}
