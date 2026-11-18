@@ -87,6 +87,7 @@ jobs:
             klint-answers-${{ steps.version.outputs.klint }}-main-
 
       # Each audit fails its step when it finds a problem at 0.8 or more.
+      # Both audit all of klint/, even on a pull request.
       # A finding judged not valid is excluded in the repository's
       # klint.json, with the link to its rebuttal as the reason.
       - name: Audit the structure of klint/
@@ -95,6 +96,7 @@ jobs:
         with:
           target: "klint/"
           mode: "structure"
+          diff: "none"
           min_confidence: "0.8"
           judge_mode: "remote"
           judge_model: "jev-latest"
@@ -109,6 +111,7 @@ jobs:
         with:
           target: "klint/"
           mode: "file"
+          diff: "none"
           min_confidence: "0.8"
           judge_mode: "remote"
           judge_model: "jev-latest"
