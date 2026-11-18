@@ -436,16 +436,16 @@ After the audit, the Action posts one review, with the `COMMENT` event, holding 
 
 > **klint** · `hardcoded_secrets` · confidence 1.00
 >
-> > Does this unit hardcode a secret, such as a password, token or API key?
+> > Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?
 >
 > If it is wrong, acknowledge it in your checkout and push the log:
 >
 > ```
-> klint-ack 3f9c2a1b7d04 --note "<why this finding is wrong>"
+> klint-ack 76ed833669be --note "<why this finding is wrong>"
 > ```
 
 * **Once per finding**: each comment carries a hidden marker with the finding's ID, the same as its acknowledgement log entry's. A later push posts no comment for a finding that already has one, and no review at all when it has no new finding.
-* **Gone findings**: when a push no longer has a finding, fixed, acknowledged or with its code changed, its comment gets one reply saying so, and its thread is resolved.
+* **Gone findings**: when a push no longer has a finding, fixed, acknowledged or with its code changed, its comment gets one reply saying so. Its thread is resolved where the token can; the job's own `GITHUB_TOKEN` can't, so the thread stays open with the reply.
 * **The review's body** sums up the findings at the threshold, new and still open, and the `rule_exclusions` and acknowledgements applied. It lists the findings a comment can't be on: a directory's, one on lines the pull request doesn't add, and those past 50 inline comments.
 * **The check** still passes or fails on the audit alone. A token that can't write, as on a pull request from a fork, posts nothing, and the job summary says so; so does an API error.
 * **Permissions**: the job needs `pull-requests: write`. `review_comments: "false"` turns the comments off.
