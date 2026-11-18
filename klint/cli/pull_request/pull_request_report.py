@@ -52,6 +52,7 @@ class PullRequestFinding:
         return {
             **self.finding,
             "audit": self.audit.value,
+            "entry_id": self.entry_id,
             "acknowledge_command": self.describe_acknowledge_command(),
         }
 

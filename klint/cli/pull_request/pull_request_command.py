@@ -4,11 +4,14 @@ The GitHub Action runs klint and klint-structure on a pull request's diff,
 then this command: ``threshold`` prints the confidence a finding needs to
 fail the check, the same the commit gate uses, and ``report`` combines the
 two audits' ``--json`` reports into one file and prints the job summary.
+``review`` posts that report as a review on the pull request, with the
+job's token in GITHUB_TOKEN, and prints what it posted.
 """
 
 import argparse
 import asyncio
 import json
+import os
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -27,6 +30,13 @@ from klint.cli.pull_request.pull_request_report import (
     PullRequestAudit,
     read_pull_request_report,
 )
+from klint.cli.pull_request.review_posting import (
+    ReviewArguments,
+    post_pull_request_review,
+)
+from klint.infra.github import GitHubReviewApi, PullRequestAddress
+
+_NO_TOKEN_LINE = "klint posted no review comments: GITHUB_TOKEN is not set."
 
 PULL_REQUEST_COMMAND = KlintCommand(
     name="klint-pull-request",
@@ -42,6 +52,7 @@ class PullRequestSubcommand(StrEnum):
 
     THRESHOLD = "threshold"
     REPORT = "report"
+    REVIEW = "review"
 
 
 @dataclass(frozen=True)
@@ -105,6 +116,8 @@ async def run_pull_request_arguments(
     namespace = parser.parse_args(argv)
     if namespace.subcommand == PullRequestSubcommand.THRESHOLD:
         return print_threshold()
+    if namespace.subcommand == PullRequestSubcommand.REVIEW:
+        return post_review(namespace)
     arguments = ReportArguments(
         file_report=namespace.file_report,
         structure_report=namespace.structure_report,
@@ -112,6 +125,32 @@ async def run_pull_request_arguments(
         output=namespace.output,
     )
     return await write_report(arguments, working_directory)
+
+
+def post_review(namespace: argparse.Namespace) -> ExitCode:
+    """Post the review ``namespace`` describes and print what was posted.
+
+    Always exits with NO_PROBLEMS: the review never changes the check.
+    """
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        print(_NO_TOKEN_LINE)
+        return ExitCode.NO_PROBLEMS
+    address = PullRequestAddress(
+        repository=namespace.repository,
+        number=namespace.pull_request,
+        api_url=os.environ.get("GITHUB_API_URL") or PullRequestAddress.api_url,
+        graphql_url=(
+            os.environ.get("GITHUB_GRAPHQL_URL") or PullRequestAddress.graphql_url
+        ),
+    )
+    arguments = ReviewArguments(
+        findings_json=namespace.findings_json,
+        diff_file=namespace.diff_file,
+        commit_id=namespace.commit,
+    )
+    print(post_pull_request_review(arguments, GitHubReviewApi(address, token)), end="")
+    return ExitCode.NO_PROBLEMS
 
 
 def run_pull_request_command() -> int:
@@ -135,4 +174,13 @@ def _build_parser() -> argparse.ArgumentParser:
     report.add_argument("--structure-report", type=Path, required=True)
     report.add_argument("--min-confidence", type=float, required=True)
     report.add_argument("--output", type=Path, required=True)
+    review = subparsers.add_parser(
+        PullRequestSubcommand.REVIEW.value,
+        help="Post the combined report as a review on the pull request",
+    )
+    review.add_argument("--findings-json", type=Path, required=True)
+    review.add_argument("--diff-file", type=Path, required=True)
+    review.add_argument("--repository", required=True, help="owner/name")
+    review.add_argument("--pull-request", type=int, required=True)
+    review.add_argument("--commit", required=True, help="the head commit's SHA")
     return parser

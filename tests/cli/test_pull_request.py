@@ -162,9 +162,12 @@ def test_the_report_combines_both_audits_findings(
     [file_finding] = [f for f in findings["findings"] if f["audit"] == "file"]
     [directory_finding] = [f for f in findings["findings"] if f["audit"] == "structure"]
     assert file_finding["unit_id"] == "cart.py::Cart.total"
-    assert file_finding["acknowledge_command"].startswith("klint-ack ")
+    assert file_finding["acknowledge_command"].startswith(
+        f"klint-ack {file_finding['entry_id']} "
+    )
     assert directory_finding["unit_id"] == "."
     assert directory_finding["acknowledge_command"] is None
+    assert directory_finding["entry_id"] is None
     assert "### klint: 2 findings in this pull request" in summary
     location = file_finding["location"]
     assert (

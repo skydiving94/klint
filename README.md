@@ -389,6 +389,7 @@ jobs:
 | `judge_base_url` | `http://127.0.0.1:8009` | Sets `KLINT_JUDGE_BASE_URL`. |
 | `judge_api_key` | none | Sets `KLINT_JUDGE_API_KEY`. Pass it from a secret. |
 | `fail_on_problems` | `true` | `true` fails the step when `klint` finds problems (exit 1); `false` reports them and passes. A run that cannot audit (exit 2) fails the step either way. |
+| `review_comments` | `true` | In pull-request mode, `true` posts each finding as a review comment on its lines; `false` posts nothing. |
 
 * **Outputs**: `exit_code`, the command's exit code; in pull-request mode, `findings_json` too.
 * **Job summary**: each run adds its report to the job summary.
@@ -399,6 +400,10 @@ On a `pull_request` event, the Action audits only what the pull request changes,
 
 ~~~yaml
 on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write # for the review comments
 
 jobs:
   klint:
@@ -418,11 +423,32 @@ jobs:
 * **Threshold**: the commit gate's: the project's `KLINT_COMMIT_MIN_CONFIDENCE`, else the judge's own, 0.8 for Jev and 0.5 for Kev. `min_confidence` overrides both.
 * **Pass or fail**: the check fails on any finding at the threshold that `klint.json`'s `rule_exclusions` and the acknowledgement log leave. `fail_on_problems: "false"` reports them and passes.
 * **Job summary**: a table of the findings, each with its file, lines, rule, confidence and `klint-ack` command. A pull request that changes nothing klint audits passes with one line.
-* **`findings_json`**: the path of one JSON file with both audits' findings, each with its `audit` (`file` or `structure`) and `acknowledge_command`, and both `--json` reports under `reports`.
+* **Review comments**: see below.
+* **`findings_json`**: the path of one JSON file with both audits' findings, each with its `audit` (`file` or `structure`), `entry_id` and `acknowledge_command`, and both `--json` reports under `reports`.
 * **Answer cache**: kept between runs with the Actions cache, keyed by the klint version and the branch, falling back to the base branch's. A workflow that sets `KLINT_ANSWER_CACHE` keeps its own.
 * **Forks**: a pull request from a fork gets no secrets, so with a remote judge and no API key the audit is skipped with a notice.
 * **A whole-project audit on a pull request**: set `diff: "none"`, with `target` and `mode` as before.
 * **Settings**: the Action always sets the judge's mode, model and address, so a `klint.json` `"env"` block does not choose the judge in the Action.
+
+#### Review comments
+
+After the audit, the Action posts one review, with the `COMMENT` event, holding a comment on the lines of each new finding:
+
+> **klint** · `hardcoded_secrets` · confidence 1.00
+>
+> > Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?
+>
+> If it is wrong, acknowledge it in your checkout and push the log:
+>
+> ```
+> klint-ack 76ed833669be --note "<why this finding is wrong>"
+> ```
+
+* **Once per finding**: each comment carries a hidden marker with the finding's ID, the same as its acknowledgement log entry's. A later push posts no comment for a finding that already has one, and no review at all when it has no new finding.
+* **Gone findings**: when a push no longer has a finding, fixed, acknowledged or with its code changed, its comment gets one reply saying so. Its thread is resolved where the token can; the job's own `GITHUB_TOKEN` can't, so the thread stays open with the reply.
+* **The review's body** sums up the findings at the threshold, new and still open, and the `rule_exclusions` and acknowledgements applied. It lists the findings a comment can't be on: a directory's, one on lines the pull request doesn't add, and those past 50 inline comments.
+* **The check** still passes or fails on the audit alone. A token that can't write, as on a pull request from a fork, posts nothing, and the job summary says so; so does an API error.
+* **Permissions**: the job needs `pull-requests: write`. `review_comments: "false"` turns the comments off.
 
 ## Claude Code Stop Hook
 
