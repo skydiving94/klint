@@ -1,8 +1,9 @@
 """Connects to the billing service."""
 
+import os
 import urllib.request
 
-BILLING_API_TOKEN = "billing-admin-Passw0rd-2024"
+BILLING_API_TOKEN = os.environ["BILLING_API_TOKEN"]
 
 
 def fetch_invoice(invoice_id: str) -> bytes:
