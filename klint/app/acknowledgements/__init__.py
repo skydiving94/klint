@@ -4,6 +4,7 @@ from klint.app.acknowledgements.finding_identity import (
     FindingIdentity,
     describe_unit_name,
     identify_finding,
+    identify_unit_finding,
     relate_path_to_repository,
 )
 from klint.app.acknowledgements.log_location import (
@@ -38,6 +39,7 @@ __all__ = [
     "find_repository_root",
     "format_timestamp_now",
     "identify_finding",
+    "identify_unit_finding",
     "open_acknowledgement_log",
     "reconcile_log",
     "relate_path_to_repository",

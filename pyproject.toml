@@ -50,6 +50,8 @@ klint-mcp = "klint.mcp:run_mcp_server"
 # command that acknowledges one of its findings as wrong.
 klint-pre-commit = "klint.cli:run_pre_commit_gate"
 klint-ack = "klint.cli:run_acknowledge"
+# The GitHub Action's helper on a pull request: its threshold and its report.
+klint-pull-request = "klint.cli:run_pull_request_command"
 
 [tool.setuptools.packages.find]
 where = ["."]

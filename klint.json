@@ -22,6 +22,13 @@
         "klint"
       ],
       "reason": "klint is a command-line tool, and nothing imports its root package; rebutted on PR #79: https://github.com/skydiving94/klint/pull/79#issuecomment-6698232137"
+    },
+    {
+      "rule_id": "excessive_nesting_depth",
+      "paths": [
+        "."
+      ],
+      "reason": "The repository root is as deep as klint/ plus one, by design; rebutted on PR #128: https://github.com/skydiving94/klint/pull/128#issuecomment-6969285171"
     }
   ]
 }
