@@ -52,6 +52,7 @@ def _audit_notes(judge: FakeJudge, *notes: NoteUnit) -> AuditReport:
         rule_loader=FixedRuleLoader([POLITE_RULE, _SHORT_RULE]),
         answer_scale=POLITENESS_SCALE,
         unit_class_to_renderer={NoteUnit: _BlankNoteRenderer()},
+        audited_units_json_key="examined_notes",
     )
     rule_set = RuleSet({UnitTraits(): [POLITE_RULE, _SHORT_RULE]})
     return asyncio.run(Auditor(judge).audit(notes, rule_set, audit_kind))

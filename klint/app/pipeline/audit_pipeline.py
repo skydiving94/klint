@@ -63,12 +63,14 @@ class AuditOutcome:
     of units the input held, and selected_unit_count the number the
     request's unit selector kept among them: every one without a selector.
     acknowledged_findings are the findings the acknowledgement log covers,
-    left out of the report.
+    left out of the report. audited_units_json_key is the key JSON output
+    lists the audited units under, as the kind of audit names it.
     """
 
     report: AuditReport
     scanned_file_count: int
     selected_unit_ids: tuple[str, ...]
+    audited_units_json_key: str
     applied_rule_exclusions: tuple[AppliedRuleExclusion, ...] = ()
     extracted_unit_count: int = 0
     selected_unit_count: int = 0
@@ -132,6 +134,7 @@ class AuditPipeline:
             report=self._finding_ranking.rank_findings(report, audit_kind),
             scanned_file_count=portfolio.scanned_file_count,
             selected_unit_ids=tuple(unit.unit_id for unit in portfolio.units),
+            audited_units_json_key=audit_kind.audited_units_json_key,
             applied_rule_exclusions=portfolio.rule_set.list_applied_rule_exclusions(),
             extracted_unit_count=portfolio.extracted_unit_count,
             selected_unit_count=portfolio.selected_unit_count,

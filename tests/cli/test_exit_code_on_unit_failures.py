@@ -72,7 +72,13 @@ def test_run_where_no_unit_could_be_audited_exits_2_with_one_error_line(
     )
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
+@pytest.mark.parametrize(
+    ("command", "audited_units_key"),
+    [
+        (FILE_AUDIT_COMMAND, "examined_files"),
+        (STRUCTURE_AUDIT_COMMAND, "examined_directories"),
+    ],
+)
 @pytest.mark.parametrize(
     ("answer", "expected_exit_code"),
     [("fail", ExitCode.PROBLEMS_FOUND), ("pass", ExitCode.NO_PROBLEMS)],
@@ -81,6 +87,7 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
     tmp_path: Path,
     capsys: Capture,
     command: AuditCommand,
+    audited_units_key: str,
     answer: str,
     expected_exit_code: ExitCode,
 ) -> None:
@@ -92,18 +99,25 @@ def test_run_where_some_units_could_be_audited_keeps_its_exit_code(
 
     captured = capsys.readouterr()
     assert exit_code == expected_exit_code
-    assert len(json.loads(captured.out)[command.audited_units_json_key]) == 1
+    assert len(json.loads(captured.out)[audited_units_key]) == 1
     (skipping_line,) = list_lines_before_judge_usage(captured.err)
     assert skipping_line.startswith(f"[{command.name}] Skipping ")
     assert skipping_line.endswith(": judge is down")
 
 
-@pytest.mark.parametrize("command", [FILE_AUDIT_COMMAND, STRUCTURE_AUDIT_COMMAND])
+@pytest.mark.parametrize(
+    ("command", "audited_units_key"),
+    [
+        (FILE_AUDIT_COMMAND, "examined_files"),
+        (STRUCTURE_AUDIT_COMMAND, "examined_directories"),
+    ],
+)
 def test_run_with_no_unit_to_audit_exits_0(
     tmp_path: Path,
     fake_judge: type[FakeJudge],
     capsys: Capture,
     command: AuditCommand,
+    audited_units_key: str,
 ) -> None:
     _write_project(tmp_path)
     judge = fake_judge()
@@ -116,7 +130,7 @@ def test_run_with_no_unit_to_audit_exits_0(
     captured = capsys.readouterr()
     assert exit_code == ExitCode.NO_PROBLEMS
     assert json.loads(captured.out) == {
-        command.audited_units_json_key: [],
+        audited_units_key: [],
         "unit_id_to_roll_up_status": {},
         "findings": [],
         "judge_usage": {"requests": 0, "input_tokens": 0},

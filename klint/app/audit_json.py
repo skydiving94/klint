@@ -28,13 +28,12 @@ def convert_answer_cache_to_dict(usage: JudgeUsage) -> dict[str, int]:
 def convert_audit_outcome_to_dict(
     outcome: AuditOutcome,
     findings: Sequence[AuditFinding],
-    audited_units_json_key: str,
     staged: StagedChangeScope | None = None,
     diff_change: DiffChangeScope | None = None,
 ) -> dict[str, object]:
     """Return ``outcome`` as JSON output writes it, with ``findings`` as selected.
 
-    The audited units are listed under ``audited_units_json_key``. The keys
+    The audited units are listed under the key the kind of audit names. The keys
     present in every output come first; "answer_cache" is present only when
     the answer cache took part, "applied_rule_exclusions" only when the
     project's klint.json turned a rule off, "applied_acknowledgements" only
@@ -47,7 +46,7 @@ def convert_audit_outcome_to_dict(
     report = outcome.report
     usage = report.get_judge_usage()
     json_report: dict[str, object] = {
-        audited_units_json_key: report.list_audited_unit_ids(),
+        outcome.audited_units_json_key: report.list_audited_unit_ids(),
         "unit_id_to_roll_up_status": {
             unit_id: status.value
             for unit_id, status in report.map_unit_id_to_roll_up_status().items()

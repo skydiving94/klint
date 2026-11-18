@@ -98,6 +98,7 @@ class CodeSuite(BaseSuite):
                     AuditablePythonClassUnit: PythonClassRenderer(),
                     AuditablePythonFunctionUnit: PythonFunctionRenderer(),
                 },
+                audited_units_json_key="examined_files",
             ),
             AuditKind(
                 kind_id=PROJECT_STRUCTURE_KIND_ID,
@@ -113,6 +114,7 @@ class CodeSuite(BaseSuite):
                     AuditableDirectoryUnit: DirectoryRenderer(),
                     AuditablePythonPackageUnit: PythonPackageRenderer(),
                 },
+                audited_units_json_key="examined_directories",
             ),
         ]
 

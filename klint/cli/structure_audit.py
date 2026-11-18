@@ -13,7 +13,6 @@ STRUCTURE_AUDIT_COMMAND = AuditCommand(
     target_argument_name="directory",
     target_argument_help="Path to the project directory to audit",
     audit_kind_id=PROJECT_STRUCTURE_KIND_ID,
-    audited_units_json_key="examined_directories",
 )
 
 

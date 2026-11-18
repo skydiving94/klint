@@ -3,6 +3,7 @@
 import asyncio
 import json
 import sys
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,6 @@ from klint.cli import (
     AuditCommandApp,
     ExitCode,
     run_command_from_shell,
-    run_klint_project_alias,
 )
 from klint.core.interfaces import BaseJudge
 from tests.support.builders import (
@@ -34,7 +34,6 @@ from tests.support.builders import (
 )
 from tests.support.fakes import FakeJudge, PickyJudge
 from tests.support.paths import MOCK_PROJECT, SnapshotAsserter
-from tests.support.stub_system_one_server import StubSystemOneServer
 
 EXAMPLE_FILE = "examples/backend_data_and_security.py"
 
@@ -415,27 +414,12 @@ def test_unusable_language_to_file_extensions_file_stops_the_command(
     assert captured.err.count("\n") == 1
 
 
-def test_old_command_name_runs_the_structure_audit_with_a_warning(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    shell_env: dict[str, str],
-    capsys: Capture,
-    system_one_server: StubSystemOneServer,
-) -> None:
-    package = write_text(tmp_path / "pkg" / "a.py", "x = 1\n").parent
-    shell_env["KLINT_JUDGE_MODE"] = "remote"
-    shell_env["KLINT_JUDGE_BASE_URL"] = system_one_server.base_url
-    monkeypatch.setattr(sys, "argv", ["klint-project", str(package), "--json"])
+def test_the_old_command_name_is_no_longer_installed() -> None:
+    commands = {
+        entry_point.name
+        for entry_point in entry_points(group="console_scripts")
+        if entry_point.value.startswith("klint.")
+    }
 
-    exit_code = run_klint_project_alias()
-
-    captured = capsys.readouterr()
-    assert exit_code == ExitCode.NO_PROBLEMS
-    assert list_lines_before_judge_usage(captured.err) == [
-        "[klint-structure] Warning: 'klint-project' is deprecated and stops "
-        "working in the next release; use 'klint-structure' instead",
-        "[klint-structure] Judge: jaredpalmer/kev-4b at "
-        f"{system_one_server.base_url} (remote, no API key)",
-    ]
-    assert json.loads(captured.out)["examined_directories"] == [str(package)]
-    assert len(system_one_server.received) == 1
+    assert "klint-structure" in commands
+    assert "klint-project" not in commands
