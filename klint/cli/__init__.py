@@ -19,6 +19,11 @@ from klint.cli.pre_commit import (
     run_acknowledge,
     run_pre_commit_gate,
 )
+from klint.cli.pull_request import (
+    PULL_REQUEST_COMMAND,
+    run_pull_request_arguments,
+    run_pull_request_command,
+)
 from klint.cli.runner import AuditCommandApp
 from klint.cli.shell_invocation import run_command_from_shell
 from klint.cli.structure_audit import STRUCTURE_AUDIT_COMMAND, run_structure_audit
@@ -27,6 +32,7 @@ __all__ = [
     "CHANGE_SUMMARY_COMMAND",
     "FILE_AUDIT_COMMAND",
     "PRE_COMMIT_COMMAND",
+    "PULL_REQUEST_COMMAND",
     "STRUCTURE_AUDIT_COMMAND",
     "AuditCommand",
     "AuditCommandApp",
@@ -42,5 +48,7 @@ __all__ = [
     "run_command_from_shell",
     "run_file_audit",
     "run_pre_commit_gate",
+    "run_pull_request_arguments",
+    "run_pull_request_command",
     "run_structure_audit",
 ]

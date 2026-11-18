@@ -19,7 +19,7 @@ from klint.app.acknowledgements import (
     LogReconciliation,
     open_acknowledgement_log,
 )
-from klint.app.commit_threshold import find_default_commit_threshold
+from klint.app.commit_threshold import choose_commit_threshold
 from klint.app.pipeline import AuditOutcome, AuditPipeline, AuditRequest
 from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
 from klint.app.wiring import AuditingJudge
@@ -201,11 +201,9 @@ def run_pre_commit_gate() -> int:
 
 def _choose_min_confidence(arguments: GateArguments, settings: AppSettings) -> float:
     """Return the threshold: the command line's, the project's, else the judge's."""
-    if arguments.min_confidence is not None:
-        return arguments.min_confidence
-    if settings.commit_min_confidence is not None:
-        return settings.commit_min_confidence
-    return find_default_commit_threshold(settings.model_name)
+    return choose_commit_threshold(
+        arguments.min_confidence, settings.commit_min_confidence, settings.model_name
+    )
 
 
 def _report_decision(
