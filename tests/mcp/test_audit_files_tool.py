@@ -106,7 +106,7 @@ def test_a_path_with_diff_is_refused(repository: Path) -> None:
     call = call_tool(server, "audit_files", {"path": "cart.py", "diff": True})
 
     assert call.result.is_error
-    assert "diff takes no path" in call.read_error()
+    assert "path and diff and diff_text are mutually exclusive" in call.read_error()
 
 
 def test_min_confidence_and_all_answers_are_passed_on(project: Path) -> None:
