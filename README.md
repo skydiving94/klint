@@ -379,9 +379,10 @@ jobs:
 
 | Input | Default | What it does |
 | :--- | :--- | :--- |
-| `target` | `.` | The file or directory to audit. |
-| `mode` | `file` | `file` runs `klint`; `structure` runs `klint-structure`. |
-| `min_confidence` | `0.60` | The least confidence a failure needs to be reported and to count as a problem. |
+| `target` | `.` | The file or directory to audit. Ignored in pull-request mode. |
+| `mode` | `file` | `file` runs `klint`; `structure` runs `klint-structure`. Ignored in pull-request mode, which runs both. |
+| `diff` | `pull_request` on a `pull_request` event, else `none` | `pull_request` audits only the pull request's diff; `none` audits `target`. |
+| `min_confidence` | `0.60`; in pull-request mode, the judge's own | The least confidence a failure needs to be reported and to count as a problem. |
 | `rules` | none | A rules file whose rules merge over the built-in ones. |
 | `judge_mode` | `local` | Sets `KLINT_JUDGE_MODE`. `local` runs `kev` on the runner's CPU. |
 | `judge_model` | `jaredpalmer/kev-0.8b` | Sets `KLINT_JUDGE_MODEL`. |
@@ -389,8 +390,38 @@ jobs:
 | `judge_api_key` | none | Sets `KLINT_JUDGE_API_KEY`. Pass it from a secret. |
 | `fail_on_problems` | `true` | `true` fails the step when `klint` finds problems (exit 1); `false` reports them and passes. A run that cannot audit (exit 2) fails the step either way. |
 
-* **Output**: `exit_code`, the command's exit code.
+* **Outputs**: `exit_code`, the command's exit code; in pull-request mode, `findings_json` too.
 * **Job summary**: each run adds its report to the job summary.
+
+### Pull-request mode
+
+On a `pull_request` event, the Action audits only what the pull request changes, and fails the check on a finding, as the commit gate blocks a commit:
+
+~~~yaml
+on: pull_request
+
+jobs:
+  klint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit the pull request with klint
+        uses: skydiving94/klint@main
+        with:
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+~~~
+
+* **What is audited**: the diff of GitHub's merge commit against its first parent, which is what the pull request would change, with `klint --diff-from` and `klint-structure --diff-from`. A checkout of the pull request's head is diffed from its merge base with the base instead. The Action fetches the commits it needs, so the default shallow checkout is enough.
+* **Threshold**: the commit gate's: the project's `KLINT_COMMIT_MIN_CONFIDENCE`, else the judge's own, 0.8 for Jev and 0.5 for Kev. `min_confidence` overrides both.
+* **Pass or fail**: the check fails on any finding at the threshold that `klint.json`'s `rule_exclusions` and the acknowledgement log leave. `fail_on_problems: "false"` reports them and passes.
+* **Job summary**: a table of the findings, each with its file, lines, rule, confidence and `klint-ack` command. A pull request that changes nothing klint audits passes with one line.
+* **`findings_json`**: the path of one JSON file with both audits' findings, each with its `audit` (`file` or `structure`) and `acknowledge_command`, and both `--json` reports under `reports`.
+* **Answer cache**: kept between runs with the Actions cache, keyed by the klint version and the branch, falling back to the base branch's. A workflow that sets `KLINT_ANSWER_CACHE` keeps its own.
+* **Forks**: a pull request from a fork gets no secrets, so with a remote judge and no API key the audit is skipped with a notice.
+* **A whole-project audit on a pull request**: set `diff: "none"`, with `target` and `mode` as before.
 * **Settings**: the Action always sets the judge's mode, model and address, so a `klint.json` `"env"` block does not choose the judge in the Action.
 
 ## Claude Code Stop Hook
