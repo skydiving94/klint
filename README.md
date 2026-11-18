@@ -465,8 +465,8 @@ The server audits paths inside the directory Claude Code started it in, the proj
 ### The tools
 | Tool | Arguments | What it returns |
 | :--- | :--- | :--- |
-| `audit_files` | `path`, or `diff` (true) with `diff_units` (`units`, `file`, `all`); `min_confidence`, `all_answers`, `rules_path` | What `klint --json` prints: `examined_files`, `unit_id_to_roll_up_status`, `findings`, `judge_usage`, and `staged_change` with `diff`. |
-| `audit_structure` | `path`; `min_confidence`, `all_answers`, `rules_path` | What `klint-structure --json` prints. |
+| `audit_files` | One of `path`, `diff` (true) and `diff_text` (a unified diff, up to 2 MB), with `diff_units` (`units`, `file`, `all`) for either diff; `min_confidence`, `all_answers`, `rules_path` | What `klint --json` prints: `examined_files`, `unit_id_to_roll_up_status`, `findings`, `judge_usage`, and `staged_change` with `diff`, or `diff_change` with `diff_text`, as for [`--diff-from`](#any-diff---diff-from). |
+| `audit_structure` | `path` or `diff_text`; `min_confidence`, `all_answers`, `rules_path` | What `klint-structure --json` prints, with `diff_change` for `diff_text`, as for [`klint-structure --diff-from`](#the-structure-of-a-diff-klint-structure---diff-from). |
 | `check_change_summary` | `path` of a change-summary document; `min_confidence`, `all_answers`, `rules_path` | What `klint-change-summary --json` prints. |
 | `list_rules` | `path`; `rules_path` | Each rule an audit of the path would ask, with the units it would be asked about, and the project's exclusions that applied. No judge is asked. |
 | `explain_rule` | `rule_id` | Each pack that defines the rule: its question, unit types, and the languages and unit tags it is limited to. |

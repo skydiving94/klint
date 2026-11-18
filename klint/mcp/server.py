@@ -17,6 +17,13 @@ from klint.mcp.rule_tools import RuleToolRunner
 
 SERVER_NAME = "klint"
 
+_DIFF_TEXT_HELP = (
+    "diff_text is a unified diff in git's format, such as `gh pr diff` or "
+    "`git diff main...HEAD` prints, up to 2 MB: its paths are taken as relative "
+    "to the working directory, and each changed file there must match the "
+    "diff's index lines."
+)
+
 _MIN_CONFIDENCE_HELP = (
     "min_confidence is the least confidence, 0.0 to 1.0, a finding needs to be "
     "reported; all_answers reports every answer, not the problems only; "
@@ -49,11 +56,12 @@ def create_mcp_server(
         description=(
             "Audit the contents of a code file, or of every file under a "
             "directory, against the file rules: each file, and each Python class "
-            "and function. With diff, audit the staged change of the working "
-            "directory's git repository instead of a path; diff_units then "
-            "chooses the units of each changed file: 'units' (the default) for "
-            "the file and every function and class on a changed line, 'file' for "
-            f"the file alone, 'all' for every unit. {_MIN_CONFIDENCE_HELP}"
+            "and function. Give one of path, diff and diff_text. With diff, audit "
+            "the staged change of the working directory's git repository; with "
+            "diff_text, the change a diff describes. diff_units then chooses the "
+            "units of each changed file: 'units' (the default) for the file and "
+            "every function and class on a changed line, 'file' for the file "
+            f"alone, 'all' for every unit. {_DIFF_TEXT_HELP} {_MIN_CONFIDENCE_HELP}"
         ),
     )
     async def audit_files(
@@ -61,15 +69,20 @@ def create_mcp_server(
         path: str | None = None,
         diff: bool = False,
         diff_units: DiffUnits | None = None,
+        diff_text: str | None = None,
         min_confidence: float = 0.0,
         all_answers: bool = False,
         rules_path: str | None = None,
     ) -> dict[str, object]:
+        _check_one_input_is_given(path=path, diff=diff, diff_text=diff_text)
+        if diff_units is not None and not (diff or diff_text is not None):
+            raise ToolError("diff_units needs diff or diff_text")
         return await audits.run_audit(
             FILE_AUDIT_TOOL,
             AuditToolArguments(
                 path=path,
-                diff_units=_read_diff_units(path, diff, diff_units),
+                diff_units=diff_units or (DiffUnits.UNITS if diff else None),
+                diff_text=diff_text,
                 rules_path=rules_path,
                 should_show_all_answers=all_answers,
                 min_confidence=min_confidence,
@@ -81,21 +94,26 @@ def create_mcp_server(
         name=STRUCTURE_AUDIT_TOOL.name,
         description=(
             "Audit the structure of a project directory against the structure "
-            "rules: each directory, its layout and its imports. "
-            f"{_MIN_CONFIDENCE_HELP}"
+            "rules: each directory, its layout and its imports. Give path or "
+            "diff_text: with diff_text, audit the working directory as the "
+            "project, but only each directory that holds a file the diff "
+            f"changes, and its parents. {_DIFF_TEXT_HELP} {_MIN_CONFIDENCE_HELP}"
         ),
     )
     async def audit_structure(
         context: Context,
-        path: str,
+        path: str | None = None,
+        diff_text: str | None = None,
         min_confidence: float = 0.0,
         all_answers: bool = False,
         rules_path: str | None = None,
     ) -> dict[str, object]:
+        _check_one_input_is_given(path=path, diff_text=diff_text)
         return await audits.run_audit(
             STRUCTURE_AUDIT_TOOL,
             AuditToolArguments(
                 path=path,
+                diff_text=diff_text,
                 rules_path=rules_path,
                 should_show_all_answers=all_answers,
                 min_confidence=min_confidence,
@@ -155,19 +173,22 @@ def create_mcp_server(
     return server
 
 
-def _read_diff_units(
-    path: str | None, diff: bool, diff_units: DiffUnits | None
-) -> DiffUnits | None:
-    """Return the units diff asks for; None without diff. Raises when they clash."""
-    if diff:
-        if path is not None:
-            raise ToolError("diff takes no path: it audits the staged change")
-        return diff_units or DiffUnits.UNITS
-    if diff_units is not None:
-        raise ToolError("diff_units needs diff")
-    if path is None:
-        raise ToolError("A path to audit, or diff, is required")
-    return None
+def _check_one_input_is_given(**name_to_value: str | bool | None) -> None:
+    """Raise ToolError unless exactly one of the inputs is given.
+
+    An input is given when it is neither None nor False.
+    """
+    given = [
+        name for name, value in name_to_value.items() if value not in (None, False)
+    ]
+    names = " and ".join(name_to_value)
+    if len(given) > 1:
+        raise ToolError(
+            f"{names} are mutually exclusive, and the call gives {', '.join(given)}: "
+            "give one"
+        )
+    if not given:
+        raise ToolError(f"One of {names} is required")
 
 
 def run_mcp_server() -> int:
