@@ -88,7 +88,7 @@ klint-change-summary examples/change_summary/summaries_only.json
 | `klint-pre-commit` | Run by git before a commit: the staged change, as `klint --diff` audits it, blocking the commit while a finding is neither fixed nor acknowledged; see [Pre-commit gate](#pre-commit-gate). | None. It takes `--min-confidence` and `--diff-units`. |
 | `klint-ack` | Acknowledges a finding of `klint-pre-commit` as wrong, in `.klint/acknowledgements/`. | The entry's ID, which `klint-pre-commit` prints, and `--note "<why it is wrong>"`. |
 | `klint-mcp` | Every audit above, and the rules, as MCP tools for a coding agent, over stdio; see [MCP Server](#mcp-server-klint-mcp). | None: the agent's client starts it. |
-| `klint-pull-request` | Run by the GitHub Action in pull-request mode: the check's threshold, the combined report of both audits, and the review; see [Pull-request mode](#pull-request-mode). | `threshold`, `report` or `review`, with the options the Action passes. |
+| `klint-pull-request` | Run by the GitHub Action in pull-request mode: the check's threshold, the combined report of both audits, and the review; see [Pull-request mode](#pull-request-mode). | `threshold`, `report` or `review`, as the Action calls it. |
 
 The first three commands take these options:
 
