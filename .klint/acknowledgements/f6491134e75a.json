@@ -1,0 +1,22 @@
+{
+  "id": "f6491134e75a",
+  "rule_id": "hardcoded_secrets",
+  "file": "klint/infra/trial_credentials.py",
+  "unit": {
+    "kind": "file",
+    "name": "",
+    "start_line": 1,
+    "end_line": 8
+  },
+  "code_hash": "sha256:709463feaef5809e9167213984df3b695193d9bead5698554e7acceddac38243",
+  "finding": {
+    "answer": "not judged",
+    "question": "Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?",
+    "confidence": null
+  },
+  "judge_model_version": null,
+  "first_flagged_at": "2026-11-19T04:39:31+00:00",
+  "status": "acknowledged",
+  "acknowledged_at": "2026-11-19T04:39:31+00:00",
+  "note": "Trial for #134: a planted password, acknowledged to test klint-ack from a review comment"
+}
