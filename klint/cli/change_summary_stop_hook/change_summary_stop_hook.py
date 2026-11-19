@@ -13,7 +13,6 @@ checks the uncommitted change alone.
 
 import asyncio
 import contextlib
-import dataclasses
 import os
 import sys
 from collections.abc import Sequence
@@ -41,7 +40,6 @@ from klint.cli.change_summary_stop_hook.hook_event import (
     read_hook_event,
 )
 from klint.cli.change_summary_stop_hook.hook_messages import (
-    SUMMARIES_PATH,
     describe_flagged_summaries,
     describe_gave_up,
     describe_missing_summaries,
@@ -59,6 +57,10 @@ from klint.cli.change_summary_stop_hook.session_start_commit import (
 from klint.cli.change_summary_stop_hook.stop_decision import StopDecision, StopVerdict
 from klint.cli.change_summary_stop_hook.summary_coverage import (
     compare_summaries_with_change,
+)
+from klint.cli.change_summary_writing import (
+    SUMMARIES_PATH,
+    read_change_to_summarize,
 )
 from klint.cli.judge_usage_description import describe_judge_usage
 from klint.cli.unit_failure_listener import UnitFailureListener
@@ -110,7 +112,9 @@ class ChangeSummaryStopHook:
             try:
                 start_commit = SessionStartCommit.open_for(Path.cwd(), event.session_id)
                 base = choose_change_base(start_commit)
-                change = await _read_change(base)
+                change = await read_change_to_summarize(
+                    GitChangeSource(Path.cwd(), base=base.commit)
+                )
                 block_count = SessionBlockCount.open_for(Path.cwd(), event.session_id)
             except ValueError as error:
                 return StopDecision.allow(describe_unverified(str(error), None))
@@ -219,28 +223,6 @@ def _record_session_start(event: HookEvent) -> None:
         print_hook_line("The repository has no commit yet, so none is recorded")
     else:
         print_hook_line(f"Session start recorded at commit {commit_hash[:12]}")
-
-
-async def _read_change(base: ChangeBase) -> GitChange:
-    """Return the change since ``base`` in the current directory's repository.
-
-    The summaries file is left out, as klint leaves it out of the change it
-    checks the summaries against.
-    """
-    change = await GitChangeSource(Path.cwd(), base=base.commit).read_input()
-    summaries_path = SUMMARIES_PATH.resolve()
-    repository_path = change.repository_path.resolve()
-    if not summaries_path.is_relative_to(repository_path):
-        return change
-    relative_path = summaries_path.relative_to(repository_path).as_posix()
-    return dataclasses.replace(
-        change,
-        files=tuple(
-            file
-            for file in change.files
-            if relative_path not in (file.path, file.old_path)
-        ),
-    )
 
 
 def _create_hook_folder() -> None:

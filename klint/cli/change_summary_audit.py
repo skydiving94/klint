@@ -23,6 +23,7 @@ CHANGE_SUMMARY_COMMAND = AuditCommand(
     ),
     audit_kind_id=CHANGE_SUMMARY_KIND_ID,
     no_problems_message="Every summary passed its checks.",
+    does_offer_writing_aids=True,
 )
 
 

@@ -35,7 +35,9 @@ class AuditCommand(KlintCommand):
     audit_kind_id names the kind of audit the command asks for. The terminal
     report says no_problems_message when it has no finding to show.
     diff_options says which options the command offers to audit a change in
-    place of a target.
+    place of a target. does_offer_writing_aids adds --instructions and
+    --skeleton, which print what helps an agent write change summaries in
+    place of an audit.
     """
 
     target_argument_name: str
@@ -43,3 +45,4 @@ class AuditCommand(KlintCommand):
     audit_kind_id: str
     no_problems_message: str = "No architectural or semantic issues found."
     diff_options: DiffOptions = DiffOptions.NONE
+    does_offer_writing_aids: bool = False

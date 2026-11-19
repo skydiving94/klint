@@ -103,11 +103,7 @@ def read_summaries_of_git_change(
             f"is {schema_version}; klint reads schema_version "
             f"{SUPPORTED_SCHEMA_VERSION} only",
         )
-    if not change.files:
-        raise ValueError(
-            f"The change ({change.diff_command}) holds no changed file, so there "
-            "is no summary to verify"
-        )
+    require_changed_files(change)
     path_to_file_change = {file.path: file for file in change.files}
     path_to_package_entry = _read_package_entries(document, change)
     path_to_file_entry = _read_file_entries(document, path_to_file_change)
@@ -125,6 +121,15 @@ def read_summaries_of_git_change(
             files,
         ),
     )
+
+
+def require_changed_files(change: GitChange) -> None:
+    """Raise ValueError when ``change`` holds no file: nothing to summarize."""
+    if not change.files:
+        raise ValueError(
+            f"The change ({change.diff_command}) holds no changed file, so there "
+            "is no summary to verify"
+        )
 
 
 def _read_package_entries(
