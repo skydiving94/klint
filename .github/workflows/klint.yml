@@ -3,7 +3,7 @@ run-name: ${{ (github.event_name == 'workflow_dispatch' && inputs.command != 'se
 
 # klint audits its own code against Jev and lists what it finds in the job
 # summary. On a pull request into main or an epic branch it audits only the
-# pull request's diff and posts each finding as a review comment; on a push to
+# pull request's diff under klint/ and posts each finding as a review comment; on a push to
 # main, or started by hand, it audits all of klint/. The job fails when an
 # audit cannot run, or when it finds a problem at 0.8 confidence or more. A finding judged not valid is excluded in the
 # repository's klint.json, with a link to its rebuttal as the reason.
@@ -103,6 +103,8 @@ jobs:
         if: steps.key.outputs.is_set == 'true' && github.event_name == 'pull_request'
         uses: ./
         with:
+          # klint's own code, as the full audit covers; examples/ fails on purpose.
+          target: "klint/"
           diff: "pull_request"
           review_comments: "true"
           min_confidence: "0.8"

@@ -2,7 +2,7 @@ name: "klint - Semantic & Architectural Code Auditor"
 description: "Audit files and project structure against plain-English rules, judged by a local kev model or a remote /v1/systemone server such as Jev."
 inputs:
   target:
-    description: "File or directory path to audit; ignored when diff is 'pull_request'"
+    description: "File or directory path to audit; when diff is 'pull_request', only the diff's changes under this path are audited"
     required: false
     default: "."
   mode:
@@ -179,6 +179,7 @@ runs:
       env:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        TARGET: ${{ inputs.target }}
       run: |
         diff_options=(--no-color --no-ext-diff --src-prefix=a/ --dst-prefix=b/)
         diff_file="$RUNNER_TEMP/klint-pull-request.diff"
@@ -188,14 +189,14 @@ runs:
         fi
         if [ "$(git rev-parse -q --verify "HEAD^2")" = "$HEAD_SHA" ]; then
           echo "Auditing the merge commit $head against its first parent."
-          git diff "${diff_options[@]}" "HEAD^1" HEAD > "$diff_file"
+          git diff "${diff_options[@]}" "HEAD^1" HEAD -- "${TARGET:-.}" > "$diff_file"
         elif [ "$head" = "$HEAD_SHA" ]; then
           echo "Auditing the head $head against its merge base with $BASE_SHA."
           if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
             git fetch --no-tags --quiet --unshallow origin
           fi
           git fetch --no-tags --quiet origin "$BASE_SHA"
-          git diff "${diff_options[@]}" "$BASE_SHA...HEAD" > "$diff_file"
+          git diff "${diff_options[@]}" "$BASE_SHA...HEAD" -- "${TARGET:-.}" > "$diff_file"
         else
           echo "::error title=klint::The checkout ($head) is neither the pull request's merge commit nor its head ($HEAD_SHA)"
           exit 2
