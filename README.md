@@ -76,6 +76,7 @@ klint-change-summary examples/change_summary/summaries.json
 # The same summaries alone, with the change read from git (commit d35fa76)
 klint-change-summary examples/change_summary/summaries_only.json
 ~~~
+To have an agent write the summaries of your own change, see [Getting summaries from an agent](#getting-summaries-from-an-agent).
 
 ## Commands
 
@@ -184,6 +185,26 @@ A summaries-only document, abridged from [examples/change_summary/summaries_only
 * **A summary that does not fit the change** stops the command (exit 2): a hunk, file or package the change does not hold, or a header that is not a hunk header. So do an unknown commit, a directory outside any git repository, and an empty change.
 
 See [examples/change_summary/README.md](examples/change_summary/README.md) for both forms of one real change.
+
+### Getting summaries from an agent
+klint checks the summaries; the agent that made the change writes them, as a summaries-only document in `.klint/change-summary.json`.
+
+* **Claude Code**: set up the [Stop hook](#claude-code-stop-hook). Before the agent stops, it sends the agent klint's writing instructions and the change's files and hunks, then checks what the agent writes.
+* **Any other agent**, such as Cursor, Codex or a plain chat: give it the same two things from the command line, then check its summaries yourself. From the project:
+  1. Print klint's writing instructions, and give them to the agent: in its prompt, a rules file or `AGENTS.md`.
+     ~~~bash
+     klint-change-summary --instructions
+     ~~~
+  2. Write a skeleton of the change where the summaries go. It names the change, lists each changed file with its hunks' headers, and leaves every `summary` null. Add a commit, as in `--skeleton HEAD`, for that commit in place of the uncommitted change.
+     ~~~bash
+     mkdir -p .klint && klint-change-summary --skeleton > .klint/change-summary.json
+     ~~~
+  3. Ask the agent to fill in every `summary` in `.klint/change-summary.json` and change nothing else; it may add `packages`.
+  4. Check its summaries:
+     ~~~bash
+     klint-change-summary .klint/change-summary.json
+     ~~~
+  An unfilled summary fails `has_summary` (exit 1). Neither `--instructions` nor `--skeleton` asks the judge. The summaries file is never part of the change it summarizes; to keep `.klint/` out of your commits, add it to `.gitignore`.
 
 ### What a command prints
 * **The judge**: a line on stderr, before the audit, names the judge the command asks, for example `[klint] Judge: jaredpalmer/kev-4b, run in this process (local); answer cache at /Users/me/Library/Caches/klint/answers`. The answer cache's folder follows when the cache is on.
