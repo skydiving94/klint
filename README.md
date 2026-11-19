@@ -31,8 +31,13 @@ By leveraging the **System One (`/v1/systemone`)** pointer-head specification, `
 * **[Change Summaries Read from Git](#change-summary-documents)**: An agent writes only its summaries, and `klint-change-summary` reads the change itself from git: a commit, or the uncommitted change.
 * **[Claude Code Stop Hook](#claude-code-stop-hook)**: `klint-change-summary-stop-hook` keeps a Claude Code agent from stopping until its summaries of everything it changed in the session, committed or not, pass, and sends it back to fix the ones flagged.
 * **[Staged-Change Audits (`klint --diff`)](#auditing-the-staged-change---diff)**: Audit only the units the staged change touches: each changed file, and the functions and classes on its changed lines.
+* **[Any Diff (`klint --diff-from`)](#any-diff---diff-from)**: Audit what any unified diff touches, piped in or read from a file, such as `git diff main...HEAD | klint --diff-from -`. Each file is checked against the diff before it is judged.
+* **[Structure Audits of a Diff (`klint-structure --diff-from`)](#the-structure-of-a-diff-klint-structure---diff-from)**: Audit only the directories a diff changes, and their parents, each judged as a full structure audit would judge it.
+* **[Unit Selectors in `rule_exclusions`](#what-a-klintjson-holds)**: Turn a rule off for one class or function, such as `settings.py::AppSettings`, in `klint.json`, reviewed with the code like any other change.
 * **[Pre-Commit Gate and Acknowledgement Log](#pre-commit-gate)**: `klint-pre-commit` blocks a commit while a finding in the staged change is neither fixed nor acknowledged. `klint-ack` records why a finding is wrong in `.klint/acknowledgements/`, which is committed and reviewed with the code.
-* **[MCP Server (`klint-mcp`)](#mcp-server-klint-mcp)**: Offers every audit, and the rules, to a coding agent as MCP tools over stdio, so it can check its work when it wants to.
+* **[MCP Server (`klint-mcp`)](#mcp-server-klint-mcp)**: Offers every audit, and the rules, to a coding agent as MCP tools over stdio, so it can check its work when it wants to, a pull request's diff included (`diff_text`).
+* **[Pull-Request Mode in the GitHub Action](#pull-request-mode)**: On a pull request, the Action audits only its diff, with `klint` and `klint-structure`, and fails the check on a finding at the judge's threshold.
+* **[Review Comments](#review-comments)**: The Action posts each finding as a review comment on its lines, with the `klint-ack` command for it, once per finding, and replies when a later push no longer has it.
 * **[Answer Cache](#the-answer-cache)**: On by default. The judge is never asked twice about the same code, rule and model, so a second run on an unchanged project sends no request.
 * **[Judge Usage Report](#what-a-command-prints)**: Every command ends by saying how many requests and input tokens it sent to the judge, and how many questions the answer cache answered.
 * **[Local Kev or Hosted Jev](#judges)**: Run the judge on your machine, on a `kev.serve` server, or ask TypeSafe's hosted Jev with an API key. Each command's first line names the judge it asks, and each judge is shown as much of a unit as it stays accurate on ([character budgets](#choosing-a-judge-and-a-threshold)).
@@ -76,13 +81,14 @@ klint-change-summary examples/change_summary/summaries_only.json
 
 | Command | What it audits | Argument |
 | :--- | :--- | :--- |
-| `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory; or, with `--diff`, none: the staged change. |
-| `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory. |
+| `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory; or, with `--diff`, none: the staged change; or, with `--diff-from`, none: the diff it reads. |
+| `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory; or, with `--diff-from`, none: the diff it reads. |
 | `klint-change-summary` | An agent's summaries of a change: each hunk against its code, and each file, package and the commit against the checked summaries below it. | A change-summary JSON document: summaries with each hunk's code, or summaries alone; see [Change-summary documents](#change-summary-documents). |
 | `klint-change-summary-stop-hook` | Run by Claude Code at the start of a session and before its agent stops: the agent's summaries, in `.klint/change-summary.json`, of everything changed since the session started, committed or not; see [Claude Code Stop Hook](#claude-code-stop-hook). | None: it reads the hook event on stdin. It takes only `--min-confidence`. |
 | `klint-pre-commit` | Run by git before a commit: the staged change, as `klint --diff` audits it, blocking the commit while a finding is neither fixed nor acknowledged; see [Pre-commit gate](#pre-commit-gate). | None. It takes `--min-confidence` and `--diff-units`. |
 | `klint-ack` | Acknowledges a finding of `klint-pre-commit` as wrong, in `.klint/acknowledgements/`. | The entry's ID, which `klint-pre-commit` prints, and `--note "<why it is wrong>"`. |
 | `klint-mcp` | Every audit above, and the rules, as MCP tools for a coding agent, over stdio; see [MCP Server](#mcp-server-klint-mcp). | None: the agent's client starts it. |
+| `klint-pull-request` | Run by the GitHub Action in pull-request mode: the check's threshold, the combined report of both audits, and the review; see [Pull-request mode](#pull-request-mode). | `threshold`, `report` or `review`, with the options the Action passes. |
 
 The first three commands take these options:
 
@@ -93,7 +99,8 @@ The first three commands take these options:
 | `--all-answers` | Shows every answer, not only the problems. |
 | `--json` | Prints JSON instead of the terminal report. |
 | `--diff` | `klint` only: audits the staged change of the current directory's repository instead of a path; see [Auditing the staged change](#auditing-the-staged-change---diff). |
-| `--diff-units units\|file\|all` | With `--diff`: which units of each changed file are judged. `units` (the default) is the file and every function and class on a changed line, `file` the file alone, `all` every unit. |
+| `--diff-from FILE` | `klint` and `klint-structure`: audits what a unified diff touches instead of a path, read from `FILE`, or from stdin with `-`; see [Any diff](#any-diff---diff-from) and [The structure of a diff](#the-structure-of-a-diff-klint-structure---diff-from). |
+| `--diff-units units\|file\|all` | `klint`, with `--diff` or `--diff-from`: which units of each changed file are judged. `units` (the default) is the file and every function and class on a changed line, `file` the file alone, `all` every unit. |
 
 For example:
 ~~~bash
@@ -595,26 +602,29 @@ The source moved from `src/` to the `klint/` package, with no alias for code tha
 * **Change Summaries**:
   * A hunk over 4,000 characters is shown only in part, and no judge sees a mistake that sits past the cut.
   * The local Kevs catch no omission. Jev catches most, but misses a file summary that names every hunk and leaves out the file's main change, and flags some true file summaries on `covers_every_change` or `covers_key_changes`.
-* **Staged Change Only**: `klint --diff` and the commit gate read the staged change; neither audits a range of commits, such as a pull request's, nor unstaged edits. `klint-structure` still audits the whole project.
+* **Diffs Are Checked Against the Files on Disk**: `--diff-from` judges each file as it is on disk, so the diff's head must be checked out; a file that doesn't match the diff's `index` hash stops the run. `klint --diff` and the commit gate read the staged change, not unstaged edits. `klint-change-summary` doesn't take a piped diff: it reads a commit, or a base, from git.
+* **Review Threads Stay Open**: when a later push no longer has a finding, the Action replies to its review comment, but the job's own `GITHUB_TOKEN` can't resolve the thread, so it stays open. A pull request from a fork, whose token can't write, gets the job summary and no comments; with a remote judge and no API key it is skipped.
+* **Suppression Lives in `klint.json` and the Acknowledgement Log**: there are no inline suppression comments, and a finding is acknowledged with `klint-ack` in a checkout, not by replying to its review comment.
 * **One Local Agent over MCP**: `klint-mcp` serves one agent over stdio, on the machine it runs on, and needs a served judge: it refuses the local mode.
 * **Eliminating Local CLI Cold-Start (`KLINT_JUDGE_MODE=local` vs. `kev.serve`)**: In `KLINT_JUDGE_MODE=local`, `klint` loads the open-weight checkpoint into memory once per CLI invocation (~3–5s startup for `kev-4b` on Apple Silicon). For instant startup across frequent runs, either use `jaredpalmer/kev-0.8b` or keep a persistent `kev.serve` process running in the background with `KLINT_JUDGE_MODE=remote`.
 * **Directory Summary Confidence Calibration**: Because `klint-structure` evaluates compact AST metadata summaries rather than full source code bodies, `[FAIL]` confidence scores on directory rules are naturally more conservative (`20%–50%`) than file-level code rules (`70%–99%`).
 
 ## Roadmap & Upcoming Features
 
-Shipped in this release:
+Shipped:
+* PR-ready checks: `klint --diff-from` and `klint-structure --diff-from` on any diff, unit selectors in `rule_exclusions`, pull-request mode in the GitHub Action with review comments on the flagged lines, `diff_text` for the MCP tools, and the removal of the old names.
 * Commit-ready checks: `klint --diff` on the staged change, the pre-commit gate with its acknowledgement log, the `klint-mcp` server, the answer cache, the judge usage report, a character budget per judge, and a Stop hook that checks the agent's commits too.
 * Agent-ready checks: Python class and function units, change summaries read from git, the Claude Code Stop hook, and the hosted Jev judge.
 
 Upcoming:
-1. **More of Git Diff Mode**: `--diff` against a ref, for pull requests, and against the working tree; and a `klint-structure` audit of the packages that changed only.
-2. **MCP over HTTP**: `klint-mcp` for several clients and remote agents, and hooks for agents other than Claude Code.
-3. **Multi-Language Extractors**: Class and function units, and `klint-structure` outlines, for TypeScript/JavaScript (`.ts`, `.tsx`) and Go.
-4. **Inline GitHub PR Review Annotations**: Extending the GitHub Action with inline pull-request review comments on flagged line ranges.
-5. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings, and packing several small units into one request.
-6. **Non-Code Files**: Auditing text documents, LaTeX and other writing.
-7. **More Accurate Local Judges**: A hosted Kev-27B and a Kev-4B fine-tuned on labelled change summaries, scored on the same test set.
-8. **Removing the Old Names**: the names in [Removed Names](#removed-names) stop working.
+1. **Inline Suppression Comments, with Guards**: a required reason, a per-project switch, a pull request listing every suppression it adds, and a check for unused ones.
+2. **Acknowledging from a Pull Request**: acknowledging a finding by replying to its review comment, and check-run annotations alongside the review comments.
+3. **Fine-Tuning Kev-4B**: an experiment fine-tuning the local Kev-4B on labelled change summaries and scoring it on the same test set, once there is more labelled data than the 141 summaries so far.
+4. **MCP over HTTP**: `klint-mcp` for several clients and remote agents, and hooks for agents other than Claude Code.
+5. **Multi-Language Extractors**: Class and function units, and `klint-structure` outlines, for TypeScript/JavaScript (`.ts`, `.tsx`) and Go.
+6. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings, and packing several small units into one request.
+7. **Non-Code Files**: Auditing text documents, LaTeX and other writing.
+8. **More Accurate Local Judges**: A hosted Kev-27B, scored on the same test sets.
 
 ## Contributing
 
