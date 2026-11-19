@@ -54,17 +54,19 @@ The cases are in `judge_accuracy/change_summary/cases/`, one file per commit of 
 klint/
 ├── cli/                     # The console scripts, their options, exit codes and terminal report
 │   ├── change_summary_stop_hook/  # The Claude Code Stop hook: the hook events, the decision to block, the session's start commit and block count
-│   └── pre_commit/          # The commit gate: klint-pre-commit, klint-ack, and how audits report acknowledged findings
+│   ├── pre_commit/          # The commit gate: klint-pre-commit, klint-ack, and how audits report acknowledged findings
+│   └── pull_request/        # klint-pull-request, for the Action's pull-request mode: the threshold, the combined report and job summary, the review comments
 ├── mcp/                     # klint-mcp: every audit, and the rules, as MCP tools for one agent over stdio
 ├── composition.py           # The injector every front end runs: the built-in suites, each kind's rule replacement, the judge's character budget
-├── app/                     # What runs an audit: settings (environment, klint.json), the injector, the kinds of audit on offer, the staged change, each judge's character budget and commit threshold, JSON output
+├── app/                     # What runs an audit: the injector, the kinds of audit on offer, the staged change or a diff and the units or directories it selects, rule exclusions, each judge's character budget and commit threshold, JSON output
+│   ├── settings/            # The settings (environment, klint.json) and the built-in rule packs
 │   ├── acknowledgements/    # The acknowledgement log as an audit uses it: a finding's identity, matching, reconciling with the staged change
 │   └── pipeline/            # One audit run, in stages: acquisition, rule selection, auditing, roll-up
 ├── catalog/                 # The built-in suites
 │   ├── domain_neutral/      # What fits any content: whole files, JSON documents, a change read from git, file traits (extension, tags, a project's overrides)
 │   │   ├── extraction/
 │   │   ├── file_traits_identifiers/
-│   │   └── git/             # A commit, a change since a base commit, the uncommitted change or the staged one, read hunk by hunk
+│   │   └── git/             # A commit, a change since a base commit, the uncommitted change, the staged one or any unified diff, read hunk by hunk, and each file checked against the diff's blob hashes
 │   ├── code/                # The code suite: file contents (klint) and project structure (klint-structure)
 │   │   ├── language_neutral/  # Units, renderers and extractors shared by every programming language
 │   │   │   └── extraction/
@@ -78,6 +80,7 @@ klint/
 │   ├── answer_cache/        # The answer cache: a judge that reuses the answers another judge gave in earlier runs
 │   ├── rule_loader/         # JSON rule packs, checked against the registered unit types
 │   ├── table_loader/        # JSON tables: each language's file extensions, and tag detection
+│   ├── github/              # GitHub's REST API for a pull request's reviews and comments
 │   └── system_one/          # Judges in the System One format: over HTTP (remote) or in this process (local)
 ├── core/                    # The auditor, the registry of unit types and klint's warnings
 │   ├── interfaces/          # What the outer layers implement: extractors, renderers, judges, rule loaders, suites
@@ -115,7 +118,7 @@ examples/                    # Deliberately bad code, a mock project and change-
 ### Adding or refining a rule
 * Edit the pack in `klint/resources/catalog/`. A pack's `"applies_to": {"languages": [...]}` header limits it to files of those languages; a pack without one is asked about files of every identified language.
 * Always phrase the `"question"` as a positive practice, `"<positive practice> rather than <antipattern>?"`, and give its `"unit_types"`. The README's "Writing a rule" lists every field.
-* A new pack is listed in `_BUILT_IN_RULE_PACKS` in `klint/app/settings.py`.
+* A new pack is listed in `_BUILT_IN_RULE_PACKS` in `klint/app/settings/built_in_packs.py`.
 
 ### Adding a language to `klint-structure`
 1. List the language's file extensions in `klint/resources/catalog/code/language_neutral/language_to_file_extensions.json`.
