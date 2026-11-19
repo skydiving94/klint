@@ -66,7 +66,7 @@ Run it before marking a PR ready if the change affects what the judge is asked o
 
 ## Self-Audit
 Run it on your issue branch before marking a PR ready, and on `epic-121` before it goes to `main`. GitHub runs it with Jev, using the repository secret, so the key never reaches your session.
-- **On a PR into `main` or an `epic-*` branch** it starts by itself on each push. It audits only the PR's diff, structure and files, and posts each finding as a review comment on its lines; a later push replies to a comment whose finding is gone. Your issue PR's latest run is its Self-Audit.
+- **On a PR into `main` or an `epic-*` branch** it starts by itself on each push. It audits only the PR's diff under `klint/`, structure and files, and posts each finding as a review comment on its lines; a later push replies to a comment whose finding is gone. Your issue PR's latest run is its Self-Audit.
 - **On a push to `main`, or started by hand,** it audits all of `klint/`, keeping `main`'s answer cache warm.
 - **Start one by hand** where no PR run covers it: before your PR exists, after you change `klint.json`'s `rule_exclusions` without a push, or to audit all of `klint/` on your branch.
 1. Find the run, or start one, and wait for it:

@@ -386,7 +386,7 @@ jobs:
 
 | Input | Default | What it does |
 | :--- | :--- | :--- |
-| `target` | `.` | The file or directory to audit. Ignored in pull-request mode. |
+| `target` | `.` | The file or directory to audit. In pull-request mode, only the diff's changes under it are audited, such as `src/` to leave out tests and examples. |
 | `mode` | `file` | `file` runs `klint`; `structure` runs `klint-structure`. Ignored in pull-request mode, which runs both. |
 | `diff` | `pull_request` on a `pull_request` event, else `none` | `pull_request` audits only the pull request's diff; `none` audits `target`. |
 | `min_confidence` | `0.60`; in pull-request mode, the judge's own | The least confidence a failure needs to be reported and to count as a problem. |
