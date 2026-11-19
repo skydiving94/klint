@@ -37,7 +37,7 @@ def _read_error(capsys: Capture) -> str:
     return capsys.readouterr().err.splitlines()[-1]
 
 
-def test_an_unknown_id_is_refused_naming_the_log(
+def test_an_id_no_finding_has_is_refused_saying_why(
     repository_with_open_entry: Path, capsys: Capture
 ) -> None:
     exit_code = run_ack("000000000000", "--note", "a note")
@@ -45,9 +45,12 @@ def test_an_unknown_id_is_refused_naming_the_log(
     assert exit_code == ExitCode.RUN_ERROR
     assert _read_error(capsys) == (
         "[klint-ack] Error: there is no entry '000000000000' in "
-        f"{repository_with_open_entry / LOG_FOLDER}; the IDs are those "
-        "klint-pre-commit prints"
+        f"{repository_with_open_entry / LOG_FOLDER}, and no finding on the code "
+        "as it stands has that ID: the code has changed since the ID was given, "
+        "or the ID is wrong. A finding given with no ID, as on a directory, is "
+        "turned off in klint.json's rule_exclusions"
     )
+    assert len(read_entries(repository_with_open_entry)) == 1
 
 
 def test_an_entry_is_acknowledged_once(

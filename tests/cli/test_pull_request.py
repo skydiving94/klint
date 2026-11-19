@@ -23,7 +23,11 @@ from tests.support.fakes import FakeJudge
 from tests.support.git_repository import isolate_git, run_git
 from tests.support.pre_commit import (
     CART_AFTER,
+    CART_CHANGED_AGAIN,
+    list_staged_paths,
+    read_entries,
     run_ack,
+    run_ack_with_judge,
     run_gate,
     set_up_gate_repository,
     stage,
@@ -197,6 +201,54 @@ def test_a_finding_acknowledged_in_the_log_no_longer_fails_the_check(
     assert exit_code == ExitCode.NO_PROBLEMS
     assert read_findings(tmp_path)["findings"] == []
     assert "klint: no problem found in the" in capsys.readouterr().out
+
+
+def test_a_finding_first_raised_on_the_pull_request_is_acknowledged_from_its_id(
+    repository: Path, tmp_path: Path, capsys: Capture
+) -> None:
+    judge = FakeJudge(rule_id_to_answer={"short": "fail"}, confidence=0.91)
+    audit_diff(judge, tmp_path, tmp_path / "change.diff", capsys)
+    report(tmp_path)
+    [finding] = read_findings(tmp_path)["findings"]
+    entry_id = finding["entry_id"]
+    # The commit gate never ran, so the log holds nothing.
+    assert read_entries(repository) == []
+    idle_judge = FakeJudge()
+
+    acknowledged = run_ack_with_judge(
+        idle_judge, entry_id, "--note", "the sum is short enough"
+    )
+
+    assert acknowledged == ExitCode.NO_PROBLEMS
+    assert idle_judge.requests == []
+    [entry] = read_entries(repository)
+    assert (entry["id"], entry["rule_id"], entry["status"], entry["note"]) == (
+        entry_id,
+        "short",
+        "acknowledged",
+        "the sum is short enough",
+    )
+    assert f".klint/acknowledgements/{entry_id}.json" in list_staged_paths(repository)
+    audit_diff(judge, tmp_path, tmp_path / "change.diff", capsys)
+    assert report(tmp_path) == ExitCode.NO_PROBLEMS
+    assert read_findings(tmp_path)["findings"] == []
+
+
+def test_an_id_from_before_the_code_changed_is_refused(
+    repository: Path, tmp_path: Path, capsys: Capture
+) -> None:
+    judge = FakeJudge(rule_id_to_answer={"short": "fail"}, confidence=0.91)
+    audit_diff(judge, tmp_path, tmp_path / "change.diff", capsys)
+    report(tmp_path)
+    [finding] = read_findings(tmp_path)["findings"]
+    (repository / "cart.py").write_text(CART_CHANGED_AGAIN, encoding="utf-8")
+    capsys.readouterr()
+
+    exit_code = run_ack(finding["entry_id"], "--note", "the sum is short enough")
+
+    assert exit_code == ExitCode.RUN_ERROR
+    assert "the code has changed since the ID was given" in capsys.readouterr().err
+    assert read_entries(repository) == []
 
 
 @pytest.mark.usefixtures("repository")
