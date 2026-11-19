@@ -29,6 +29,13 @@
         "."
       ],
       "reason": "The repository root is as deep as klint/ plus one, by design; rebutted on PR #128: https://github.com/skydiving94/klint/pull/128#issuecomment-6969285171"
+    },
+    {
+      "rule_id": "trivial_subpackage",
+      "paths": [
+        "klint/infra/github"
+      ],
+      "reason": "klint/infra keeps one subpackage per outside system; github holds GitHub's review-API adapter; rebutted on PR #140: https://github.com/skydiving94/klint/pull/140#issuecomment-7014276015"
     }
   ]
 }
