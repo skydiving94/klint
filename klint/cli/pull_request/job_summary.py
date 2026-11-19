@@ -28,8 +28,8 @@ def format_job_summary(report: PullRequestReport) -> str:
         *(_format_row(finding) for finding in report.findings),
         "",
         "A finding is fixed in the code, or acknowledged as wrong with its "
-        "`klint-ack` command, run in your checkout once `klint-pre-commit` has "
-        "logged it, with the log pushed. A finding with no command, such as a "
+        "`klint-ack` command, run in a checkout of the pull request's head, "
+        "with the entry it stages pushed. A finding with no command, such as a "
         "directory's, is turned off in `klint.json`'s `rule_exclusions`.",
     ]
     return "\n".join(lines) + "\n"

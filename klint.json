@@ -29,6 +29,27 @@
         "."
       ],
       "reason": "The repository root is as deep as klint/ plus one, by design; rebutted on PR #128: https://github.com/skydiving94/klint/pull/128#issuecomment-6969285171"
+    },
+    {
+      "rule_id": "excessive_nesting_depth",
+      "paths": [
+        "tests"
+      ],
+      "reason": "Not valid for a pytest tree that mirrors klint/; rebutted on PR #135: https://github.com/skydiving94/klint/pull/135#issuecomment-6999876841"
+    },
+    {
+      "rule_id": "flat_structure",
+      "paths": [
+        "tests/cli"
+      ],
+      "reason": "Not valid for a pytest tree that mirrors klint/; rebutted on PR #135: https://github.com/skydiving94/klint/pull/135#issuecomment-6999876841"
+    },
+    {
+      "rule_id": "missing_package_public_api",
+      "paths": [
+        "tests/support"
+      ],
+      "reason": "Not valid for a pytest tree that mirrors klint/; rebutted on PR #135: https://github.com/skydiving94/klint/pull/135#issuecomment-6999876841"
     }
   ]
 }

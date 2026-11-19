@@ -7,6 +7,10 @@ from klint.app.acknowledgements.finding_identity import (
     identify_unit_finding,
     relate_path_to_repository,
 )
+from klint.app.acknowledgements.finding_rebuilding import (
+    FindingRebuilding,
+    RebuiltFinding,
+)
 from klint.app.acknowledgements.log_location import (
     ACKNOWLEDGEMENTS_FOLDER,
     find_acknowledgement_scope,
@@ -31,8 +35,10 @@ __all__ = [
     "AcknowledgedFinding",
     "AcknowledgementScope",
     "FindingIdentity",
+    "FindingRebuilding",
     "FindingSeparation",
     "LogReconciliation",
+    "RebuiltFinding",
     "StagedUnits",
     "describe_unit_name",
     "find_acknowledgement_scope",
