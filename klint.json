@@ -40,14 +40,14 @@
     {
       "rule_id": "flat_structure",
       "paths": [
-        "tests"
+        "tests/cli"
       ],
       "reason": "Not valid for a pytest tree that mirrors klint/; rebutted on PR #135: https://github.com/skydiving94/klint/pull/135#issuecomment-6999876841"
     },
     {
       "rule_id": "missing_package_public_api",
       "paths": [
-        "tests"
+        "tests/support"
       ],
       "reason": "Not valid for a pytest tree that mirrors klint/; rebutted on PR #135: https://github.com/skydiving94/klint/pull/135#issuecomment-6999876841"
     }
