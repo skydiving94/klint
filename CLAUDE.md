@@ -65,13 +65,16 @@ Run it before marking a PR ready if the change affects what the judge is asked o
   - Exit 1 (problems found) leaves the run green; it fails only when the command cannot run.
 
 ## Self-Audit
-Run it on your issue branch before marking a PR ready, and on `epic-121` before it goes to `main`. GitHub runs it: it audits `klint/` on that branch with Jev, using the repository secret, so the key never reaches your session.
-1. Start it, then find the run and wait for it:
-   `gh workflow run klint.yml --repo skydiving94/klint --ref issue-N`
+Run it on your issue branch before marking a PR ready, and on `epic-121` before it goes to `main`. GitHub runs it with Jev, using the repository secret, so the key never reaches your session.
+- **On a PR into `main` or an `epic-*` branch** it starts by itself on each push. It audits only the PR's diff, structure and files, and posts each finding as a review comment on its lines; a later push replies to a comment whose finding is gone. Your issue PR's latest run is its Self-Audit.
+- **On a push to `main`, or started by hand,** it audits all of `klint/`, keeping `main`'s answer cache warm.
+- **Start one by hand** where no PR run covers it: before your PR exists, after you change `klint.json`'s `rule_exclusions` without a push, or to audit all of `klint/` on your branch.
+1. Find the run, or start one, and wait for it:
    `gh run list --repo skydiving94/klint --workflow klint.yml --branch issue-N --limit 1`
+   `gh workflow run klint.yml --repo skydiving94/klint --ref issue-N`
    `gh run watch <run-id> --repo skydiving94/klint`
-2. Read the findings of both audits, structure and file, in the log: `gh run view <run-id> --repo skydiving94/klint --log`.
-3. Check each finding against the code; the judge has false positives, so never change code only because it was flagged. Fix each valid finding. Rebut each one that is not valid in a comment on the PR, naming the rule, the package and the facts. A finding already rebutted on an earlier PR may cite that rebuttal. Then exclude it in the repository's `klint.json` under `rule_exclusions`: its `rule_id`, the `paths` it doesn't apply to, and the comment's link as the `reason`. Remove an exclusion once its finding is fixed.
+2. Read the findings: on a PR run, in the review comments and the job summary; on any run, in the log: `gh run view <run-id> --repo skydiving94/klint --log`.
+3. Check each finding against the code; the judge has false positives, so never change code only because it was flagged. Fix each valid finding. Rebut each one that is not valid in a comment on the PR (on a PR run, a reply to its review comment), naming the rule, the package and the facts. A finding already rebutted on an earlier PR may cite that rebuttal. Then exclude it in the repository's `klint.json` under `rule_exclusions`: its `rule_id`, the `paths` it doesn't apply to, and the comment's link as the `reason`. Remove an exclusion once its finding is fixed.
 4. Record the run, and the link to the rebuttal comment, in the PR.
 - Both audits run at `--min-confidence 0.8`. The run fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded; each audit's report lists the exclusions it applied.
 - The self-audit triage at each epic's start and end (`klint-structure klint/` against Jev) uses `--min-confidence 0.50`. A finding below it needs no rebuttal; one from 0.50 to 0.8 is rebutted in a comment but needs no exclusion, since Self-Audit does not report it.
