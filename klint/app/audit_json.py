@@ -2,6 +2,11 @@
 
 from collections.abc import Sequence
 
+from klint.app.changed_directories import (
+    ChangedDirectoriesScope,
+    convert_changed_directories_to_dict,
+)
+from klint.app.diff_change import DiffChangeScope, convert_diff_change_to_dict
 from klint.app.pipeline import AuditOutcome
 from klint.app.staged_change import StagedChangeScope, convert_staged_change_to_dict
 from klint.core.models.judging import JudgeUsage
@@ -27,24 +32,25 @@ def convert_answer_cache_to_dict(usage: JudgeUsage) -> dict[str, int]:
 def convert_audit_outcome_to_dict(
     outcome: AuditOutcome,
     findings: Sequence[AuditFinding],
-    audited_units_json_key: str,
     staged: StagedChangeScope | None = None,
+    diff_change: DiffChangeScope | ChangedDirectoriesScope | None = None,
 ) -> dict[str, object]:
     """Return ``outcome`` as JSON output writes it, with ``findings`` as selected.
 
-    The audited units are listed under ``audited_units_json_key``. The keys
+    The audited units are listed under the key the kind of audit names. The keys
     present in every output come first; "answer_cache" is present only when
     the answer cache took part, "applied_rule_exclusions" only when the
     project's klint.json turned a rule off, "applied_acknowledgements" only
     when the project's acknowledgement log covered a finding, and
     "staged_change" only for an
-    audit of the staged change, so that a plain run gets the same JSON as
+    audit of the staged change, and "diff_change" only for an audit of a
+    diff, so that a plain run gets the same JSON as
     before each was added.
     """
     report = outcome.report
     usage = report.get_judge_usage()
     json_report: dict[str, object] = {
-        audited_units_json_key: report.list_audited_unit_ids(),
+        outcome.audited_units_json_key: report.list_audited_unit_ids(),
         "unit_id_to_roll_up_status": {
             unit_id: status.value
             for unit_id, status in report.map_unit_id_to_roll_up_status().items()
@@ -66,5 +72,13 @@ def convert_audit_outcome_to_dict(
     if staged is not None:
         json_report["staged_change"] = convert_staged_change_to_dict(
             staged, outcome.extracted_unit_count, outcome.selected_unit_count
+        )
+    if isinstance(diff_change, DiffChangeScope):
+        json_report["diff_change"] = convert_diff_change_to_dict(
+            diff_change, outcome.extracted_unit_count, outcome.selected_unit_count
+        )
+    elif diff_change is not None:
+        json_report["diff_change"] = convert_changed_directories_to_dict(
+            diff_change, outcome.extracted_unit_count, outcome.selected_unit_count
         )
     return json_report

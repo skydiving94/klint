@@ -54,17 +54,19 @@ The cases are in `judge_accuracy/change_summary/cases/`, one file per commit of 
 klint/
 ├── cli/                     # The console scripts, their options, exit codes and terminal report
 │   ├── change_summary_stop_hook/  # The Claude Code Stop hook: the hook events, the decision to block, the session's start commit and block count
-│   └── pre_commit/          # The commit gate: klint-pre-commit, klint-ack, and how audits report acknowledged findings
+│   ├── pre_commit/          # The commit gate: klint-pre-commit, klint-ack, and how audits report acknowledged findings
+│   └── pull_request/        # klint-pull-request, for the Action's pull-request mode: the threshold, the combined report and job summary, the review comments
 ├── mcp/                     # klint-mcp: every audit, and the rules, as MCP tools for one agent over stdio
 ├── composition.py           # The injector every front end runs: the built-in suites, each kind's rule replacement, the judge's character budget
-├── app/                     # What runs an audit: settings (environment, klint.json), the injector, the kinds of audit on offer, the staged change, each judge's character budget and commit threshold, JSON output
+├── app/                     # What runs an audit: the injector, the kinds of audit on offer, the staged change or a diff and the units or directories it selects, rule exclusions, each judge's character budget and commit threshold, JSON output
+│   ├── settings/            # The settings (environment, klint.json) and the built-in rule packs
 │   ├── acknowledgements/    # The acknowledgement log as an audit uses it: a finding's identity, matching, reconciling with the staged change
 │   └── pipeline/            # One audit run, in stages: acquisition, rule selection, auditing, roll-up
 ├── catalog/                 # The built-in suites
 │   ├── domain_neutral/      # What fits any content: whole files, JSON documents, a change read from git, file traits (extension, tags, a project's overrides)
 │   │   ├── extraction/
 │   │   ├── file_traits_identifiers/
-│   │   └── git/             # A commit, a change since a base commit, the uncommitted change or the staged one, read hunk by hunk
+│   │   └── git/             # A commit, a change since a base commit, the uncommitted change, the staged one or any unified diff, read hunk by hunk, and each file checked against the diff's blob hashes
 │   ├── code/                # The code suite: file contents (klint) and project structure (klint-structure)
 │   │   ├── language_neutral/  # Units, renderers and extractors shared by every programming language
 │   │   │   └── extraction/
@@ -78,6 +80,7 @@ klint/
 │   ├── answer_cache/        # The answer cache: a judge that reuses the answers another judge gave in earlier runs
 │   ├── rule_loader/         # JSON rule packs, checked against the registered unit types
 │   ├── table_loader/        # JSON tables: each language's file extensions, and tag detection
+│   ├── github/              # GitHub's REST API for a pull request's reviews and comments
 │   └── system_one/          # Judges in the System One format: over HTTP (remote) or in this process (local)
 ├── core/                    # The auditor, the registry of unit types and klint's warnings
 │   ├── interfaces/          # What the outer layers implement: extractors, renderers, judges, rule loaders, suites
@@ -115,7 +118,7 @@ examples/                    # Deliberately bad code, a mock project and change-
 ### Adding or refining a rule
 * Edit the pack in `klint/resources/catalog/`. A pack's `"applies_to": {"languages": [...]}` header limits it to files of those languages; a pack without one is asked about files of every identified language.
 * Always phrase the `"question"` as a positive practice, `"<positive practice> rather than <antipattern>?"`, and give its `"unit_types"`. The README's "Writing a rule" lists every field.
-* A new pack is listed in `_BUILT_IN_RULE_PACKS` in `klint/app/settings.py`.
+* A new pack is listed in `_BUILT_IN_RULE_PACKS` in `klint/app/settings/built_in_packs.py`.
 
 ### Adding a language to `klint-structure`
 1. List the language's file extensions in `klint/resources/catalog/code/language_neutral/language_to_file_extensions.json`.
@@ -135,12 +138,16 @@ examples/                    # Deliberately bad code, a mock project and change-
 
 1. Create a branch, commit, push it, and open a pull request against `main`.
 2. Make sure the checks above pass.
-3. **Self-Audit**: on each pull request into `main` and each push to `main`, the "klint Self-Audit" workflow runs `klint-structure` and `klint` on `klint/` at minimum confidence 0.8, asking Jev with the repository's `KLINT_JUDGE_API_KEY` secret. It lists the findings in the job summary, each as open or rebutted. It fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded (below). A run without the secret, such as one for a pull request from a fork, skips the audits and says so. A maintainer can also run it on a branch of this repository from the Actions tab ("Run workflow"). The workflow keeps klint's answer cache between runs with `actions/cache`, keyed by the klint version and the branch and falling back to `main`'s, so a run asks Jev only about the units the branch changed; its `Answer cache:` line in the log says how many questions came from the cache.
+3. **Self-Audit**: the "klint Self-Audit" workflow asks Jev with the repository's `KLINT_JUDGE_API_KEY` secret, at minimum confidence 0.8.
+   * On each push to a pull request into `main` or an `epic-*` branch, it runs in PR mode: `klint-structure` and `klint` audit only the pull request's diff under `klint/`, as the full audit covers only `klint/`, and each finding is posted as a review comment on its lines, with its `klint-ack` command. A later push posts no duplicate and replies to a comment whose finding is gone. A finding outside the diff's lines, or a structure finding, goes in the review's body.
+   * On each push to `main`, or when a maintainer starts it on a branch of this repository from the Actions tab ("Run workflow"), it audits all of `klint/`.
+   * It lists the findings in the job summary, each as open or rebutted. It fails when an audit cannot run, or when it finds a problem that is neither fixed nor excluded (below). A run without the secret, such as one for a pull request from a fork, skips the audits and says so.
+   * The workflow keeps klint's answer cache between runs with `actions/cache`, keyed by the klint version and the branch and falling back to `main`'s, so a run asks Jev only about the units that changed; its `Answer cache:` line in the log says how many questions came from the cache.
 4. **Merge rule**: before a pull request into `main` merges, each self-audit finding is fixed. A finding that is not valid is rebutted instead, in a comment on the pull request that says why, and excluded in the repository's `klint.json` under `rule_exclusions`: its `rule_id`, the `paths` it doesn't apply to, and the comment's link as the `reason`, so the check passes. An exclusion whose finding is fixed is removed. Each audit's report lists the exclusions it applied.
 
 ### `rule_exclusions` or `klint-ack`?
 Both keep a finding judged wrong from failing a check, and Self-Audit and the commit gate read both.
-* **`rule_exclusions` in `klint.json`**: the rule never applies to these paths, whatever the code there says, such as a package-structure rule on a command-line tool's root package. It is matched by path and survives code changes. Rebut the finding in a comment on the pull request and link it as the `reason`.
+* **`rule_exclusions` in `klint.json`**: the rule never applies to these paths, whatever the code there says, such as a package-structure rule on a command-line tool's root package. It is matched by path and survives code changes. Rebut the finding in a comment on the pull request and link it as the `reason`. When the rule is wrong for one class or function rather than a whole file, name the unit, as in `klint/app/settings.py::AppSettings`: the selector covers that unit and its methods, and is reviewed in the pull request like any change. There are no inline suppression comments, so a finding can't be silenced in the commit that causes it. A selector that stops matching, such as after a rename, lets its finding back and warns on the next full audit; fix or remove it.
 * **`klint-ack <id> --note "<why>"`**: this one finding on this code is wrong, such as a `god_component` on a long but single-purpose function. It is matched by the unit's code hash, so the judge is asked again once the code changes. The entry in `.klint/acknowledgements/` is committed with the code; the note is the rebuttal.
 
 To reproduce the Self-Audit locally, export your `KLINT_JUDGE_API_KEY` as the README's "Using Jev" shows, then:

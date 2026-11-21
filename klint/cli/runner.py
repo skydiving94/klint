@@ -7,15 +7,11 @@ from pathlib import Path
 
 from klint.app.acknowledgements import find_acknowledgement_scope
 from klint.app.audit_json import convert_audit_outcome_to_dict
-from klint.app.pipeline import AuditPipeline, AuditRequest
-from klint.app.staged_change import StagedChangeScope, read_staged_change_scope
+from klint.app.pipeline import AuditOutcome, AuditPipeline, AuditRequest
 from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_input_choice import ChosenAuditInput, choose_audit_input
 from klint.cli.command_arguments import CommandArguments, parse_command_arguments
-from klint.cli.console import (
-    print_error_line,
-    print_klint_warnings_raised_inside,
-    print_warning_line,
-)
+from klint.cli.console import print_error_line, print_klint_warnings_raised_inside
 from klint.cli.exit_code import ExitCode
 from klint.cli.formatter import (
     AuditProgressReporter,
@@ -25,9 +21,7 @@ from klint.cli.formatter import (
 )
 from klint.cli.judge_usage_description import print_judge_usage_lines
 from klint.cli.pre_commit import format_acknowledged_findings
-from klint.cli.staged_diff import describe_staged_change
 from klint.core.interfaces import BaseAuditProgressListener
-from klint.core.models.audits import AuditInput, DiskPathInput
 from klint.infra.rule_loader import JsonFileRuleSource
 
 
@@ -72,53 +66,12 @@ class AuditCommandApp:
         command = self._command
         should_show_progress = not arguments.should_print_json
         progress = AuditProgressReporter(enabled=should_show_progress)
-        staged: StagedChangeScope | None = None
-        audit_input: AuditInput
-        if arguments.diff_units is not None:
-            try:
-                staged = await read_staged_change_scope(
-                    arguments.diff_units, Path.cwd()
-                )
-            except ValueError as exc:
-                print_error_line(command, exc)
-                return ExitCode.RUN_ERROR
-            if not staged.has_files():
-                print(f"[{command.name}] No staged change to audit", file=sys.stderr)
-            for path in staged.paths_with_unstaged_edits:
-                print_warning_line(
-                    command,
-                    f"'{path}' has unstaged edits too: its units are read from the "
-                    "working tree, and the changed lines from the index",
-                )
-            audit_input = staged.scope.audit_input
-            log_directory = Path.cwd()
-        elif arguments.target is not None:
-            audit_input = DiskPathInput(path=arguments.target)
-            target = arguments.target
-            log_directory = target.parent if target.is_file() else target
-        else:
-            raise ValueError("A path to audit, or --diff, is required")
-        request = AuditRequest(
-            audit_input=audit_input,
-            audit_kind_id=command.audit_kind_id,
-            custom_rule_source=(
-                None
-                if arguments.custom_rules_path is None
-                else JsonFileRuleSource(
-                    path=arguments.custom_rules_path.resolve(), is_required=True
-                )
-            ),
-            min_confidence=arguments.min_confidence,
-            unit_selector=None if staged is None else staged.scope.unit_selector,
-            # The repository's acknowledgement log, when the target is in one.
-            acknowledgements=await find_acknowledgement_scope(
-                log_directory, Path.cwd()
-            ),
-            scan_progress_listener=TerminalScanProgressListener(
-                enabled=should_show_progress
-            ),
-            audit_progress_listener=_ProgressListener(progress, command.name),
-        )
+        try:
+            chosen = await choose_audit_input(command, arguments)
+        except ValueError as exc:
+            print_error_line(command, exc)
+            return ExitCode.RUN_ERROR
+        request = await _build_request(command, arguments, chosen, progress)
         try:
             with print_klint_warnings_raised_inside(command):
                 outcome = await self._audit_pipeline.run_audit(request)
@@ -128,47 +81,92 @@ class AuditCommandApp:
             print_error_line(command, exc)
             return ExitCode.RUN_ERROR
         progress.finish()
-
-        report = outcome.report
         selected_unit_count = len(outcome.selected_unit_ids)
-        if selected_unit_count and not report.list_audited_unit_ids():
+        if selected_unit_count and not outcome.report.list_audited_unit_ids():
             # Each unit's failure has had its own line; nothing was checked.
             print_error_line(
                 command,
                 f"None of the {selected_unit_count} unit(s) to audit could be audited",
             )
             return ExitCode.RUN_ERROR
-        findings = report.select_findings(
-            should_include_non_problems=arguments.should_show_all_answers,
-            min_confidence=arguments.min_confidence,
+        _print_report(command, arguments, outcome, chosen)
+        failures = outcome.report.select_findings(
+            min_confidence=arguments.min_confidence
         )
-        if arguments.should_print_json:
-            json_report = convert_audit_outcome_to_dict(
-                outcome, findings, command.audited_units_json_key, staged
-            )
-            print(json.dumps(json_report, indent=2))
-        else:
-            print(
-                format_audit_report(
-                    findings,
-                    scanned_file_count=outcome.scanned_file_count,
-                    audited_unit_count=len(outcome.selected_unit_ids),
-                    no_problems_message=command.no_problems_message,
-                    unit_id_to_roll_up_status=report.map_unit_id_to_roll_up_status(),
-                )
-            )
-            if outcome.applied_rule_exclusions:
-                print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
-            if outcome.acknowledged_findings:
-                print(format_acknowledged_findings(outcome.acknowledged_findings))
-        # The report is flushed first, so that the lines on stderr come after
-        # it where both streams go to one place, such as a CI log.
-        sys.stdout.flush()
-        if staged is not None:
-            description = describe_staged_change(
-                staged, outcome.extracted_unit_count, outcome.selected_unit_count
-            )
-            print(f"[{command.name}] Staged change: {description}", file=sys.stderr)
-        print_judge_usage_lines(command.name, report.get_judge_usage())
-        failures = report.select_findings(min_confidence=arguments.min_confidence)
         return ExitCode.PROBLEMS_FOUND if failures else ExitCode.NO_PROBLEMS
+
+
+async def _build_request(
+    command: AuditCommand,
+    arguments: CommandArguments,
+    chosen: ChosenAuditInput,
+    progress: AuditProgressReporter,
+) -> AuditRequest:
+    """Return the request for the audit ``arguments`` ask for, of ``chosen``."""
+    should_show_progress = not arguments.should_print_json
+    return AuditRequest(
+        audit_input=chosen.audit_input,
+        audit_kind_id=command.audit_kind_id,
+        custom_rule_source=(
+            None
+            if arguments.custom_rules_path is None
+            else JsonFileRuleSource(
+                path=arguments.custom_rules_path.resolve(), is_required=True
+            )
+        ),
+        min_confidence=arguments.min_confidence,
+        unit_selector=chosen.find_unit_selector(),
+        # The repository's acknowledgement log, when the target is in one.
+        acknowledgements=await find_acknowledgement_scope(
+            chosen.log_directory, Path.cwd()
+        ),
+        scan_progress_listener=TerminalScanProgressListener(
+            enabled=should_show_progress
+        ),
+        audit_progress_listener=_ProgressListener(progress, command.name),
+    )
+
+
+def _print_report(
+    command: AuditCommand,
+    arguments: CommandArguments,
+    outcome: AuditOutcome,
+    chosen: ChosenAuditInput,
+) -> None:
+    """Print the report on stdout, then what was audited and the judge's usage."""
+    report = outcome.report
+    findings = report.select_findings(
+        should_include_non_problems=arguments.should_show_all_answers,
+        min_confidence=arguments.min_confidence,
+    )
+    if arguments.should_print_json:
+        json_report = convert_audit_outcome_to_dict(
+            outcome,
+            findings,
+            chosen.staged,
+            chosen.diff_change,
+        )
+        print(json.dumps(json_report, indent=2))
+    else:
+        print(
+            format_audit_report(
+                findings,
+                scanned_file_count=outcome.scanned_file_count,
+                audited_unit_count=len(outcome.selected_unit_ids),
+                no_problems_message=command.no_problems_message,
+                unit_id_to_roll_up_status=report.map_unit_id_to_roll_up_status(),
+            )
+        )
+        if outcome.applied_rule_exclusions:
+            print(format_applied_rule_exclusions(outcome.applied_rule_exclusions))
+        if outcome.acknowledged_findings:
+            print(format_acknowledged_findings(outcome.acknowledged_findings))
+    # The report is flushed first, so that the lines on stderr come after
+    # it where both streams go to one place, such as a CI log.
+    sys.stdout.flush()
+    change_description = chosen.describe_change(
+        outcome.extracted_unit_count, outcome.selected_unit_count
+    )
+    if change_description is not None:
+        print(f"[{command.name}] {change_description}", file=sys.stderr)
+    print_judge_usage_lines(command.name, report.get_judge_usage())

@@ -55,7 +55,6 @@ NOTES_COMMAND = AuditCommand(
     target_argument_name="folder",
     target_argument_help="Folder of notes",
     audit_kind_id=NOTES_KIND_ID,
-    audited_units_json_key="examined_notes",
 )
 
 
@@ -135,6 +134,7 @@ class NotesSuite(BaseSuite):
                 rule_loader=FixedRuleLoader([POLITE_RULE]),
                 answer_scale=POLITENESS_SCALE,
                 unit_class_to_renderer={NoteUnit: NoteRenderer()},
+                audited_units_json_key="examined_notes",
             )
         ]
 
@@ -158,6 +158,7 @@ class NotesDocumentSuite(BaseSuite):
                 rule_loader=FixedRuleLoader([POLITE_RULE]),
                 answer_scale=POLITENESS_SCALE,
                 unit_class_to_renderer={NoteUnit: NoteRenderer()},
+                audited_units_json_key="examined_notes",
             )
         ]
 

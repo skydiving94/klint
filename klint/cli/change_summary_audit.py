@@ -22,7 +22,6 @@ CHANGE_SUMMARY_COMMAND = AuditCommand(
         "directory"
     ),
     audit_kind_id=CHANGE_SUMMARY_KIND_ID,
-    audited_units_json_key="examined_summaries",
     no_problems_message="Every summary passed its checks.",
 )
 

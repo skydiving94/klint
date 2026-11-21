@@ -2,17 +2,21 @@ name: "klint - Semantic & Architectural Code Auditor"
 description: "Audit files and project structure against plain-English rules, judged by a local kev model or a remote /v1/systemone server such as Jev."
 inputs:
   target:
-    description: "File or directory path to audit"
+    description: "File or directory path to audit; when diff is 'pull_request', only the diff's changes under this path are audited"
     required: false
     default: "."
   mode:
-    description: "'file' runs klint on each file's contents; 'structure' runs klint-structure on the project's directories. 'project' is the old name of 'structure', deprecated."
+    description: "'file' runs klint on each file's contents; 'structure' runs klint-structure on the project's directories. Ignored when diff is 'pull_request', which runs both."
     required: false
     default: "file"
-  min_confidence:
-    description: "Minimum confidence (0.0 to 1.0) a failure needs to be reported and to count as a problem"
+  diff:
+    description: "'pull_request' audits only the pull request's diff against its base, with both klint and klint-structure; 'none' audits target as mode says. Default: 'pull_request' on a pull_request event, else 'none'."
     required: false
-    default: "0.60"
+    default: ""
+  min_confidence:
+    description: "Minimum confidence (0.0 to 1.0) a failure needs to be reported and to count as a problem. Default: 0.60; when diff is 'pull_request', the commit gate's threshold: the project's KLINT_COMMIT_MIN_CONFIDENCE, else the judge's own (0.8 for Jev, 0.5 for Kev, 0.8 for an unmeasured judge)."
+    required: false
+    default: ""
   rules:
     description: "Optional path to a rules JSON file whose rules merge over the built-in ones"
     required: false
@@ -33,30 +37,21 @@ inputs:
     description: "The API key the remote server asks for; pass it from a secret. Sets KLINT_JUDGE_API_KEY."
     required: false
     default: ""
+  review_comments:
+    description: "When diff is 'pull_request': 'true' posts each finding as a review comment on its lines, once per finding across pushes, and replies when a finding is gone; 'false' posts nothing. Needs the 'pull-requests: write' permission. Default: true."
+    required: false
+    default: "true"
   fail_on_problems:
     description: "'true' fails the step when klint finds problems (exit 1); 'false' reports them and passes. A run that cannot audit (exit 2) fails the step either way."
     required: false
     default: "true"
-  kev_mode:
-    description: "Deprecated: use judge_mode. Works until the next release, with a warning."
-    required: false
-    default: ""
-  kev_model_name:
-    description: "Deprecated: use judge_model. Works until the next release, with a warning."
-    required: false
-    default: ""
-  kev_base_url:
-    description: "Deprecated: use judge_base_url. Works until the next release, with a warning."
-    required: false
-    default: ""
-  kev_api_key:
-    description: "Deprecated: use judge_api_key. Works until the next release, with a warning."
-    required: false
-    default: ""
 outputs:
   exit_code:
     description: "klint's exit code: 0 when no problem is found, 1 when one is, 2 when the audit cannot run"
     value: ${{ steps.audit.outputs.exit_code }}
+  findings_json:
+    description: "When diff is 'pull_request': the path of the combined report, with each finding of both audits and its klint-ack command, and both --json reports"
+    value: ${{ steps.audit.outputs.findings_json }}
 
 runs:
   using: "composite"
@@ -68,22 +63,17 @@ runs:
       shell: bash
       env:
         MODE: ${{ inputs.mode }}
+        DIFF: ${{ inputs.diff }}
+        EVENT_NAME: ${{ github.event_name }}
+        HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        REPOSITORY: ${{ github.repository }}
+        HAS_API_KEY: ${{ inputs.judge_api_key != '' }}
         FAIL_ON_PROBLEMS: ${{ inputs.fail_on_problems }}
+        REVIEW_COMMENTS: ${{ inputs.review_comments }}
         JUDGE_MODE: ${{ inputs.judge_mode }}
         JUDGE_MODEL: ${{ inputs.judge_model }}
         JUDGE_BASE_URL: ${{ inputs.judge_base_url }}
-        KEV_MODE: ${{ inputs.kev_mode }}
-        KEV_MODEL_NAME: ${{ inputs.kev_model_name }}
-        KEV_BASE_URL: ${{ inputs.kev_base_url }}
-        # Whether a key is given, never the key itself.
-        IS_KEV_API_KEY_SET: ${{ inputs.kev_api_key != '' }}
       run: |
-        # Warns that the old name $2 was used when its value $1 is set.
-        warn_about_old_name() {
-          if [ -n "$1" ]; then
-            echo "::warning title=klint::'$2' is deprecated and stops working in the next release; use '$3' instead"
-          fi
-        }
         # Prints the first of its arguments that is set.
         pick_first_set() {
           for value in "$@"; do
@@ -93,15 +83,9 @@ runs:
             fi
           done
         }
-        warn_about_old_name "$KEV_MODE" kev_mode judge_mode
-        warn_about_old_name "$KEV_MODEL_NAME" kev_model_name judge_model
-        warn_about_old_name "$KEV_BASE_URL" kev_base_url judge_base_url
-        if [ "$IS_KEV_API_KEY_SET" = "true" ]; then
-          warn_about_old_name set kev_api_key judge_api_key
-        fi
-        judge_mode=$(pick_first_set "$JUDGE_MODE" "$KEV_MODE" local | tr '[:upper:]' '[:lower:]')
-        judge_model=$(pick_first_set "$JUDGE_MODEL" "$KEV_MODEL_NAME" jaredpalmer/kev-0.8b)
-        judge_base_url=$(pick_first_set "$JUDGE_BASE_URL" "$KEV_BASE_URL" http://127.0.0.1:8009)
+        judge_mode=$(pick_first_set "$JUDGE_MODE" local | tr '[:upper:]' '[:lower:]')
+        judge_model=$(pick_first_set "$JUDGE_MODEL" jaredpalmer/kev-0.8b)
+        judge_base_url=$(pick_first_set "$JUDGE_BASE_URL" http://127.0.0.1:8009)
         case "$judge_mode" in
           local|remote) ;;
           *) echo "::error title=klint::judge_mode must be 'local' or 'remote', not '$judge_mode'"; exit 2 ;;
@@ -109,16 +93,44 @@ runs:
         case "$MODE" in
           file) command=klint ;;
           structure) command=klint-structure ;;
-          project)
-            warn_about_old_name "$MODE" "mode: project" "mode: structure"
-            command=klint-structure ;;
+          project) echo "::error title=klint::mode 'project' was removed; use 'structure' instead"; exit 2 ;;
           *) echo "::error title=klint::mode must be 'file' or 'structure', not '$MODE'"; exit 2 ;;
         esac
         case "$FAIL_ON_PROBLEMS" in
           true|false) ;;
           *) echo "::error title=klint::fail_on_problems must be 'true' or 'false', not '$FAIL_ON_PROBLEMS'"; exit 2 ;;
         esac
+        case "$REVIEW_COMMENTS" in
+          true|false) ;;
+          *) echo "::error title=klint::review_comments must be 'true' or 'false', not '$REVIEW_COMMENTS'"; exit 2 ;;
+        esac
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          diff=$(pick_first_set "$DIFF" pull_request)
+        else
+          diff=$(pick_first_set "$DIFF" none)
+        fi
+        case "$diff" in
+          none) ;;
+          pull_request)
+            if [ "$EVENT_NAME" != "pull_request" ]; then
+              echo "::error title=klint::diff 'pull_request' needs a pull_request event, not '$EVENT_NAME'"; exit 2
+            fi
+            ;;
+          *) echo "::error title=klint::diff must be 'pull_request' or 'none', not '$diff'"; exit 2 ;;
+        esac
+        # A pull request from a fork gets no secrets, so a remote judge's key
+        # is missing: the audit is skipped rather than failed.
+        should_skip=false
+        if [ "$diff" = "pull_request" ] && [ "$judge_mode" = "remote" ] \
+          && [ "$HAS_API_KEY" != "true" ] && [ "$HEAD_REPOSITORY" != "$REPOSITORY" ]; then
+          should_skip=true
+          message="This pull request comes from a fork, so the judge's API key is not available to it, and the klint audit is skipped."
+          echo "::notice title=klint::$message"
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
+        fi
         {
+          echo "diff=$diff"
+          echo "should_skip=$should_skip"
           echo "command=$command"
           echo "judge_mode=$judge_mode"
           echo "judge_model=$judge_model"
@@ -126,18 +138,20 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     - name: Set up Python
+      if: steps.settings.outputs.should_skip != 'true'
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
 
     - name: Cache Hugging Face model weights
-      if: steps.settings.outputs.judge_mode == 'local'
+      if: steps.settings.outputs.should_skip != 'true' && steps.settings.outputs.judge_mode == 'local'
       uses: actions/cache@v4
       with:
         path: ~/.cache/huggingface/hub
         key: ${{ runner.os }}-hf-${{ steps.settings.outputs.judge_model }}
 
     - name: Install klint
+      if: steps.settings.outputs.should_skip != 'true'
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
@@ -152,69 +166,146 @@ runs:
           pip install --no-cache-dir -e "$ACTION_PATH"
         fi
 
-    - name: Run klint
-      id: audit
+
+    # The diff's new side must be what is on disk, so that klint's check of
+    # each file against the diff passes. A pull_request checkout is GitHub's
+    # merge commit, whose first parent is the base: the diff against it is
+    # what the pull request would change. A checkout of the head instead is
+    # diffed from its merge base with the base commit.
+    - name: Take the pull request's diff
+      id: diff
+      if: steps.settings.outputs.should_skip != 'true' && steps.settings.outputs.diff == 'pull_request'
       shell: bash
       env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        TARGET: ${{ inputs.target }}
+      run: |
+        diff_options=(--no-color --no-ext-diff --src-prefix=a/ --dst-prefix=b/)
+        diff_file="$RUNNER_TEMP/klint-pull-request.diff"
+        head=$(git rev-parse HEAD)
+        if ! git rev-parse -q --verify "HEAD^1" > /dev/null; then
+          git fetch --no-tags --quiet --depth=2 origin "$head"
+        fi
+        if [ "$(git rev-parse -q --verify "HEAD^2")" = "$HEAD_SHA" ]; then
+          echo "Auditing the merge commit $head against its first parent."
+          git diff "${diff_options[@]}" "HEAD^1" HEAD -- "${TARGET:-.}" > "$diff_file"
+        elif [ "$head" = "$HEAD_SHA" ]; then
+          echo "Auditing the head $head against its merge base with $BASE_SHA."
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            git fetch --no-tags --quiet --unshallow origin
+          fi
+          git fetch --no-tags --quiet origin "$BASE_SHA"
+          git diff "${diff_options[@]}" "$BASE_SHA...HEAD" -- "${TARGET:-.}" > "$diff_file"
+        else
+          echo "::error title=klint::The checkout ($head) is neither the pull request's merge commit nor its head ($HEAD_SHA)"
+          exit 2
+        fi
+        echo "diff_file=$diff_file" >> "$GITHUB_OUTPUT"
+
+    # The answer cache is kept between runs, so that a run asks the judge
+    # only about what changed since the last one. It lives outside the
+    # checkout, so that no audit reads it, and is keyed by the klint version
+    # and the branch, with a new key per run since a saved cache never
+    # changes: the restore takes the newest of this branch's, else of the
+    # base's. A workflow that sets KLINT_ANSWER_CACHE keeps its own.
+    - name: Choose the answer cache folder
+      id: cache_folder
+      if: steps.settings.outputs.should_skip != 'true' && steps.settings.outputs.diff == 'pull_request' && env.KLINT_ANSWER_CACHE == ''
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        echo "path=$RUNNER_TEMP/klint-answers" >> "$GITHUB_OUTPUT"
+        version=$(sed -nE 's/^version = "([^"]+)"/\1/p' "$ACTION_PATH/pyproject.toml" | head -n 1)
+        echo "klint=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the answer cache
+      id: answer_cache
+      if: steps.cache_folder.outputs.path != ''
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.cache_folder.outputs.path }}
+        key: klint-answers-${{ steps.cache_folder.outputs.klint }}-${{ github.head_ref }}-${{ github.run_id }}
+        restore-keys: |
+          klint-answers-${{ steps.cache_folder.outputs.klint }}-${{ github.head_ref }}-
+          klint-answers-${{ steps.cache_folder.outputs.klint }}-${{ github.base_ref }}-
+
+    - name: Run klint
+      id: audit
+      if: steps.settings.outputs.should_skip != 'true'
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
         COMMAND: ${{ steps.settings.outputs.command }}
+        DIFF: ${{ steps.settings.outputs.diff }}
+        DIFF_FILE: ${{ steps.diff.outputs.diff_file }}
+        CACHE_FOLDER: ${{ steps.cache_folder.outputs.path }}
         TARGET: ${{ inputs.target }}
         MIN_CONFIDENCE: ${{ inputs.min_confidence }}
         RULES: ${{ inputs.rules }}
-        FAIL_ON_PROBLEMS: ${{ inputs.fail_on_problems }}
         KLINT_JUDGE_MODE: ${{ steps.settings.outputs.judge_mode }}
         KLINT_JUDGE_MODEL: ${{ steps.settings.outputs.judge_model }}
         KLINT_JUDGE_BASE_URL: ${{ steps.settings.outputs.judge_base_url }}
-        KLINT_JUDGE_API_KEY: ${{ inputs.judge_api_key || inputs.kev_api_key }}
+        KLINT_JUDGE_API_KEY: ${{ inputs.judge_api_key }}
       run: |
         if [ -n "$KLINT_JUDGE_API_KEY" ]; then
           echo "::add-mask::$KLINT_JUDGE_API_KEY"
         fi
-        args=("$TARGET" --min-confidence "$MIN_CONFIDENCE")
-        if [ -n "$RULES" ]; then
-          args+=(--rules "$RULES")
+        if [ -n "$CACHE_FOLDER" ]; then
+          export KLINT_ANSWER_CACHE="$CACHE_FOLDER"
         fi
-        report=$(mktemp "$RUNNER_TEMP/klint-report.XXXXXX")
-        set +e
-        "$COMMAND" "${args[@]}" 2>&1 | tee "$report"
-        exit_code=${PIPESTATUS[0]}
-        set -e
-        echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+        if [ "$DIFF" = "pull_request" ]; then
+          bash "$ACTION_PATH/action_scripts/audit_pull_request.sh"
+        else
+          bash "$ACTION_PATH/action_scripts/audit_target.sh"
+        fi
 
-        case "$exit_code" in
-          0) outcome="No problems found" ;;
-          1) outcome="Problems found" ;;
-          *) outcome="The audit could not run" ;;
-        esac
-        # A step's summary holds at most 1 MiB; the log keeps the whole report.
-        summary_limit=900000
-        esc=$(printf '\033')
-        {
-          echo "### klint: \`$COMMAND $TARGET\`"
-          echo
-          echo "$outcome (exit $exit_code), at a minimum confidence of $MIN_CONFIDENCE."
-          echo
-          echo '````text'
-          sed "s/${esc}\[[0-9;]*[A-Za-z]//g" "$report" | head -c "$summary_limit"
-          echo
-          echo '````'
-          if [ "$(wc -c < "$report")" -gt "$summary_limit" ]; then
-            echo
-            echo "The report is cut short here; the step's log has all of it."
-          fi
-          echo
-        } >> "$GITHUB_STEP_SUMMARY"
+    # The review never changes the check: a token that cannot write, as on
+    # a pull request from a fork, or an API error is noted in the job
+    # summary, and the next step passes or fails as the audit decides.
+    - name: Post review comments
+      if: steps.settings.outputs.diff == 'pull_request' && inputs.review_comments == 'true' && steps.audit.outputs.findings_json != ''
+      continue-on-error: true
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        FINDINGS_JSON: ${{ steps.audit.outputs.findings_json }}
+        DIFF_FILE: ${{ steps.diff.outputs.diff_file }}
+        PULL_REQUEST: ${{ github.event.pull_request.number }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        klint-pull-request review --findings-json "$FINDINGS_JSON" --diff-file "$DIFF_FILE" \
+          --repository "$GITHUB_REPOSITORY" --pull-request "$PULL_REQUEST" --commit "$HEAD_SHA" \
+          | tee -a "$GITHUB_STEP_SUMMARY"
 
-        case "$exit_code" in
+    - name: Save the answer cache
+      if: ${{ !cancelled() && steps.answer_cache.outputs.cache-primary-key != '' }}
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ steps.cache_folder.outputs.path }}
+        key: ${{ steps.answer_cache.outputs.cache-primary-key }}
+
+    - name: Pass or fail the check
+      if: steps.settings.outputs.should_skip != 'true'
+      shell: bash
+      env:
+        EXIT_CODE: ${{ steps.audit.outputs.exit_code }}
+        AUDITOR: ${{ steps.audit.outputs.auditor }}
+        AUDITED: ${{ steps.audit.outputs.audited }}
+        FAIL_ON_PROBLEMS: ${{ inputs.fail_on_problems }}
+      run: |
+        case "$EXIT_CODE" in
           0) ;;
           1)
             if [ "$FAIL_ON_PROBLEMS" = "true" ]; then
-              echo "::error title=klint::$COMMAND found problems in $TARGET; see the job summary"
+              echo "::error title=klint::$AUDITOR found problems in $AUDITED; see the job summary"
               exit 1
             fi
-            echo "::notice title=klint::$COMMAND found problems in $TARGET; see the job summary"
+            echo "::notice title=klint::$AUDITOR found problems in $AUDITED; see the job summary"
             ;;
           *)
-            echo "::error title=klint::$COMMAND could not run the audit of $TARGET (exit $exit_code)"
-            exit "$exit_code"
+            echo "::error title=klint::$AUDITOR could not run the audit of $AUDITED (exit $EXIT_CODE)"
+            exit "$EXIT_CODE"
             ;;
         esac

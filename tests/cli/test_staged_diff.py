@@ -12,11 +12,17 @@ from klint.app import AppSettings
 from klint.cli import FILE_AUDIT_COMMAND, ExitCode, run_file_audit
 from klint.core.interfaces import BaseJudge
 from tests.support.builders import (
-    FILE_RULE,
     build_audit_command_app,
     list_lines_before_judge_usage,
     make_settings,
     write_json,
+)
+from tests.support.cart_project import (
+    ALL_RULES,
+    CART_AFTER,
+    CART_BEFORE,
+    GO_BEFORE,
+    HELPERS,
 )
 from tests.support.fakes import FakeJudge, SubjectJudge
 from tests.support.git_repository import (
@@ -27,35 +33,6 @@ from tests.support.git_repository import (
 )
 
 Capture = pytest.CaptureFixture[str]
-
-CLASS_RULE = {**FILE_RULE, "unit_types": ["class"]}
-FUNCTION_RULE = {**FILE_RULE, "unit_types": ["function"]}
-ALL_RULES = {"tidy_file": FILE_RULE, "focused": CLASS_RULE, "short": FUNCTION_RULE}
-
-CART_BEFORE = '''import json
-
-
-class Cart:
-    """A shopping cart."""
-
-    def add(self, item: str) -> None:
-        self.items.append(item)
-
-    def total(self) -> int:
-        """Return the sum of the prices."""
-        return sum(len(item) for item in self.items)
-
-
-def load(text: str) -> Cart:
-    return json.loads(text)
-'''
-# The total method gains a line: lines 12 and 13 are the changed ones.
-CART_AFTER = CART_BEFORE.replace(
-    "        return sum(len(item) for item in self.items)\n",
-    "        prices = [len(item) for item in self.items]\n        return sum(prices)\n",
-)
-HELPERS = "def shout(text: str) -> str:\n    return text.upper()\n"
-GO_BEFORE = "package main\n\nfunc main() {}\n"
 
 
 @pytest.fixture

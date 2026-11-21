@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from klint.core.models.reports import AuditFinding
+from klint.core.models.units import Location
 
 _HASH_PREFIX = "sha256:"
 # The length of an entry ID: 12 hexadecimal digits, short enough to type.
@@ -41,9 +42,30 @@ def identify_finding(
     The unit's code is read from its file on disk. None when the finding has
     no location, its file is outside the repository, or cannot be read.
     """
-    location = finding.location
-    if location is None:
+    if finding.location is None:
         return None
+    return identify_unit_finding(
+        finding.rule_id,
+        finding.unit_id,
+        finding.location,
+        repository_root,
+        working_directory,
+    )
+
+
+def identify_unit_finding(
+    rule_id: str,
+    unit_id: str,
+    location: Location,
+    repository_root: Path,
+    working_directory: Path,
+) -> FindingIdentity | None:
+    """Return the identity of a finding of ``rule_id`` on the unit at ``location``.
+
+    The location's path is from ``working_directory``, and the unit's code is
+    read from its file on disk. None when the file is outside the repository
+    or cannot be read, as for a directory.
+    """
     file = relate_path_to_repository(location.path, repository_root, working_directory)
     if file is None:
         return None
@@ -54,9 +76,9 @@ def identify_finding(
     except OSError:
         return None
     return FindingIdentity(
-        rule_id=finding.rule_id,
+        rule_id=rule_id,
         file=file,
-        unit_name=describe_unit_name(finding.unit_id, location.path),
+        unit_name=describe_unit_name(unit_id, location.path),
         code_hash=hash_code(code),
     )
 

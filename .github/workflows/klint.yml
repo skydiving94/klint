@@ -2,8 +2,10 @@ name: klint Self-Audit
 run-name: ${{ (github.event_name == 'workflow_dispatch' && inputs.command != 'self-audit') && format('Jev run of {0} {1} on {2} by @{3}', inputs.command, inputs.target, github.ref_name, github.actor) || format('klint Self-Audit on {0} by @{1}', github.ref_name, github.actor) }}
 
 # klint audits its own code against Jev and lists what it finds in the job
-# summary. The job fails when an audit cannot run, or when it finds a problem
-# at 0.8 confidence or more. A finding judged not valid is excluded in the
+# summary. On a pull request into main or an epic branch it audits only the
+# pull request's diff under klint/ and posts each finding as a review comment; on a push to
+# main, or started by hand, it audits all of klint/. The job fails when an
+# audit cannot run, or when it finds a problem at 0.8 confidence or more. A finding judged not valid is excluded in the
 # repository's klint.json, with a link to its rebuttal as the reason.
 #
 # Started by hand, it can instead run one command against Jev on the chosen
@@ -14,7 +16,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, "epic-*"]
   workflow_dispatch:
     inputs:
       command:
@@ -38,6 +40,10 @@ jobs:
   audit:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.command == 'self-audit' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The review comments on a pull request's flagged lines.
+      pull-requests: write
     steps:
       # A run without the repository's secrets, such as one for a pull
       # request from a fork, cannot ask Jev, so it skips the audits.
@@ -65,7 +71,8 @@ jobs:
       # checkout, so that no audit reads it. The cache is keyed by the
       # klint version and the branch, and a new key per run, since a saved
       # cache never changes: the restore takes the newest of this branch's,
-      # else of main's. The run's answers are saved whatever the audits find.
+      # else of a pull request's base, else of main's. The run's answers are
+      # saved whatever the audits find.
       - name: Choose the answer cache folder and read the klint version
         if: steps.key.outputs.is_set == 'true'
         id: version
@@ -84,17 +91,37 @@ jobs:
           key: klint-answers-${{ steps.version.outputs.klint }}-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
           restore-keys: |
             klint-answers-${{ steps.version.outputs.klint }}-${{ github.head_ref || github.ref_name }}-
+            klint-answers-${{ steps.version.outputs.klint }}-${{ github.base_ref || 'main' }}-
             klint-answers-${{ steps.version.outputs.klint }}-main-
 
       # Each audit fails its step when it finds a problem at 0.8 or more.
       # A finding judged not valid is excluded in the repository's
       # klint.json, with the link to its rebuttal as the reason.
+      # On a pull request, one step audits the diff with both klint and
+      # klint-structure, and comments on the flagged lines.
+      - name: Audit the pull request's diff
+        if: steps.key.outputs.is_set == 'true' && github.event_name == 'pull_request'
+        uses: ./
+        with:
+          # klint's own code, as the full audit covers; examples/ fails on purpose.
+          target: "klint/"
+          diff: "pull_request"
+          review_comments: "true"
+          min_confidence: "0.8"
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+          fail_on_problems: "true"
+
+      # Elsewhere both audits cover all of klint/.
       - name: Audit the structure of klint/
-        if: steps.key.outputs.is_set == 'true'
+        if: steps.key.outputs.is_set == 'true' && github.event_name != 'pull_request'
         uses: ./
         with:
           target: "klint/"
           mode: "structure"
+          diff: "none"
           min_confidence: "0.8"
           judge_mode: "remote"
           judge_model: "jev-latest"
@@ -104,11 +131,12 @@ jobs:
 
       # Runs even when the structure audit failed, so that both report.
       - name: Audit the files of klint/
-        if: ${{ !cancelled() && steps.key.outputs.is_set == 'true' }}
+        if: ${{ !cancelled() && steps.key.outputs.is_set == 'true' && github.event_name != 'pull_request' }}
         uses: ./
         with:
           target: "klint/"
           mode: "file"
+          diff: "none"
           min_confidence: "0.8"
           judge_mode: "remote"
           judge_model: "jev-latest"

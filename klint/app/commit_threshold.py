@@ -19,6 +19,22 @@ def find_default_commit_threshold(model_name: str) -> float:
     return model_name_to_commit_threshold.get(model_name, _UNMEASURED_JUDGE_THRESHOLD)
 
 
+def choose_commit_threshold(
+    chosen_threshold: float | None, project_threshold: float | None, model_name: str
+) -> float:
+    """Return the threshold a finding needs to block a change.
+
+    ``chosen_threshold`` is the one the caller asked for, ``project_threshold``
+    the project's KLINT_COMMIT_MIN_CONFIDENCE; the first set wins, else the
+    judge's own for ``model_name``.
+    """
+    if chosen_threshold is not None:
+        return chosen_threshold
+    if project_threshold is not None:
+        return project_threshold
+    return find_default_commit_threshold(model_name)
+
+
 def read_commit_min_confidence(value: str, source_description: str) -> float:
     """Return the commit threshold the setting ``value`` gives.
 

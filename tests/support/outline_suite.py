@@ -48,7 +48,6 @@ OUTLINE_COMMAND = AuditCommand(
     target_argument_name="outline",
     target_argument_help="Outline JSON file",
     audit_kind_id=OUTLINE_KIND_ID,
-    audited_units_json_key="examined_sections",
 )
 CLEAR_SECTION_RULE = AuditRule(
     rule_id="clear_section",
@@ -133,6 +132,7 @@ class OutlineSuite(BaseSuite):
             answer_scale=PRACTICE_SCALE,
             audit_order=AuditOrder.CHILDREN_FIRST,
             unit_class_to_renderer={OutlineSectionUnit: OutlineSectionRenderer()},
+            audited_units_json_key="examined_sections",
         )
         return [
             outline_kind,

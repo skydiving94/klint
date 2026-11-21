@@ -32,10 +32,10 @@ from tests.support.stub_system_one_server import StubSystemOneServer
 
 
 @pytest.mark.parametrize(
-    ("command", "audited_path_parts", "rule_id"),
+    ("command", "audited_units_key", "audited_path_parts", "rule_id"),
     [
-        (FILE_AUDIT_COMMAND, ("a.py",), "for_files"),
-        (STRUCTURE_AUDIT_COMMAND, (), "for_directories"),
+        (FILE_AUDIT_COMMAND, "examined_files", ("a.py",), "for_files"),
+        (STRUCTURE_AUDIT_COMMAND, "examined_directories", (), "for_directories"),
     ],
 )
 def test_both_commands_take_the_same_options(
@@ -43,6 +43,7 @@ def test_both_commands_take_the_same_options(
     fake_judge: type[FakeJudge],
     capsys: pytest.CaptureFixture[str],
     command: AuditCommand,
+    audited_units_key: str,
     audited_path_parts: tuple[str, ...],
     rule_id: str,
 ) -> None:
@@ -62,37 +63,35 @@ def test_both_commands_take_the_same_options(
     confident_answers = json.loads(capsys.readouterr().out)
 
     audited = str(target.joinpath(*audited_path_parts))
-    assert every_answer[command.audited_units_json_key] == [audited]
+    assert every_answer[audited_units_key] == [audited]
     assert [(i["rule_id"], i["answer"]) for i in every_answer["findings"]] == [
         (rule_id, "Pass")
     ]
     assert confident_answers == {
-        command.audited_units_json_key: [audited],
+        audited_units_key: [audited],
         "unit_id_to_roll_up_status": {audited: "no_problem"},
         "findings": [],
         "judge_usage": {"requests": 1, "input_tokens": None},
     }
 
 
-def test_old_all_flag_still_shows_every_answer_with_a_warning(
+def test_the_removed_all_flag_is_refused_naming_its_replacement(
     tmp_path: Path,
     fake_judge: type[FakeJudge],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     target = write_text(tmp_path / "a.py", "x = 1\n")
-    app = build_audit_command_app(FILE_AUDIT_COMMAND, fake_judge())
-    asyncio.run(app.run([str(target), "--json", "--all-answers"]))
-    every_answer = capsys.readouterr().out
+    judge = fake_judge()
+    app = build_audit_command_app(FILE_AUDIT_COMMAND, judge)
 
-    exit_code = asyncio.run(app.run([str(target), "--json", "--all"]))
+    with pytest.raises(SystemExit) as stopped:
+        asyncio.run(app.run([str(target), "--json", "--all"]))
 
-    captured = capsys.readouterr()
-    assert exit_code == ExitCode.NO_PROBLEMS
-    assert captured.out == every_answer
-    assert list_lines_before_judge_usage(captured.err) == [
-        "[klint] Warning: '--all' is deprecated and stops working in the next "
-        "release; use '--all-answers' instead"
-    ]
+    assert stopped.value.code == ExitCode.RUN_ERROR
+    assert "'--all' was removed; use '--all-answers' instead" in (
+        capsys.readouterr().err
+    )
+    assert judge.requests == []
 
 
 @pytest.mark.parametrize(
@@ -106,7 +105,7 @@ def test_each_command_names_its_path_argument_in_the_help(
         parse_command_arguments(command, ["--help"])
 
     help_text = capsys.readouterr().out
-    assert f" {argument_name}\n" in help_text
+    assert f"\n  {argument_name}  " in help_text
     assert command.description in help_text
 
 

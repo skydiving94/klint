@@ -79,6 +79,7 @@ class ChangeSummarySuite(BaseSuite):
                     AuditableFileSummaryUnit: FileSummaryRenderer(),
                     AuditablePackageSummaryUnit: PackageSummaryRenderer(),
                 },
+                audited_units_json_key="examined_summaries",
                 ranked_tags=(SummaryCheckTag.ACCURACY, SummaryCheckTag.COMPLETENESS),
                 audit_order=AuditOrder.CHILDREN_FIRST,
                 character_budget=CHANGE_SUMMARY_CHARACTER_BUDGET,

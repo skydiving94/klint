@@ -1,8 +1,9 @@
 """An audit of the staged change: what --diff reads and keeps, for any front end."""
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
+from klint.app.change_scope_json import convert_change_scope_to_dict
 from klint.catalog.domain_neutral.git import (
     ChangeScope,
     DiffUnits,
@@ -10,7 +11,6 @@ from klint.catalog.domain_neutral.git import (
     scope_audit_to_change,
 )
 from klint.core.models.reports import JsonValue
-from klint.core.models.units import AuditableUnit
 
 
 @dataclass(frozen=True)
@@ -64,25 +64,6 @@ def convert_staged_change_to_dict(
 
     The CLI writes it under "staged_change" with --diff.
     """
-    return {
-        "diff_units": staged.diff_units.value,
-        "files": list(staged.scope.list_audited_paths()),
-        "deleted_files": list(staged.scope.deleted_paths),
-        "unit_count": extracted_unit_count,
-        "selected_unit_count": selected_unit_count,
-        "selected_units": [
-            _convert_unit_to_dict(unit)
-            for unit in staged.scope.unit_selector.selected_units
-        ],
-    }
-
-
-def _convert_unit_to_dict(unit: AuditableUnit) -> dict[str, JsonValue]:
-    """Return a selected unit as --json lists it: its ID, type, place and context."""
-    location = unit.get_location()
-    return {
-        "unit_id": unit.unit_id,
-        "unit_type": unit.unit_type,
-        "location": None if location is None else asdict(location),
-        "context": asdict(unit.get_context()),
-    }
+    return convert_change_scope_to_dict(
+        staged.scope, staged.diff_units, extracted_unit_count, selected_unit_count
+    )

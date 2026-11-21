@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from klint.catalog.domain_neutral.git import DiffUnits
-from klint.cli.audit_command import AuditCommand
+from klint.cli.audit_command import AuditCommand, DiffOptions
 from klint.cli.exit_code import ExitCode
-from klint.core import warn_about_deprecated_name
+from klint.core import describe_removed_name
 
 
 @dataclass(frozen=True)
@@ -19,8 +19,11 @@ class CommandArguments:
     --rules. should_show_all_answers asks for every answer instead of failures
     only, and min_confidence is the least confidence a finding needs to be
     reported. should_print_json asks for JSON instead of the terminal report.
-    diff_units is the choice --diff-units makes when --diff is given; None
-    without --diff, when target is the path to audit.
+    diff_units is the choice --diff-units makes when --diff or --diff-from
+    is given; None without them, when target is the path to audit, and for
+    a command without --diff-units.
+    diff_from is the file --diff-from reads the diff from, "-" for stdin;
+    None without --diff-from.
     """
 
     target: Path | None
@@ -29,6 +32,7 @@ class CommandArguments:
     min_confidence: float
     should_print_json: bool
     diff_units: DiffUnits | None = None
+    diff_from: Path | None = None
 
 
 def parse_command_arguments(
@@ -48,11 +52,16 @@ def parse_command_arguments(
         "target",
         metavar=command.target_argument_name,
         type=Path,
-        nargs="?" if command.does_offer_diff else None,
+        nargs=None if command.diff_options is DiffOptions.NONE else "?",
         help=command.target_argument_help,
     )
-    if command.does_offer_diff:
-        _add_diff_arguments(parser)
+    match command.diff_options:
+        case DiffOptions.CHANGED_UNITS:
+            _add_diff_arguments(parser)
+        case DiffOptions.CHANGED_DIRECTORIES:
+            _add_diff_from_directories_argument(parser)
+        case DiffOptions.NONE:
+            pass
     parser.add_argument(
         "--rules",
         type=Path,
@@ -67,8 +76,8 @@ def parse_command_arguments(
     parser.add_argument(
         "--all",
         action="store_true",
-        dest="all_answers_under_old_name",
-        help="Old name of --all-answers, deprecated",
+        dest="is_removed_all_given",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--min-confidence",
@@ -82,20 +91,27 @@ def parse_command_arguments(
         help="Output raw JSON instead of formatted terminal report",
     )
     namespace = parser.parse_args(argv)
-    if namespace.all_answers_under_old_name:
-        warn_about_deprecated_name("--all", "--all-answers")
+    if namespace.is_removed_all_given:
+        # Defined only to refuse it: argparse would take it as --all-answers.
+        parser.error(describe_removed_name("--all", "--all-answers"))
     diff_units = None
-    if command.does_offer_diff:
-        diff_units = _read_diff_units(parser, namespace)
+    diff_from = None
+    match command.diff_options:
+        case DiffOptions.CHANGED_UNITS:
+            diff_units = _read_diff_units(parser, namespace)
+            diff_from = namespace.diff_from
+        case DiffOptions.CHANGED_DIRECTORIES:
+            diff_from = _read_diff_from_without_units(parser, namespace)
+        case DiffOptions.NONE:
+            pass
     return CommandArguments(
         target=namespace.target,
         custom_rules_path=namespace.rules,
-        should_show_all_answers=(
-            namespace.all_answers or namespace.all_answers_under_old_name
-        ),
+        should_show_all_answers=namespace.all_answers,
         min_confidence=namespace.min_confidence,
         should_print_json=namespace.json,
         diff_units=diff_units,
+        diff_from=diff_from,
     )
 
 
@@ -109,28 +125,73 @@ def _add_diff_arguments(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
+        "--diff-from",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help=(
+            "Audit what a unified diff in git's format touches instead of a "
+            "path, such as 'git diff main...HEAD' writes; '-' reads it from "
+            "stdin. Its paths are taken as relative to the current directory, "
+            "and the files there must be the ones the diff's index lines name"
+        ),
+    )
+    parser.add_argument(
         "--diff-units",
         type=DiffUnits,
         choices=list(DiffUnits),
         default=None,
         help=(
-            "With --diff, which units of each changed file to audit: 'units' "
-            "(the default) for the file and every function and class on a "
-            "changed line, 'file' for the file alone, 'all' for every unit"
+            "With --diff or --diff-from, which units of each changed file to "
+            "audit: 'units' (the default) for the file and every function and "
+            "class on a changed line, 'file' for the file alone, 'all' for every unit"
         ),
     )
+
+
+def _add_diff_from_directories_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--diff-from",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help=(
+            "Audit, instead of a path, each directory that holds a file a "
+            "unified diff in git's format touches, such as 'git diff "
+            "main...HEAD' writes, and each of its parents; '-' reads it from "
+            "stdin. The project is the current directory: the diff's paths are "
+            "taken as relative to it, and the files there must be the ones the "
+            "diff's index lines name"
+        ),
+    )
+
+
+def _read_diff_from_without_units(
+    parser: argparse.ArgumentParser, namespace: argparse.Namespace
+) -> Path | None:
+    """Return the file --diff-from names; None without it. Exits on a clash."""
+    diff_from: Path | None = namespace.diff_from
+    if diff_from is not None and namespace.target is not None:
+        parser.error("--diff-from takes no path: the project is the current directory")
+    if diff_from is None and namespace.target is None:
+        parser.error("a path to audit or --diff-from is required")
+    return diff_from
 
 
 def _read_diff_units(
     parser: argparse.ArgumentParser, namespace: argparse.Namespace
 ) -> DiffUnits | None:
-    """Return the units --diff asks for; None without --diff. Exits when they clash."""
-    if namespace.diff:
-        if namespace.target is not None:
+    """Return the units a diff option asks for; None without one. Exits on a clash."""
+    if namespace.diff and namespace.diff_from is not None:
+        parser.error("--diff and --diff-from are two kinds of change: give one")
+    if namespace.diff or namespace.diff_from is not None:
+        if namespace.target is not None and namespace.diff:
             parser.error("--diff takes no path: it audits the staged change")
+        if namespace.target is not None:
+            parser.error("--diff-from takes no path: it audits the files of the diff")
         return namespace.diff_units or DiffUnits.UNITS
     if namespace.diff_units is not None:
-        parser.error("--diff-units needs --diff")
+        parser.error("--diff-units needs --diff or --diff-from")
     if namespace.target is None:
-        parser.error("a path to audit, or --diff, is required")
+        parser.error("a path to audit, --diff or --diff-from is required")
     return None

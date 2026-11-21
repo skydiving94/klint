@@ -31,8 +31,13 @@ By leveraging the **System One (`/v1/systemone`)** pointer-head specification, `
 * **[Change Summaries Read from Git](#change-summary-documents)**: An agent writes only its summaries, and `klint-change-summary` reads the change itself from git: a commit, or the uncommitted change.
 * **[Claude Code Stop Hook](#claude-code-stop-hook)**: `klint-change-summary-stop-hook` keeps a Claude Code agent from stopping until its summaries of everything it changed in the session, committed or not, pass, and sends it back to fix the ones flagged.
 * **[Staged-Change Audits (`klint --diff`)](#auditing-the-staged-change---diff)**: Audit only the units the staged change touches: each changed file, and the functions and classes on its changed lines.
+* **[Any Diff (`klint --diff-from`)](#any-diff---diff-from)**: Audit what any unified diff touches, piped in or read from a file, such as `git diff main...HEAD | klint --diff-from -`. Each file is checked against the diff before it is judged.
+* **[Structure Audits of a Diff (`klint-structure --diff-from`)](#the-structure-of-a-diff-klint-structure---diff-from)**: Audit only the directories a diff changes, and their parents, each judged as a full structure audit would judge it.
+* **[Unit Selectors in `rule_exclusions`](#what-a-klintjson-holds)**: Turn a rule off for one class or function, such as `settings.py::AppSettings`, in `klint.json`, reviewed with the code like any other change.
 * **[Pre-Commit Gate and Acknowledgement Log](#pre-commit-gate)**: `klint-pre-commit` blocks a commit while a finding in the staged change is neither fixed nor acknowledged. `klint-ack` records why a finding is wrong in `.klint/acknowledgements/`, which is committed and reviewed with the code.
-* **[MCP Server (`klint-mcp`)](#mcp-server-klint-mcp)**: Offers every audit, and the rules, to a coding agent as MCP tools over stdio, so it can check its work when it wants to.
+* **[MCP Server (`klint-mcp`)](#mcp-server-klint-mcp)**: Offers every audit, and the rules, to a coding agent as MCP tools over stdio, so it can check its work when it wants to, a pull request's diff included (`diff_text`).
+* **[Pull-Request Mode in the GitHub Action](#pull-request-mode)**: On a pull request, the Action audits only its diff, with `klint` and `klint-structure`, and fails the check on a finding at the judge's threshold.
+* **[Review Comments](#review-comments)**: The Action posts each finding as a review comment on its lines, with the `klint-ack` command for it, once per finding, and replies when a later push no longer has it.
 * **[Answer Cache](#the-answer-cache)**: On by default. The judge is never asked twice about the same code, rule and model, so a second run on an unchanged project sends no request.
 * **[Judge Usage Report](#what-a-command-prints)**: Every command ends by saying how many requests and input tokens it sent to the judge, and how many questions the answer cache answered.
 * **[Local Kev or Hosted Jev](#judges)**: Run the judge on your machine, on a `kev.serve` server, or ask TypeSafe's hosted Jev with an API key. Each command's first line names the judge it asks, and each judge is shown as much of a unit as it stays accurate on ([character budgets](#choosing-a-judge-and-a-threshold)).
@@ -76,13 +81,14 @@ klint-change-summary examples/change_summary/summaries_only.json
 
 | Command | What it audits | Argument |
 | :--- | :--- | :--- |
-| `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory; or, with `--diff`, none: the staged change. |
-| `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory. |
+| `klint` | The contents of each file, and of each class and function in a Python file, against the file rules. | A file or a directory; or, with `--diff`, none: the staged change; or, with `--diff-from`, none: the diff it reads. |
+| `klint-structure` | The structure of a project: each directory and Python package, from an outline of each file (imports, exports, classes, functions, line count). | A directory; or, with `--diff-from`, none: the diff it reads. |
 | `klint-change-summary` | An agent's summaries of a change: each hunk against its code, and each file, package and the commit against the checked summaries below it. | A change-summary JSON document: summaries with each hunk's code, or summaries alone; see [Change-summary documents](#change-summary-documents). |
 | `klint-change-summary-stop-hook` | Run by Claude Code at the start of a session and before its agent stops: the agent's summaries, in `.klint/change-summary.json`, of everything changed since the session started, committed or not; see [Claude Code Stop Hook](#claude-code-stop-hook). | None: it reads the hook event on stdin. It takes only `--min-confidence`. |
 | `klint-pre-commit` | Run by git before a commit: the staged change, as `klint --diff` audits it, blocking the commit while a finding is neither fixed nor acknowledged; see [Pre-commit gate](#pre-commit-gate). | None. It takes `--min-confidence` and `--diff-units`. |
-| `klint-ack` | Acknowledges a finding of `klint-pre-commit` as wrong, in `.klint/acknowledgements/`. | The entry's ID, which `klint-pre-commit` prints, and `--note "<why it is wrong>"`. |
+| `klint-ack` | Acknowledges a finding of `klint-pre-commit` or of a pull request's check as wrong, in `.klint/acknowledgements/`. | The finding's ID, which `klint-pre-commit` prints and each review comment shows, and `--note "<why it is wrong>"`. |
 | `klint-mcp` | Every audit above, and the rules, as MCP tools for a coding agent, over stdio; see [MCP Server](#mcp-server-klint-mcp). | None: the agent's client starts it. |
+| `klint-pull-request` | Run by the GitHub Action in pull-request mode: the check's threshold, the combined report of both audits, and the review; see [Pull-request mode](#pull-request-mode). | `threshold`, `report` or `review`, as the Action calls it. |
 
 The first three commands take these options:
 
@@ -93,7 +99,8 @@ The first three commands take these options:
 | `--all-answers` | Shows every answer, not only the problems. |
 | `--json` | Prints JSON instead of the terminal report. |
 | `--diff` | `klint` only: audits the staged change of the current directory's repository instead of a path; see [Auditing the staged change](#auditing-the-staged-change---diff). |
-| `--diff-units units\|file\|all` | With `--diff`: which units of each changed file are judged. `units` (the default) is the file and every function and class on a changed line, `file` the file alone, `all` every unit. |
+| `--diff-from FILE` | `klint` and `klint-structure`: audits what a unified diff touches instead of a path, read from `FILE`, or from stdin with `-`; see [Any diff](#any-diff---diff-from) and [The structure of a diff](#the-structure-of-a-diff-klint-structure---diff-from). |
+| `--diff-units units\|file\|all` | `klint`, with `--diff` or `--diff-from`: which units of each changed file are judged. `units` (the default) is the file and every function and class on a changed line, `file` the file alone, `all` every unit. |
 
 For example:
 ~~~bash
@@ -117,6 +124,30 @@ klint --diff --diff-units all --json
 * **Nothing staged**: `[klint] No staged change to audit`, exit 0. Outside a git repository: exit 2.
 * **With the answer cache**, a unit whose code has not changed costs no request, so a second `klint --diff` on the same change is free.
 * **Unstaged edits**: the changed lines come from the index, and the code of each unit from the working tree. When a staged file also has unstaged edits, klint says so with a warning; stage the whole file for an exact result.
+
+#### Any diff (`--diff-from`)
+`klint --diff-from <file>` audits what a unified diff in git's format touches, read from a file, or from stdin with `-`. Any such diff works, so a pull request's change is one pipe away:
+
+~~~bash
+git diff main...HEAD | klint --diff-from -
+gh pr diff 123 | klint --diff-from - --diff-units file
+~~~
+
+* **The same audit**: `--diff-units`, the units chosen and the report are those of `--diff`. On stderr the count reads `[klint] Change in the diff: …`, and with `--json` the same fields come under `diff_change`. `--diff` itself is the staged change, `git diff --cached`, put through the same reading.
+* **The files are read from disk**: the diff's paths are taken as relative to the current directory, so run it where the diff was made, usually the repository's top. Where the diff has `index <old>..<new>` lines, each changed file must hash to `<new>`, as `git hash-object` hashes it; a file that doesn't, or is missing, stops the run with exit 2, naming it. Check out the diff's head first, as a pull request's CI does. A diff with no `index` lines is taken as it is, with a warning.
+* **What it reads**: diffs with or without lines of context, with the `a/` and `b/` prefixes, others such as `--no-prefix`, quoted paths and paths with spaces. A combined diff of a merge, a diff in another format such as `diff -u`'s, and a file outside the current directory are refused with exit 2; a diff that can't be read names its line.
+* **An empty diff**: `[klint] No change in the diff to audit`, exit 0.
+
+#### The structure of a diff (`klint-structure --diff-from`)
+`klint-structure --diff-from <file or ->` audits each directory that holds a file the diff adds, changes, deletes or renames, and each of its parents up to the current directory, which is the project:
+
+~~~bash
+git diff main...HEAD | klint-structure --diff-from -
+~~~
+
+* **The same questions as a full audit**: each audited directory is summarized from all of its files and subpackages, not only the changed ones, so a finding means what it means in `klint-structure .`, and an unchanged directory's answer comes from the answer cache.
+* **Which directories**: a rename counts for its old and its new directory, and a deleted directory for its parent. A change only to files the structure audit leaves out, such as `node_modules/` or images, audits nothing: `Change in the diff: 2 files, in no directory the audit covers`, exit 0.
+* **The diff is read as for `klint --diff-from`**, with the same check against the files on disk. It takes no path and no `--diff-units`. On stderr the count reads `[klint-structure] Change in the diff: 1 file, 3 of 12 directories selected`, and `--json` adds `diff_change` with `files`, `deleted_files`, `unit_count`, `selected_unit_count` and `audited_directories`.
 
 ### Change-summary documents
 `klint-change-summary` takes a JSON document in one of two forms. Both hold a summary for each hunk, each file, each package you choose to summarize, and the whole commit.
@@ -197,7 +228,9 @@ A relative path set in `klint.json` is taken from the folder of the `klint.json`
 * `"fallback_rule_packs"`: the rule packs asked about a file whose language `klint` cannot identify, in place of the built-in `backend.json` and `file_design.json`.
 * `"file_traits"`: corrections to the language or tags `klint` detects for some files, for example `[{"glob": "web/**", "tags": ["frontend"]}]`. The first entry whose glob matches a file decides.
 * `"layers"`: the project's layers, outermost first, for example `["myapp.cli", "myapp.services", "myapp.core"]`. `klint-structure` shows them to the judge when it asks `layering_violation` and `leaky_abstraction`, and takes the last as the core. Without them, both rules ask about layers in general terms.
-* `"rule_exclusions"`: rules the project turns off for some of its paths, for example `[{"rule_id": "god_component", "paths": ["legacy/**"], "reason": "Being replaced by the new module"}]`. Each entry holds exactly a `rule_id`, `paths`, globs matched from the folder of the `klint.json` (a class or function by its file's path), and a `reason`. The rule is not asked about a matching unit, and every other rule still is. The report lists each exclusion it applied, and `--json` adds them as `applied_rule_exclusions` when there are some.
+* `"rule_exclusions"`: rules the project turns off for some of its paths, for example `[{"rule_id": "god_component", "paths": ["legacy/**"], "reason": "Being replaced by the new module"}]`. Each entry holds exactly a `rule_id`, `paths`, globs matched from the folder of the `klint.json` (a class or function by its file's path), and a `reason`. The rule is not asked about a matching unit, and every other rule still is. The report lists each exclusion it applied, and `--json` adds them as `applied_rule_exclusions` when there are some, with the IDs of the units each covered.
+  * **Unit selectors**: a `paths` entry may name a class or function by its unit ID, as klint prints it, such as `"klint/app/settings.py::AppSettings"` or `"cart.py::Cart.total"`. It covers that unit and every unit nested in it, so a class's selector covers its methods, but not the file unit. Globs work in both parts: `"klint/app/*.py::*Settings"`; in the name, `*` stops at a `.` and `**` crosses it. The terminal report lists the units a selector covered. A renamed class stops matching, so its finding comes back.
+  * **Stale entries**: when a full audit of a folder that holds an entry's path finds no unit for it to turn its rule off for, klint warns once, naming the entry. A diff audit, the commit gate included, doesn't warn, since it sees only part of the project; nor does an audit whose rules don't include the entry's rule.
 
 ~~~json
 {
@@ -353,19 +386,77 @@ jobs:
 
 | Input | Default | What it does |
 | :--- | :--- | :--- |
-| `target` | `.` | The file or directory to audit. |
-| `mode` | `file` | `file` runs `klint`; `structure` runs `klint-structure`. |
-| `min_confidence` | `0.60` | The least confidence a failure needs to be reported and to count as a problem. |
+| `target` | `.` | The file or directory to audit. In pull-request mode, only the diff's changes under it are audited, such as `src/` to leave out tests and examples. |
+| `mode` | `file` | `file` runs `klint`; `structure` runs `klint-structure`. Ignored in pull-request mode, which runs both. |
+| `diff` | `pull_request` on a `pull_request` event, else `none` | `pull_request` audits only the pull request's diff; `none` audits `target`. |
+| `min_confidence` | `0.60`; in pull-request mode, the judge's own | The least confidence a failure needs to be reported and to count as a problem. |
 | `rules` | none | A rules file whose rules merge over the built-in ones. |
 | `judge_mode` | `local` | Sets `KLINT_JUDGE_MODE`. `local` runs `kev` on the runner's CPU. |
 | `judge_model` | `jaredpalmer/kev-0.8b` | Sets `KLINT_JUDGE_MODEL`. |
 | `judge_base_url` | `http://127.0.0.1:8009` | Sets `KLINT_JUDGE_BASE_URL`. |
 | `judge_api_key` | none | Sets `KLINT_JUDGE_API_KEY`. Pass it from a secret. |
 | `fail_on_problems` | `true` | `true` fails the step when `klint` finds problems (exit 1); `false` reports them and passes. A run that cannot audit (exit 2) fails the step either way. |
+| `review_comments` | `true` | In pull-request mode, `true` posts each finding as a review comment on its lines; `false` posts nothing. |
 
-* **Output**: `exit_code`, the command's exit code.
+* **Outputs**: `exit_code`, the command's exit code; in pull-request mode, `findings_json` too.
 * **Job summary**: each run adds its report to the job summary.
+
+### Pull-request mode
+
+On a `pull_request` event, the Action audits only what the pull request changes, and fails the check on a finding, as the commit gate blocks a commit:
+
+~~~yaml
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write # for the review comments
+
+jobs:
+  klint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit the pull request with klint
+        uses: skydiving94/klint@main
+        with:
+          judge_mode: "remote"
+          judge_model: "jev-latest"
+          judge_base_url: "https://api.typesafe.ai"
+          judge_api_key: ${{ secrets.KLINT_JUDGE_API_KEY }}
+~~~
+
+* **What is audited**: the diff of GitHub's merge commit against its first parent, which is what the pull request would change, with `klint --diff-from` and `klint-structure --diff-from`. A checkout of the pull request's head is diffed from its merge base with the base instead. The Action fetches the commits it needs, so the default shallow checkout is enough.
+* **Threshold**: the commit gate's: the project's `KLINT_COMMIT_MIN_CONFIDENCE`, else the judge's own, 0.8 for Jev and 0.5 for Kev. `min_confidence` overrides both.
+* **Pass or fail**: the check fails on any finding at the threshold that `klint.json`'s `rule_exclusions` and the acknowledgement log leave. `fail_on_problems: "false"` reports them and passes.
+* **Job summary**: a table of the findings, each with its file, lines, rule, confidence and `klint-ack` command. A pull request that changes nothing klint audits passes with one line.
+* **Review comments**: see below.
+* **`findings_json`**: the path of one JSON file with both audits' findings, each with its `audit` (`file` or `structure`), `entry_id` and `acknowledge_command`, and both `--json` reports under `reports`.
+* **Answer cache**: kept between runs with the Actions cache, keyed by the klint version and the branch, falling back to the base branch's. A workflow that sets `KLINT_ANSWER_CACHE` keeps its own.
+* **Forks**: a pull request from a fork gets no secrets, so with a remote judge and no API key the audit is skipped with a notice.
+* **A whole-project audit on a pull request**: set `diff: "none"`, with `target` and `mode` as before.
 * **Settings**: the Action always sets the judge's mode, model and address, so a `klint.json` `"env"` block does not choose the judge in the Action.
+
+#### Review comments
+
+After the audit, the Action posts one review, with the `COMMENT` event, holding a comment on the lines of each new finding:
+
+> **klint** · `hardcoded_secrets` · confidence 1.00
+>
+> > Are sensitive credentials (API keys, passwords, tokens) loaded from configuration or environment variables rather than hardcoded in source code?
+>
+> If it is wrong, acknowledge it in your checkout and push the log:
+>
+> ```
+> klint-ack 76ed833669be --note "<why this finding is wrong>"
+> ```
+
+* **Acknowledging**: run the comment's `klint-ack` command in a checkout of the pull request's head, then commit and push the entry it stages. The commit gate need not have logged the finding: with no entry for the ID, `klint-ack` finds the finding in the code as it stands, under the rules an audit of the repository would ask, without asking a judge, and writes it as an acknowledged entry. If the code the finding is on has changed since the comment, no finding has the ID any more, and `klint-ack` says so and exits 2. A finding with no ID, such as a directory's, is turned off in `klint.json`'s `rule_exclusions` instead.
+* **Once per finding**: each comment carries a hidden marker with the finding's ID, the same as its acknowledgement log entry's. A later push posts no comment for a finding that already has one, and no review at all when it has no new finding.
+* **Gone findings**: when a push no longer has a finding, fixed, acknowledged or with its code changed, its comment gets one reply saying so. Its thread is resolved where the token can; the job's own `GITHUB_TOKEN` can't, so the thread stays open with the reply.
+* **The review's body** sums up the findings at the threshold, new and still open, and the `rule_exclusions` and acknowledgements applied. It lists the findings a comment can't be on: a directory's, one on lines the pull request doesn't add, and those past 50 inline comments.
+* **The check** still passes or fails on the audit alone. A token that can't write, as on a pull request from a fork, posts nothing, and the job summary says so; so does an API error.
+* **Permissions**: the job needs `pull-requests: write`. `review_comments: "false"` turns the comments off.
 
 ## Claude Code Stop Hook
 
@@ -439,8 +530,8 @@ The server audits paths inside the directory Claude Code started it in, the proj
 ### The tools
 | Tool | Arguments | What it returns |
 | :--- | :--- | :--- |
-| `audit_files` | `path`, or `diff` (true) with `diff_units` (`units`, `file`, `all`); `min_confidence`, `all_answers`, `rules_path` | What `klint --json` prints: `examined_files`, `unit_id_to_roll_up_status`, `findings`, `judge_usage`, and `staged_change` with `diff`. |
-| `audit_structure` | `path`; `min_confidence`, `all_answers`, `rules_path` | What `klint-structure --json` prints. |
+| `audit_files` | One of `path`, `diff` (true) and `diff_text` (a unified diff, up to 2 MB), with `diff_units` (`units`, `file`, `all`) for either diff; `min_confidence`, `all_answers`, `rules_path` | What `klint --json` prints: `examined_files`, `unit_id_to_roll_up_status`, `findings`, `judge_usage`, and `staged_change` with `diff`, or `diff_change` with `diff_text`, as for [`--diff-from`](#any-diff---diff-from). |
+| `audit_structure` | `path` or `diff_text`; `min_confidence`, `all_answers`, `rules_path` | What `klint-structure --json` prints, with `diff_change` for `diff_text`, as for [`klint-structure --diff-from`](#the-structure-of-a-diff-klint-structure---diff-from). |
 | `check_change_summary` | `path` of a change-summary document; `min_confidence`, `all_answers`, `rules_path` | What `klint-change-summary --json` prints. |
 | `list_rules` | `path`; `rules_path` | Each rule an audit of the path would ask, with the units it would be asked about, and the project's exclusions that applied. No judge is asked. |
 | `explain_rule` | `rule_id` | Each pack that defines the rule: its question, unit types, and the languages and unit tags it is limited to. |
@@ -479,23 +570,22 @@ A long audit sends progress notifications, one per unit audited. When the judge 
 | The judge is down, klint cannot run, or an entry file cannot be read | Blocks, saying why. `git commit --no-verify` skips the check. |
 
 * **Threshold**: a failure blocks from the confidence of the judge in use, 0.8 for Jev and 0.5 for Kev. `KLINT_COMMIT_MIN_CONFIDENCE`, in the environment or the `"env"` block of `klint.json`, sets the project's own; `klint-pre-commit --min-confidence 0.7` wins over both. `--diff-units` chooses the units as for [`--diff`](#auditing-the-staged-change---diff).
-* **Acknowledging a finding that is wrong**: `klint-ack <id> --note "<why it is wrong>"`, with the ID the hook printed. The note is required and recorded. The entry is staged with the commit. The finding stays acknowledged while the unit's code hashes the same; once the code changes, the judge's finding on it is a new entry, and the old one stays as history.
-* **The log**: each entry records the rule, the file, the unit's kind, name and lines, a hash of the unit's code, the finding and its confidence, the judge's model version, when it was first flagged, its status, and, once acknowledged, when and the note. klint writes it: the hook adds and removes entries for the staged change only, and `klint-ack` acknowledges. The same staged change and the same answers give the same entries, apart from the timestamps. Every `klint` audit of the repository leaves out the findings an acknowledged entry covers and lists them, as `applied_acknowledgements` in `--json`; a `rule_exclusions` entry in `klint.json` turns a rule off for some paths whatever the code, while an acknowledgement covers one finding on one version of the code.
+* **Acknowledging a finding that is wrong**: `klint-ack <id> --note "<why it is wrong>"`, with the ID the hook printed or a pull request's review comment shows. The note is required and recorded. The entry is staged with the commit. An ID the log has no entry for, such as one first raised on a pull request, gets a new acknowledged entry when exactly one finding on the code as it stands has it; see [Review comments](#review-comments). The finding stays acknowledged while the unit's code hashes the same; once the code changes, the judge's finding on it is a new entry, and the old one stays as history.
+* **The log**: each entry records the rule, the file, the unit's kind, name and lines, a hash of the unit's code, the finding and its confidence, the judge's model version, when it was first flagged, its status, and, once acknowledged, when and the note. klint writes it: the hook adds and removes entries for the staged change only, and `klint-ack` acknowledges, or adds an acknowledged entry for a finding the hook never logged; such an entry records no confidence and no judge model version, and its answer as `not judged`. The same staged change and the same answers give the same entries, apart from the timestamps. Every `klint` audit of the repository leaves out the findings an acknowledged entry covers and lists them, as `applied_acknowledgements` in `--json`; a `rule_exclusions` entry in `klint.json` turns a rule off for some paths whatever the code, while an acknowledgement covers one finding on one version of the code.
 * **A commit made with `--no-verify`** can leave open entries behind; the next gated commit that stages those files brings them up to date.
 
-## Renamed in This Release
+## Removed Names
 
-These names changed. Each old name still works until the next release and prints a warning naming its replacement.
+The old names kept for one release after the renames are gone. Use each replacement:
+* `klint-project`: `klint-structure`.
+* `--all`: `--all-answers`. klint refuses `--all`.
+* `KEV_MODE`, `KEV_MODEL_NAME`, `KEV_BASE_URL`, `KEV_API_KEY`: `KLINT_JUDGE_MODE`, `KLINT_JUDGE_MODEL`, `KLINT_JUDGE_BASE_URL`, `KLINT_JUDGE_API_KEY`.
+* `KEV_DEFAULT_RULES_PATH`, `KEV_DEFAULT_PROJECT_RULES_PATH`: `KLINT_REPLACE_FILE_RULES`, `KLINT_REPLACE_PROJECT_RULES`.
+* Rule fields `instructions`, `target_unit_types`: `question`, `unit_types`.
+* Action inputs `kev_mode`, `kev_model_name`, `kev_base_url`, `kev_api_key`: `judge_mode`, `judge_model`, `judge_base_url`, `judge_api_key`.
+* Action input `mode: "project"`: `mode: "structure"`. The Action fails on it.
 
-| Old name | New name |
-| :--- | :--- |
-| `klint-project` | `klint-structure` |
-| `--all` | `--all-answers` |
-| `KEV_MODE`, `KEV_MODEL_NAME`, `KEV_BASE_URL`, `KEV_API_KEY` | `KLINT_JUDGE_MODE`, `KLINT_JUDGE_MODEL`, `KLINT_JUDGE_BASE_URL`, `KLINT_JUDGE_API_KEY` |
-| `KEV_DEFAULT_RULES_PATH`, `KEV_DEFAULT_PROJECT_RULES_PATH` | `KLINT_REPLACE_FILE_RULES`, `KLINT_REPLACE_PROJECT_RULES` |
-| Rule fields `instructions`, `target_unit_types` | `question`, `unit_types` |
-| Action inputs `kev_mode`, `kev_model_name`, `kev_base_url`, `kev_api_key` | `judge_mode`, `judge_model`, `judge_base_url`, `judge_api_key` |
-| Action input `mode: "project"` | `mode: "structure"` |
+klint ignores an old setting or rule field with a warning naming its replacement, and GitHub warns about an old Action input.
 
 The source moved from `src/` to the `klint/` package, with no alias for code that imports it.
 
@@ -513,26 +603,29 @@ The source moved from `src/` to the `klint/` package, with no alias for code tha
 * **Change Summaries**:
   * A hunk over 4,000 characters is shown only in part, and no judge sees a mistake that sits past the cut.
   * The local Kevs catch no omission. Jev catches most, but misses a file summary that names every hunk and leaves out the file's main change, and flags some true file summaries on `covers_every_change` or `covers_key_changes`.
-* **Staged Change Only**: `klint --diff` and the commit gate read the staged change; neither audits a range of commits, such as a pull request's, nor unstaged edits. `klint-structure` still audits the whole project.
+* **Diffs Are Checked Against the Files on Disk**: `--diff-from` judges each file as it is on disk, so the diff's head must be checked out; a file that doesn't match the diff's `index` hash stops the run. `klint --diff` and the commit gate read the staged change, not unstaged edits. `klint-change-summary` doesn't take a piped diff: it reads a commit, or a base, from git.
+* **Review Threads Stay Open**: when a later push no longer has a finding, the Action replies to its review comment, but the job's own `GITHUB_TOKEN` can't resolve the thread, so it stays open. A pull request from a fork, whose token can't write, gets the job summary and no comments; with a remote judge and no API key it is skipped.
+* **Suppression Lives in `klint.json` and the Acknowledgement Log**: there are no inline suppression comments, and a finding is acknowledged with `klint-ack` in a checkout, not by replying to its review comment.
 * **One Local Agent over MCP**: `klint-mcp` serves one agent over stdio, on the machine it runs on, and needs a served judge: it refuses the local mode.
 * **Eliminating Local CLI Cold-Start (`KLINT_JUDGE_MODE=local` vs. `kev.serve`)**: In `KLINT_JUDGE_MODE=local`, `klint` loads the open-weight checkpoint into memory once per CLI invocation (~3–5s startup for `kev-4b` on Apple Silicon). For instant startup across frequent runs, either use `jaredpalmer/kev-0.8b` or keep a persistent `kev.serve` process running in the background with `KLINT_JUDGE_MODE=remote`.
 * **Directory Summary Confidence Calibration**: Because `klint-structure` evaluates compact AST metadata summaries rather than full source code bodies, `[FAIL]` confidence scores on directory rules are naturally more conservative (`20%–50%`) than file-level code rules (`70%–99%`).
 
 ## Roadmap & Upcoming Features
 
-Shipped in this release:
+Shipped:
+* PR-ready checks: `klint --diff-from` and `klint-structure --diff-from` on any diff, unit selectors in `rule_exclusions`, pull-request mode in the GitHub Action with review comments on the flagged lines, `diff_text` for the MCP tools, and the removal of the old names.
 * Commit-ready checks: `klint --diff` on the staged change, the pre-commit gate with its acknowledgement log, the `klint-mcp` server, the answer cache, the judge usage report, a character budget per judge, and a Stop hook that checks the agent's commits too.
 * Agent-ready checks: Python class and function units, change summaries read from git, the Claude Code Stop hook, and the hosted Jev judge.
 
 Upcoming:
-1. **More of Git Diff Mode**: `--diff` against a ref, for pull requests, and against the working tree; and a `klint-structure` audit of the packages that changed only.
-2. **MCP over HTTP**: `klint-mcp` for several clients and remote agents, and hooks for agents other than Claude Code.
-3. **Multi-Language Extractors**: Class and function units, and `klint-structure` outlines, for TypeScript/JavaScript (`.ts`, `.tsx`) and Go.
-4. **Inline GitHub PR Review Annotations**: Extending the GitHub Action with inline pull-request review comments on flagged line ranges.
-5. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings, and packing several small units into one request.
-6. **Non-Code Files**: Auditing text documents, LaTeX and other writing.
-7. **More Accurate Local Judges**: A hosted Kev-27B and a Kev-4B fine-tuned on labelled change summaries, scored on the same test set.
-8. **Removing the Old Names**: the names in [Renamed in This Release](#renamed-in-this-release) stop working.
+1. **Inline Suppression Comments, with Guards**: a required reason, a per-project switch, a pull request listing every suppression it adds, and a check for unused ones.
+2. **Acknowledging from a Pull Request**: acknowledging a finding by replying to its review comment, and check-run annotations alongside the review comments.
+3. **Fine-Tuning Kev-4B**: an experiment fine-tuning the local Kev-4B on labelled change summaries and scoring it on the same test set, once there is more labelled data than the 141 summaries so far.
+4. **MCP over HTTP**: `klint-mcp` for several clients and remote agents, and hooks for agents other than Claude Code.
+5. **Multi-Language Extractors**: Class and function units, and `klint-structure` outlines, for TypeScript/JavaScript (`.ts`, `.tsx`) and Go.
+6. **Permutation Calibration & Multi-Unit Batching**: Supporting `/v1/systemone/permute` debiasing on borderline findings, and packing several small units into one request.
+7. **Non-Code Files**: Auditing text documents, LaTeX and other writing.
+8. **More Accurate Local Judges**: A hosted Kev-27B, scored on the same test sets.
 
 ## Contributing
 

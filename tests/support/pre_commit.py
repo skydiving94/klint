@@ -91,6 +91,13 @@ def run_ack(*options: str) -> ExitCode:
     return asyncio.run(acknowledge_entry(list(options), Path.cwd()))
 
 
+def run_ack_with_judge(judge: BaseJudge, *options: str) -> ExitCode:
+    """Run klint-ack in the cwd's repository, with ``judge`` wired in."""
+    return asyncio.run(
+        acknowledge_entry(list(options), Path.cwd(), JudgeBindingOverride(judge))
+    )
+
+
 def list_entry_files(repository: Path) -> list[Path]:
     folder = repository / LOG_FOLDER
     return sorted(folder.glob("*.json")) if folder.is_dir() else []
