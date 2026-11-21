@@ -6,6 +6,7 @@ import sys
 from klint.app import AppSettings
 from klint.app.pipeline import AuditPipeline
 from klint.cli.audit_command import AuditCommand
+from klint.cli.change_summary_writing import print_writing_aid
 from klint.cli.command_arguments import parse_command_arguments
 from klint.cli.console import print_error_line, print_klint_warnings_raised_inside
 from klint.cli.exit_code import ExitCode
@@ -32,6 +33,8 @@ async def _run_command(command: AuditCommand) -> ExitCode:
     try:
         with print_klint_warnings_raised_inside(command):
             arguments = parse_command_arguments(command, sys.argv[1:])
+            if arguments.writing_aid is not None:
+                return await print_writing_aid(command, arguments.writing_aid)
             settings = await asyncio.to_thread(
                 AppSettings.from_env, arguments.target, arguments.custom_rules_path
             )

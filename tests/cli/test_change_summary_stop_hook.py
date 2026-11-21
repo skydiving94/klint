@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from klint.cli.change_summary_stop_hook import (
-    MAX_BLOCKS_IN_A_ROW,
-    SUMMARIES_PATH,
+from klint.cli.change_summary_stop_hook import MAX_BLOCKS_IN_A_ROW, SUMMARIES_PATH
+from klint.cli.change_summary_writing import (
+    InstructionsAudience,
     load_summary_instructions,
 )
 from tests.support.change_summary import HypothesisJudge
@@ -55,7 +55,7 @@ def test_no_summaries_block_with_the_change_and_the_instructions(
     assert f"write summaries of your change to {SUMMARIES_PATH}" in answer.reason
     assert "- app/greet.py (modified): @@ -1 +0,0 @@, @@ -5 +4,2 @@" in answer.reason
     assert "- docs/guide.md (added): @@ -0,0 +1 @@" in answer.reason
-    assert load_summary_instructions() in answer.reason
+    assert load_summary_instructions(InstructionsAudience.STOP_HOOK) in answer.reason
 
 
 def test_summaries_out_of_date_for_the_change_block_naming_the_difference(

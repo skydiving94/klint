@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Iterator, Sequence
 from typing import TextIO
 
-from klint.cli.change_summary_stop_hook.hook_messages import SUMMARIES_PATH
+from klint.cli.change_summary_writing import SUMMARIES_PATH
 from klint.core import KlintWarning
 
 STOP_HOOK_COMMAND_NAME = "klint-change-summary-stop-hook"

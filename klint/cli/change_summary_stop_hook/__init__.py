@@ -12,16 +12,12 @@ from klint.cli.change_summary_stop_hook.change_summary_stop_hook import (
     run_change_summary_stop_hook,
 )
 from klint.cli.change_summary_stop_hook.hook_console import STOP_HOOK_COMMAND_NAME
-from klint.cli.change_summary_stop_hook.hook_messages import (
-    SUMMARIES_PATH,
-    load_summary_instructions,
-)
+from klint.cli.change_summary_writing import SUMMARIES_PATH
 
 __all__ = [
     "MAX_BLOCKS_IN_A_ROW",
     "STOP_HOOK_COMMAND_NAME",
     "SUMMARIES_PATH",
     "ChangeSummaryStopHook",
-    "load_summary_instructions",
     "run_change_summary_stop_hook",
 ]

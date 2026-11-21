@@ -10,6 +10,7 @@ from klint.app.audit_json import convert_audit_outcome_to_dict
 from klint.app.pipeline import AuditOutcome, AuditPipeline, AuditRequest
 from klint.cli.audit_command import AuditCommand
 from klint.cli.audit_input_choice import ChosenAuditInput, choose_audit_input
+from klint.cli.change_summary_writing import print_writing_aid
 from klint.cli.command_arguments import CommandArguments, parse_command_arguments
 from klint.cli.console import print_error_line, print_klint_warnings_raised_inside
 from klint.cli.exit_code import ExitCode
@@ -64,6 +65,8 @@ class AuditCommandApp:
     async def run_with_arguments(self, arguments: CommandArguments) -> ExitCode:
         """Run the command on a parsed command line; return the exit code."""
         command = self._command
+        if arguments.writing_aid is not None:
+            return await print_writing_aid(command, arguments.writing_aid)
         should_show_progress = not arguments.should_print_json
         progress = AuditProgressReporter(enabled=should_show_progress)
         try:

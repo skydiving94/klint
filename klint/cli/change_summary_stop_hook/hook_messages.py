@@ -1,25 +1,25 @@
 """What the hook tells the agent when it blocks a stop, and the user when it lets go."""
 
 from collections.abc import Mapping, Sequence
-from importlib import resources
-from pathlib import Path
 
-from klint.catalog.domain_neutral.git import GitChange, GitFileChange
+from klint.catalog.domain_neutral.git import GitChange
 from klint.cli.change_summary_stop_hook.change_base import ChangeBase
 from klint.cli.change_summary_stop_hook.summary_coverage import SummaryCoverage
+from klint.cli.change_summary_writing import (
+    SUMMARIES_PATH,
+    InstructionsAudience,
+    ListedFile,
+    list_changed_files,
+    load_summary_instructions,
+)
 from klint.core.models.reports import AuditFinding
 
-# Where the agent writes its summaries, relative to the project directory.
-SUMMARIES_PATH = Path(".klint/change-summary.json")
 # The most files, or files and hunks, one list in a message names.
 _MAX_LISTED_ITEMS = 60
-_INSTRUCTIONS_RESOURCE = "change_summary_stop_hook/writing_change_summaries.md"
 
 
-def load_summary_instructions() -> str:
-    """Return the instructions for writing the summaries, as shipped with klint."""
-    instructions = resources.files("klint.resources") / _INSTRUCTIONS_RESOURCE
-    return instructions.read_text(encoding="utf-8").strip()
+def _load_instructions() -> str:
+    return load_summary_instructions(InstructionsAudience.STOP_HOOK)
 
 
 def describe_missing_summaries(change: GitChange, base: ChangeBase) -> str:
@@ -28,7 +28,7 @@ def describe_missing_summaries(change: GitChange, base: ChangeBase) -> str:
         "then stop again. klint checks them before you may stop.",
         _describe_change(change),
         _describe_git_change_field(base),
-        load_summary_instructions(),
+        _load_instructions(),
     )
 
 
@@ -42,7 +42,7 @@ def describe_uncovered_change(
         _describe_parts("Summarized but not in the change", coverage.stale_parts),
         _describe_change(change),
         _describe_git_change_field(base),
-        load_summary_instructions(),
+        _load_instructions(),
     )
 
 
@@ -52,14 +52,14 @@ def describe_other_change(base: ChangeBase) -> str:
         f'summaries only, with "git_change": {base.format_git_change()}. Write '
         "summaries of the current change there, then stop again.",
         _describe_git_change_field(base),
-        load_summary_instructions(),
+        _load_instructions(),
     )
 
 
 def describe_unreadable_summaries(error: Exception) -> str:
     return _join_paragraphs(
         f"klint cannot read {SUMMARIES_PATH}: {error}\nFix the file, then stop again.",
-        load_summary_instructions(),
+        _load_instructions(),
     )
 
 
@@ -138,8 +138,9 @@ def _describe_git_change_field(base: ChangeBase) -> str:
 
 
 def _describe_change(change: GitChange) -> str:
-    lines = [_describe_file(file) for file in change.files[:_MAX_LISTED_ITEMS]]
-    more_count = len(change.files) - _MAX_LISTED_ITEMS
+    listed_files = list_changed_files(change)
+    lines = [_describe_file(file) for file in listed_files[:_MAX_LISTED_ITEMS]]
+    more_count = len(listed_files) - _MAX_LISTED_ITEMS
     if more_count > 0:
         lines.append(f"- and {more_count} more; see git status")
     return "\n".join(
@@ -150,14 +151,9 @@ def _describe_change(change: GitChange) -> str:
     )
 
 
-def _describe_file(file: GitFileChange) -> str:
-    kind = file.change_kind.value
-    if file.old_path is not None:
-        kind = f"{kind} from {file.old_path}"
-    if file.is_binary:
-        kind = f"{kind}, binary"
-    headers = ", ".join(hunk.header.format_text() for hunk in file.hunks)
-    return f"- {file.path} ({kind}): {headers or 'no hunk'}"
+def _describe_file(file: ListedFile) -> str:
+    headers = ", ".join(file.hunk_headers)
+    return f"- {file.path} ({file.kind_description}): {headers or 'no hunk'}"
 
 
 def _describe_parts(title: str, parts: Sequence[str]) -> str:

@@ -10,6 +10,7 @@ from klint.catalog.change_summary.documents.change_summary_source import (
 )
 from klint.catalog.change_summary.documents.document import (
     ROOT_PACKAGE_PATH,
+    SUPPORTED_SCHEMA_VERSION,
     ChangeKind,
     ChangeSummaryDocument,
     FileSummary,
@@ -21,10 +22,12 @@ from klint.catalog.change_summary.documents.document_reader import (
 )
 from klint.catalog.change_summary.documents.git_summaries_reader import (
     read_summaries_of_git_change,
+    require_changed_files,
 )
 
 __all__ = [
     "ROOT_PACKAGE_PATH",
+    "SUPPORTED_SCHEMA_VERSION",
     "ChangeKind",
     "ChangeSummaryDocument",
     "ChangeSummaryInput",
@@ -34,4 +37,5 @@ __all__ = [
     "PackageSummary",
     "read_change_summary_document",
     "read_summaries_of_git_change",
+    "require_changed_files",
 ]

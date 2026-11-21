@@ -7,6 +7,7 @@ from pathlib import Path
 
 from klint.catalog.domain_neutral.git import DiffUnits
 from klint.cli.audit_command import AuditCommand, DiffOptions
+from klint.cli.change_summary_writing.writing_aid import WritingAid, WritingAidKind
 from klint.cli.exit_code import ExitCode
 from klint.core import describe_removed_name
 
@@ -24,6 +25,8 @@ class CommandArguments:
     a command without --diff-units.
     diff_from is the file --diff-from reads the diff from, "-" for stdin;
     None without --diff-from.
+    writing_aid is what --instructions or --skeleton asks to print in place
+    of an audit; None without them.
     """
 
     target: Path | None
@@ -33,6 +36,11 @@ class CommandArguments:
     should_print_json: bool
     diff_units: DiffUnits | None = None
     diff_from: Path | None = None
+    writing_aid: WritingAid | None = None
+
+
+# What --skeleton holds when it names no commit: the uncommitted change.
+_UNCOMMITTED_CHANGE = ""
 
 
 def parse_command_arguments(
@@ -52,7 +60,12 @@ def parse_command_arguments(
         "target",
         metavar=command.target_argument_name,
         type=Path,
-        nargs=None if command.diff_options is DiffOptions.NONE else "?",
+        nargs=(
+            None
+            if command.diff_options is DiffOptions.NONE
+            and not command.does_offer_writing_aids
+            else "?"
+        ),
         help=command.target_argument_help,
     )
     match command.diff_options:
@@ -62,6 +75,8 @@ def parse_command_arguments(
             _add_diff_from_directories_argument(parser)
         case DiffOptions.NONE:
             pass
+    if command.does_offer_writing_aids:
+        _add_writing_aid_arguments(parser)
     parser.add_argument(
         "--rules",
         type=Path,
@@ -94,6 +109,9 @@ def parse_command_arguments(
     if namespace.is_removed_all_given:
         # Defined only to refuse it: argparse would take it as --all-answers.
         parser.error(describe_removed_name("--all", "--all-answers"))
+    writing_aid = None
+    if command.does_offer_writing_aids:
+        writing_aid = _read_writing_aid(parser, namespace)
     diff_units = None
     diff_from = None
     match command.diff_options:
@@ -112,6 +130,7 @@ def parse_command_arguments(
         should_print_json=namespace.json,
         diff_units=diff_units,
         diff_from=diff_from,
+        writing_aid=writing_aid,
     )
 
 
@@ -195,3 +214,52 @@ def _read_diff_units(
     if namespace.target is None:
         parser.error("a path to audit, --diff or --diff-from is required")
     return None
+
+
+def _add_writing_aid_arguments(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--instructions",
+        action="store_true",
+        help=(
+            "Print klint's instructions for writing change summaries, for an "
+            "agent, instead of checking summaries"
+        ),
+    )
+    group.add_argument(
+        "--skeleton",
+        nargs="?",
+        const=_UNCOMMITTED_CHANGE,
+        default=None,
+        metavar="COMMIT",
+        help=(
+            "Print a summaries-only document for a change in the current "
+            "directory's git repository, every summary null for an agent to "
+            "fill in, instead of checking summaries: the uncommitted change, "
+            "or COMMIT against its first parent"
+        ),
+    )
+
+
+def _read_writing_aid(
+    parser: argparse.ArgumentParser, namespace: argparse.Namespace
+) -> WritingAid | None:
+    """Return the aid --instructions or --skeleton asks for. Exits on a clash."""
+    skeleton: str | None = namespace.skeleton
+    if namespace.instructions:
+        aid = WritingAid(WritingAidKind.INSTRUCTIONS)
+    elif skeleton is not None:
+        commit = None if skeleton == _UNCOMMITTED_CHANGE else skeleton
+        aid = WritingAid(WritingAidKind.SKELETON, commit)
+    elif namespace.target is None:
+        parser.error(
+            "a path to the summaries, --instructions or --skeleton is required"
+        )
+    else:
+        return None
+    if namespace.target is not None:
+        parser.error(
+            f"--{aid.kind.value} takes no path to summaries: it prints in place "
+            "of a check"
+        )
+    return aid
